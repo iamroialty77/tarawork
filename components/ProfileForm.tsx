@@ -40,7 +40,7 @@ export default function ProfileForm({ initialProfile, onUpdate }: ProfileFormPro
       <h2 className="text-xl font-bold mb-4">Freelancer Profile</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Pangalan</label>
+          <label className="block text-sm font-medium text-gray-700">Full Name</label>
           <input
             type="text"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-black"
@@ -60,7 +60,7 @@ export default function ProfileForm({ initialProfile, onUpdate }: ProfileFormPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Maikling Bio</label>
+          <label className="block text-sm font-medium text-gray-700">Short Bio</label>
           <textarea
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-black"
             rows={3}
@@ -77,7 +77,7 @@ export default function ProfileForm({ initialProfile, onUpdate }: ProfileFormPro
               className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-black"
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
-              placeholder="Hal. React"
+              placeholder="e.g. React"
             />
             <button
               type="button"
@@ -110,7 +110,7 @@ export default function ProfileForm({ initialProfile, onUpdate }: ProfileFormPro
           type="submit"
           className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-medium"
         >
-          I-save ang Profile
+          Save Profile
         </button>
       </form>
     </div>

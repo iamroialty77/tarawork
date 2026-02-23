@@ -57,7 +57,7 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Maghanap ng trabaho (e.g. React, UI/UX)..."
+              placeholder="Search for jobs (e.g. React, UI/UX)..."
               className="w-full rounded-xl border border-gray-200 pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden text-gray-900"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -72,7 +72,7 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value as any)}
               >
-                <option value="All">Lahat ng Bayad</option>
+                <option value="All">All Payments</option>
                 <option value="Hourly">Hourly</option>
                 <option value="Flat-Rate">Flat-Rate</option>
               </select>
@@ -83,7 +83,7 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
               value={durationFilter}
               onChange={(e) => setDurationFilter(e.target.value as any)}
             >
-              <option value="All">Lahat ng Duration</option>
+              <option value="All">All Durations</option>
               <option value="1-2 weeks">1-2 weeks</option>
               <option value="1-3 months">1-3 months</option>
               <option value="Ongoing">Ongoing</option>
@@ -108,12 +108,12 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
               </label>
             </div>
             <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-              Skills: {profile.skills.join(", ") || "Wala pa"}
+              Skills: {profile.skills.join(", ") || "None yet"}
             </span>
           </div>
           
           <span className="text-xs font-medium text-gray-500">
-            {filteredJobs.length} trabaho ang nahanap
+            {filteredJobs.length} jobs found
           </span>
         </div>
       </div>
@@ -128,9 +128,9 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
             <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
               <Search className="w-8 h-8 text-gray-300" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Walang Nahanap</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">No Results Found</h3>
             <p className="text-gray-500 max-w-xs mx-auto">
-              Subukan ang ibang keywords o tanggalin ang ilang filters.
+              Try different keywords or remove some filters.
             </p>
           </div>
         )}

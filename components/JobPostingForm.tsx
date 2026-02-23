@@ -112,10 +112,10 @@ export default function JobPostingForm() {
         </div>
         <p className="text-[11px] text-indigo-700 leading-relaxed italic">
           &ldquo;{score < 50 
-            ? "Masyadong maikli ang detalye. Dagdagan pa para mas maraming mag-apply!" 
+            ? "Details are too short. Add more to attract more applicants!" 
             : score < 85
-            ? "Maganda ang simula! Idagdag ang mga milestones para sa mas malinaw na budget."
-            : "Napakahusay! Handa na ang iyong post para sa mga premium talent."}&rdquo;
+            ? "Great start! Add milestones for a clearer budget structure."
+            : "Excellent! Your post is ready for premium talent."}&rdquo;
         </p>
       </div>
 
@@ -124,7 +124,7 @@ export default function JobPostingForm() {
           <div className="h-8 w-8 rounded-xl bg-white shadow-sm flex-shrink-0 flex items-center justify-center text-sm border border-indigo-100">💡</div>
           <div>
             <p className="text-xs font-bold text-indigo-900">Market Intelligence</p>
-            <p className="text-[11px] text-indigo-700">Para sa <span className="font-bold">{formData.jobType}</span>, ang karaniwang rate sa Tara ay <span className="font-bold">₱25,000 - ₱60,000</span>.</p>
+            <p className="text-[11px] text-indigo-700">For <span className="font-bold">{formData.jobType}</span>, the typical rate on Tara is <span className="font-bold">₱25,000 - ₱60,000</span>.</p>
           </div>
         </div>
         
@@ -132,7 +132,7 @@ export default function JobPostingForm() {
           <div className="h-8 w-8 rounded-xl bg-white shadow-sm flex-shrink-0 flex items-center justify-center text-sm border border-indigo-100">🛡️</div>
           <div>
             <p className="text-xs font-bold text-indigo-900">Escrow Protection</p>
-            <p className="text-[11px] text-indigo-700">Bawat milestone ay garantisado. Hindi muna kailangang maglabas ng pera hangga't walang agreement.</p>
+            <p className="text-[11px] text-indigo-700">Every milestone is guaranteed. No funds are released until an agreement is reached.</p>
           </div>
         </div>
       </div>
@@ -353,7 +353,7 @@ export default function JobPostingForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
-                placeholder="Ano ang gagawin sa milestone na ito?"
+                placeholder="What will be accomplished?"
                 className="rounded-xl border-2 border-white bg-white px-4 py-2 text-sm focus:border-indigo-600 focus:outline-none transition-all"
                 value={newMilestone.title}
                 onChange={(e) => setNewMilestone({ ...newMilestone, title: e.target.value })}
@@ -541,7 +541,7 @@ export default function JobPostingForm() {
                     className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
-                    Bumalik
+                    Back
                   </button>
                 )}
               </div>
@@ -559,7 +559,7 @@ export default function JobPostingForm() {
                     onClick={nextStep}
                     className="group px-8 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-200 transition-all flex items-center gap-2"
                   >
-                    Patuloy na
+                    Continue
                     <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                   </button>
                 ) : (
@@ -567,7 +567,7 @@ export default function JobPostingForm() {
                     type="submit"
                     className="px-10 py-3 bg-gray-900 text-white rounded-2xl hover:bg-black font-black shadow-lg shadow-gray-200 transition-all active:scale-95"
                   >
-                    I-PUBLISH NA 🚀
+                    PUBLISH NOW 🚀
                   </button>
                 )}
               </div>

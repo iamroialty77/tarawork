@@ -8,6 +8,7 @@ import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
 import ProjectManager from "../components/ProjectManager";
 import JobPostingForm from "../components/JobPostingForm";
+import AdminDashboard from "../components/AdminDashboard";
 import { 
   Briefcase, 
   Users, 
@@ -17,13 +18,14 @@ import {
   Settings,
   Search as SearchIcon,
   TrendingUp,
-  Award
+  Award,
+  Shield
 } from "lucide-react";
 
 export default function Home() {
-  const [view, setView] = useState<"freelancer" | "client">("freelancer");
+  const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [profile, setProfile] = useState<FreelancerProfile>({
-    name: "Juan Dela Cruz",
+    name: "Alex Rivera",
     skills: ["React", "TypeScript", "Tailwind CSS"],
     verifiedSkills: [
       { name: "React Framework", score: 92, lastAssessment: "2024-02-15", isVerified: true },
@@ -69,6 +71,15 @@ export default function Home() {
                   <Users className="w-4 h-4" />
                   Client
                 </button>
+                <button
+                  onClick={() => setView("admin")}
+                  className={`flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+                    view === "admin" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  Admin
+                </button>
               </div>
             </div>
 
@@ -100,7 +111,7 @@ export default function Home() {
                   Welcome back, <span className="text-indigo-400">{profile.name.split(' ')[0]}!</span>
                 </h2>
                 <p className="text-indigo-100 text-lg mb-8 opacity-90">
-                  May <span className="font-bold text-white">24 bagong trabaho</span> na swak sa iyong skills ang na-post ngayon.
+                  There are <span className="font-bold text-white">24 new jobs</span> matching your skills posted today.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <button className="bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg">
@@ -151,7 +162,7 @@ export default function Home() {
                     <div className="relative z-10">
                       <h3 className="text-lg font-bold mb-2">Phase 2 Roadmap</h3>
                       <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-                        Nag-set up na tayo ng placeholders para sa AI Vetting at Time Tracking na konektado sa Escrow.
+                        Placeholders for AI Vetting and Time Tracking connected to Escrow are now set up.
                       </p>
                       <button className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
                         Learn more <Zap className="w-3 h-3" />
@@ -170,7 +181,7 @@ export default function Home() {
                   <div className="flex justify-between items-end mb-6">
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Available Jobs</h2>
-                      <p className="text-slate-500 mt-1">Tingnan ang mga trabahong swak sa iyong skills.</p>
+                      <p className="text-slate-500 mt-1">Browse opportunities that match your expertise.</p>
                     </div>
                     <div className="flex gap-2">
                       <button className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all">
@@ -184,15 +195,15 @@ export default function Home() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : view === "client" ? (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center mb-10">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-2xl mb-6">
                 <Briefcase className="w-8 h-8 text-indigo-600" />
               </div>
-              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Mag-post ng Bagong Trabaho</h2>
+              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Post a New Job</h2>
               <p className="mt-4 text-lg text-slate-600">
-                Hanapin ang pinakamahusay na freelancer para sa iyong proyekto sa loob lamang ng ilang minuto.
+                Find the best freelancer for your project in just a few minutes.
               </p>
             </div>
             
@@ -200,6 +211,8 @@ export default function Home() {
               <JobPostingForm />
             </div>
           </div>
+        ) : (
+          <AdminDashboard />
         )}
       </main>
 

@@ -3,8 +3,8 @@ import { Job } from "../types";
 export const MOCK_JOBS: Job[] = [
   {
     id: "1",
-    title: "React Developer para sa E-commerce",
-    description: "Kailangan ng senior react developer para sa 3-month project.",
+    title: "React Developer for E-commerce",
+    description: "Senior react developer needed for a 3-month project.",
     company: "TechPH",
     paymentMethod: "Hourly",
     rate: "$25/hr",
@@ -15,7 +15,7 @@ export const MOCK_JOBS: Job[] = [
   {
     id: "2",
     title: "Next.js Fullstack Developer",
-    description: "Pagbuo ng dashboard gamit ang Next.js at Serverless functions.",
+    description: "Building a dashboard using Next.js and Serverless functions.",
     company: "Startup Hub",
     paymentMethod: "Flat-Rate",
     rate: "$1500",
@@ -26,7 +26,7 @@ export const MOCK_JOBS: Job[] = [
   {
     id: "3",
     title: "UI/UX Designer",
-    description: "Design para sa mobile app.",
+    description: "Design for a mobile app.",
     company: "Creative Co.",
     paymentMethod: "Hourly",
     rate: "$30/hr",
@@ -37,7 +37,7 @@ export const MOCK_JOBS: Job[] = [
   {
     id: "4",
     title: "Backend Engineer (Go)",
-    description: "Kailangan ng Go expert para sa scaling.",
+    description: "Go expert needed for scaling operations.",
     company: "Fintech App",
     paymentMethod: "Flat-Rate",
     rate: "$5000",
@@ -48,7 +48,7 @@ export const MOCK_JOBS: Job[] = [
   {
     id: "5",
     title: "Frontend Developer (Vue)",
-    description: "Migration ng legacy app papuntang Vue 3.",
+    description: "Migration of a legacy app to Vue 3.",
     company: "Legacy Systems",
     paymentMethod: "Hourly",
     rate: "$20/hr",
