@@ -1,6 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import { 
   Users, 
   Briefcase, 
@@ -11,10 +13,32 @@ import {
   Search,
   MoreVertical,
   ArrowUpRight,
-  Filter
+  Filter,
+  Database
 } from "lucide-react";
 
 export default function AdminDashboard() {
+  const [dbStatus, setDbStatus] = useState<"connecting" | "connected" | "error">("connecting");
+
+  useEffect(() => {
+    async function checkConnection() {
+      try {
+        const { data, error } = await supabase.from('_test_connection').select('*').limit(1);
+        // Kahit walang table, basta nag-respond ang Supabase (kahit error 404 basta galing sa supabase)
+        if (error && error.code !== 'PGRST116' && error.message !== 'relation "_test_connection" does not exist') {
+           console.error("Supabase connection error:", error);
+           setDbStatus("error");
+        } else {
+           setDbStatus("connected");
+        }
+      } catch (err) {
+        console.error("Failed to fetch from Supabase:", err);
+        setDbStatus("error");
+      }
+    }
+    checkConnection();
+  }, []);
+
   const stats = [
     { label: "Total Users", value: "12,842", change: "+12%", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Active Jobs", value: "3,456", change: "+5%", icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-50" },
@@ -31,9 +55,20 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Admin Control Center</h2>
-        <p className="text-slate-500 mt-1">Global platform overview and management.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Admin Control Center</h2>
+          <p className="text-slate-500 mt-1">Global platform overview and management.</p>
+        </div>
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
+          dbStatus === "connected" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+          dbStatus === "error" ? "bg-red-50 text-red-600 border-red-100" :
+          "bg-slate-50 text-slate-400 border-slate-100"
+        }`}>
+          <Database className="w-3.5 h-3.5" />
+          {dbStatus === "connected" ? "Supabase Connected" : 
+           dbStatus === "error" ? "Supabase Error" : "Connecting to Supabase..."}
+        </div>
       </div>
 
       {/* Stats Grid */}
