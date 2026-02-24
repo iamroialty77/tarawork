@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MOCK_JOBS } from "../lib/mockData";
 import { FreelancerProfile } from "../types";
 import JobFeed from "../components/JobFeed";
@@ -10,6 +10,8 @@ import Workspace from "../components/Workspace";
 import TeamManager from "../components/TeamManager";
 import JobPostingForm from "../components/JobPostingForm";
 import AdminDashboard from "../components/AdminDashboard";
+import { supabase } from "../lib/supabase";
+import { useRouter } from "next/navigation";
 import { 
   Briefcase, 
   Users, 
@@ -22,11 +24,23 @@ import {
   Award,
   Shield,
   Clock,
-  LogIn
+  LogIn,
+  Mail,
+  Facebook,
+  Linkedin,
+  Github,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Home() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [profile, setProfile] = useState<FreelancerProfile>({
     name: "Alex Rivera",
@@ -68,6 +82,61 @@ export default function Home() {
       }
     ],
   });
+
+  useEffect(() => {
+    async function checkUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/auth");
+      } else {
+        setUser(session.user);
+        
+        // Check for first-time social login to show notification
+        const isNewSocial = typeof window !== 'undefined' ? sessionStorage.getItem('social_login_pending') : null;
+        if (isNewSocial) {
+          setToastMsg(`Connection Successful! A confirmation notification has been sent to your ${isNewSocial} account.`);
+          setShowToast(true);
+          sessionStorage.removeItem('social_login_pending');
+          setTimeout(() => setShowToast(false), 5000);
+        }
+
+        if (session.user.user_metadata?.full_name) {
+          setProfile(prev => ({ ...prev, name: session.user.user_metadata.full_name }));
+        } else if (session.user.email) {
+          setProfile(prev => ({ ...prev, name: session.user.email!.split('@')[0] }));
+        }
+        setLoading(false);
+      }
+    }
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push("/auth");
+      } else {
+        setUser(session.user);
+        if (session.user.user_metadata?.full_name) {
+          setProfile(prev => ({ ...prev, name: session.user.user_metadata.full_name }));
+        } else if (session.user.email) {
+          setProfile(prev => ({ ...prev, name: session.user.email!.split('@')[0] }));
+        }
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-xs">Authenticating...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
@@ -116,13 +185,15 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Link 
-                href="/auth"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-all"
+              <button 
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  router.push("/auth");
+                }}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-100 transition-all"
               >
-                <LogIn className="w-4 h-4" />
-                Login
-              </Link>
+                Logout
+              </button>
               <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
@@ -263,6 +334,60 @@ export default function Home() {
                     verifiedSkills={profile.verifiedSkills || []} 
                     aiInsights={profile.aiInsights}
                   />
+
+                  {/* Connected Accounts Section */}
+                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-indigo-600" />
+                      Connected Accounts
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-100">
+                            <Mail className="w-4 h-4 text-red-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-700">Google / Gmail</p>
+                            <p className="text-[10px] text-slate-400">Connected via OAuth</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold border border-emerald-100">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Active
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 opacity-60">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-100">
+                            <Facebook className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-700">Facebook</p>
+                            <p className="text-[10px] text-slate-400">Not connected</p>
+                          </div>
+                        </div>
+                        <button className="text-[10px] font-bold text-indigo-600 hover:underline">Link Now</button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 opacity-60">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-100">
+                            <Linkedin className="w-4 h-4 text-blue-700" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-700">LinkedIn</p>
+                            <p className="text-[10px] text-slate-400">Not connected</p>
+                          </div>
+                        </div>
+                        <button className="text-[10px] font-bold text-indigo-600 hover:underline">Link Now</button>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-[10px] text-slate-400 leading-relaxed italic">
+                      Notifications are automatically sent to your linked social accounts upon every successful secure connection.
+                    </p>
+                  </div>
                   
                   <div className="p-6 bg-slate-900 rounded-2xl text-white relative overflow-hidden">
                     <div className="relative z-10">
@@ -322,6 +447,31 @@ export default function Home() {
           <AdminDashboard />
         )}
       </main>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, x: "-50%" }}
+            className="fixed bottom-8 left-1/2 z-50 w-full max-w-md px-4"
+          >
+            <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-4">
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                <Bell className="w-5 h-5 text-white animate-ring" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold tracking-tight">{toastMsg}</p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Security Notification</p>
+              </div>
+              <button onClick={() => setShowToast(false)} className="text-slate-500 hover:text-white transition-colors">
+                &times;
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <footer className="bg-white border-t border-slate-200 py-12 mt-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
