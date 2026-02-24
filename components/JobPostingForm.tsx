@@ -63,6 +63,7 @@ export default function JobPostingForm() {
         title: newMilestone.title,
         dueDate: newMilestone.dueDate || "",
         amount: newMilestone.amount,
+        status: "Pending"
       };
       setFormData({ ...formData, milestones: [...(formData.milestones || []), milestone] });
       setNewMilestone({ title: "", dueDate: "", amount: 0 });
@@ -129,10 +130,10 @@ export default function JobPostingForm() {
         </div>
         
         <div className="flex gap-3">
-          <div className="h-8 w-8 rounded-xl bg-white shadow-sm flex-shrink-0 flex items-center justify-center text-sm border border-indigo-100">🛡️</div>
+          <div className="h-8 w-8 rounded-xl bg-white shadow-sm flex-shrink-0 flex items-center justify-center text-sm border border-indigo-100">🇵🇭</div>
           <div>
-            <p className="text-xs font-bold text-indigo-900">Escrow Protection</p>
-            <p className="text-[11px] text-indigo-700">Every milestone is guaranteed. No funds are released until an agreement is reached.</p>
+            <p className="text-xs font-bold text-indigo-900">Localized Payouts</p>
+            <p className="text-[11px] text-indigo-700">GCash & Maya enabled. Automatic tax computation for BIR Form 2307.</p>
           </div>
         </div>
       </div>

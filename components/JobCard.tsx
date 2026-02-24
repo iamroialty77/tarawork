@@ -11,7 +11,8 @@ import {
   MoreHorizontal,
   ShieldCheck,
   TrendingUp,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from "lucide-react";
 import { useState } from "react";
 import { cn, formatRelativeTime } from "../lib/utils";
@@ -56,6 +57,10 @@ export default function JobCard({ job, index = 0 }: JobCardProps) {
                     High Budget
                   </span>
                 )}
+                <span className="flex items-center text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100 uppercase tracking-wider">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  94% Match
+                </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <span className="font-medium hover:text-gray-700 cursor-pointer">{job.company}</span>

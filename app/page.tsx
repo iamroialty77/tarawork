@@ -6,7 +6,8 @@ import { FreelancerProfile } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
-import ProjectManager from "../components/ProjectManager";
+import Workspace from "../components/Workspace";
+import TeamManager from "../components/TeamManager";
 import JobPostingForm from "../components/JobPostingForm";
 import AdminDashboard from "../components/AdminDashboard";
 import { 
@@ -31,10 +32,36 @@ export default function Home() {
       { name: "React Framework", score: 92, lastAssessment: "2024-02-15", isVerified: true },
       { name: "TypeScript", score: 85, lastAssessment: "2024-02-10", isVerified: true }
     ],
+    softSkills: [
+      { name: "Fast Responder", badge: "⚡", level: "Master", count: 48 },
+      { name: "Crisis Solver", badge: "🛡️", level: "Expert", count: 12 },
+      { name: "Reliable Communicator", badge: "📞", level: "Master", count: 35 }
+    ],
+    aiInsights: {
+      gapAnalysis: [
+        { 
+          topic: "Redux Patterns", 
+          missingSkills: ["RTK Query", "Middleware"], 
+          suggestion: "Learn RTK Query for better data fetching logic based on your recent project rejections." 
+        }
+      ],
+      compatibilityScore: 94,
+      cultureMatch: ["Fast-paced", "Result-oriented"]
+    },
+    ranking: 12,
     hourlyRate: "$20",
     bio: "I am a passionate developer with experience in React and Next.js.",
     activeProjects: [
-      { id: "1", title: "E-commerce Redesign", client: "TechCorp", status: "Active", hoursLogged: 12, budget: "$500" }
+      { 
+        id: "1", 
+        title: "E-commerce Redesign", 
+        client: "TechCorp", 
+        status: "Active", 
+        hoursLogged: 12, 
+        budget: "₱25,000",
+        workspaceType: "Code",
+        githubRepo: "techcorp/ecommerce-v2"
+      }
     ],
   });
 
@@ -156,16 +183,39 @@ export default function Home() {
               <div className="lg:col-span-4 space-y-6">
                 <div className="sticky top-24 space-y-6">
                   <ProfileForm initialProfile={profile} onUpdate={setProfile} />
-                  <SkillAssessment verifiedSkills={profile.verifiedSkills || []} />
+                  
+                  {/* Soft Skills & Badges */}
+                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Award className="w-4 h-4 text-indigo-600" />
+                      Career Badges
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.softSkills?.map((skill) => (
+                        <div key={skill.name} className="group relative flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl hover:border-indigo-200 hover:bg-indigo-50 transition-all cursor-help">
+                          <span className="text-lg">{skill.badge}</span>
+                          <span className="text-[10px] font-bold text-slate-600">{skill.name}</span>
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-slate-900 text-white text-[9px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                            {skill.level} Level. Endorsed {skill.count} times.
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <SkillAssessment 
+                    verifiedSkills={profile.verifiedSkills || []} 
+                    aiInsights={profile.aiInsights}
+                  />
                   
                   <div className="p-6 bg-slate-900 rounded-2xl text-white relative overflow-hidden">
                     <div className="relative z-10">
-                      <h3 className="text-lg font-bold mb-2">Phase 2 Roadmap</h3>
+                      <h3 className="text-lg font-bold mb-2">Pro Perks Locked</h3>
                       <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-                        Placeholders for AI Vetting and Time Tracking connected to Escrow are now set up.
+                        You're in the <span className="text-white font-bold">Top 2%</span>. Early access to high-budget projects is now active.
                       </p>
                       <button className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
-                        Learn more <Zap className="w-3 h-3" />
+                        View Ranking Leaderboard <Zap className="w-3 h-3" />
                       </button>
                     </div>
                     <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-600/20 rounded-full blur-xl"></div>
@@ -175,7 +225,8 @@ export default function Home() {
 
               {/* Right Column */}
               <div className="lg:col-span-8 space-y-8">
-                <ProjectManager projects={profile.activeProjects || []} />
+                <Workspace projects={profile.activeProjects || []} />
+                <TeamManager squad={profile.squad} />
 
                 <div className="pt-2">
                   <div className="flex justify-between items-end mb-6">

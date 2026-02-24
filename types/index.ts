@@ -1,13 +1,54 @@
 export type PaymentMethod = "Hourly" | "Flat-Rate";
 export type JobType = "Full-time" | "Part-time" | "Contract" | "One-time Project";
 export type JobDuration = "1-2 weeks" | "1-3 months" | "Ongoing";
-export type ProjectStatus = "Active" | "Completed" | "Pending";
+export type ProjectStatus = "Active" | "Completed" | "Pending" | "In-Review";
+export type WorkspaceType = "Code" | "Design" | "General";
+
+export interface SquadMember {
+  id: string;
+  name: string;
+  role: string;
+  avatar?: string;
+  share: number; // percentage of budget
+}
+
+export interface Squad {
+  id: string;
+  name: string;
+  leadId: string;
+  members: SquadMember[];
+  totalBudget: number;
+}
+
+export interface AIAnalysis {
+  gapAnalysis: {
+    topic: string;
+    missingSkills: string[];
+    suggestion: string;
+    learningResourceUrl?: string;
+  }[];
+  compatibilityScore: number; // 0-100
+  cultureMatch: string[]; // e.g. ["Fast-paced", "Detail-oriented"]
+}
+
+export interface SoftSkill {
+  name: string;
+  badge: string; // Icon or emoji
+  level: "Beginner" | "Expert" | "Master";
+  count: number; // number of times endorsed/recorded
+}
 
 export interface Milestone {
   id: string;
   title: string;
   dueDate: string;
   amount: number;
+  status: "Pending" | "In-Progress" | "Completed" | "Released";
+  githubSync?: {
+    repo: string;
+    branch: string;
+    isMerged: boolean;
+  };
 }
 
 export interface ProposalQuestion {
@@ -46,13 +87,21 @@ export interface Project {
   status: ProjectStatus;
   hoursLogged: number;
   budget: string;
+  workspaceType: WorkspaceType;
+  meetingMinutes?: string[];
+  githubRepo?: string;
+  figmaFile?: string;
 }
 
 export interface FreelancerProfile {
   name: string;
   skills: string[];
   verifiedSkills?: VerifiedSkill[];
+  softSkills?: SoftSkill[];
   hourlyRate: string;
   bio: string;
   activeProjects?: Project[];
+  squad?: Squad;
+  aiInsights?: AIAnalysis;
+  ranking?: number; // Leaderboard position
 }
