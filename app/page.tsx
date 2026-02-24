@@ -99,6 +99,10 @@ export default function Home() {
         .single();
 
       if (error && error.code !== 'PGRST116') {
+        if (error.message.includes("relation \"profiles\" does not exist")) {
+          setToastMsg("Database Error: 'profiles' table not found. Please run the SQL setup script.");
+          setShowToast(true);
+        }
         throw error;
       }
 
@@ -160,9 +164,11 @@ export default function Home() {
         .order('createdAt', { ascending: false });
 
       if (error) {
-        // Fallback to mock data if the table doesn't exist yet
-        if (error.code !== 'PGRST116') {
-          console.warn("Table 'jobs' not found, using mock data.");
+        if (error.message.includes("relation \"jobs\" does not exist")) {
+          console.warn("Table 'jobs' not found. Please run the SQL setup script.");
+          // Don't show toast here as it might be annoying on every refresh, just log it
+        } else if (error.code !== 'PGRST116') {
+          console.error("Error fetching jobs:", error);
         }
         return;
       }

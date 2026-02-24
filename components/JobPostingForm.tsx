@@ -112,7 +112,12 @@ export default function JobPostingForm() {
         .from('jobs')
         .insert([jobData]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("relation \"jobs\" does not exist")) {
+          throw new Error("The 'jobs' table does not exist in your database. Please run the SQL setup script in your Supabase dashboard.");
+        }
+        throw error;
+      }
 
       setPublishStatus({ type: 'success', msg: "Job published successfully! It's now live on the marketplace." });
       setStep(1);
