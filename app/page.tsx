@@ -168,6 +168,20 @@ export default function Home() {
     }
   };
 
+  const handleUpdateProject = async (updatedProject: any) => {
+    if (!profile.activeProjects) return;
+    
+    const updatedProjects = profile.activeProjects.map(p => 
+      p.id === updatedProject.id ? updatedProject : p
+    );
+    
+    const updatedProfile = { ...profile, activeProjects: updatedProjects };
+    setProfile(updatedProfile);
+    
+    // Save to DB
+    await handleProfileSave(updatedProfile);
+  };
+
   const fetchJobs = async () => {
     try {
       const { data, error } = await supabase
@@ -293,14 +307,27 @@ export default function Home() {
               >
                 Logout
               </button>
-              <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative">
+              <button 
+                onClick={() => alert("You have 3 new notifications:\n1. Project 'E-commerce API' Milestone released.\n2. New match: Senior React Developer.\n3. Profile audit complete.")}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative"
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
               </button>
-              <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors">
+              <button 
+                onClick={() => alert("Settings module coming soon! You can update your profile below for now.")}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"
+              >
                 <Settings className="w-5 h-5" />
               </button>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-100 transition-all"></div>
+              <div 
+                onClick={() => profileRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-100 transition-all overflow-hidden"
+              >
+                {profile.avatar_url && (
+                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -485,7 +512,10 @@ export default function Home() {
 
               {/* Right Column */}
               <div className="lg:col-span-8 space-y-8">
-                <Workspace projects={profile.activeProjects || []} />
+                <Workspace 
+                  projects={profile.activeProjects || []} 
+                  onUpdateProject={handleUpdateProject}
+                />
                 <TeamManager squad={profile.squad} />
 
                 <div className="pt-2" ref={jobsRef}>
@@ -601,13 +631,16 @@ export default function Home() {
 
       <footer className="bg-white border-t border-slate-200 py-12 mt-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
+          <button 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center justify-center gap-2 mb-4 mx-auto hover:opacity-100 transition-opacity"
+          >
             <img 
               src="/tarawork-removebg-preview.png" 
               alt="Tara Logo" 
               className="h-8 w-auto grayscale opacity-50"
             />
-          </div>
+          </button>
           <p className="text-slate-400 text-sm">© 2024 Tara Marketplace. All rights reserved.</p>
         </div>
       </footer>

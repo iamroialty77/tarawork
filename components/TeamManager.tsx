@@ -34,7 +34,10 @@ export default function TeamManager({ squad }: TeamManagerProps) {
         <p className="text-slate-500 max-w-xs mx-auto text-sm">
           You haven't joined or created a squad yet. Squads allow you to apply for larger projects as a team.
         </p>
-        <button className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all">
+        <button 
+          onClick={() => alert("Squad creation module is initializing... You will be redirected to the squad builder shortly.")}
+          className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all"
+        >
           Create a Squad
         </button>
       </div>
@@ -110,7 +113,10 @@ export default function TeamManager({ squad }: TeamManagerProps) {
           ))}
 
           {isLead ? (
-            <button className="w-full py-4 border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 font-bold text-sm">
+            <button 
+              onClick={() => alert("Invite link copied to clipboard! Share it with your teammates.")}
+              className="w-full py-4 border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 font-bold text-sm"
+            >
               <UserPlus className="w-4 h-4" />
               Add Squad Member
             </button>
@@ -128,7 +134,10 @@ export default function TeamManager({ squad }: TeamManagerProps) {
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
           <span className="text-[10px] font-bold text-emerald-700 uppercase">Automatic Budget Distribution Enabled</span>
         </div>
-        <button className="text-[10px] font-black text-emerald-600 hover:underline">
+        <button 
+          onClick={() => alert("Redirecting to Smart Contracts manager...")}
+          className="text-[10px] font-black text-emerald-600 hover:underline"
+        >
           MANAGE CONTRACTS
         </button>
       </div>

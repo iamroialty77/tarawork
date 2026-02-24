@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     skills TEXT[] DEFAULT '{}',
     "hourlyRate" TEXT DEFAULT '$0',
     bio TEXT,
+    avatar_url TEXT,
     "companyName" TEXT,
     "verifiedSkills" JSONB DEFAULT '[]',
     "softSkills" JSONB DEFAULT '[]',

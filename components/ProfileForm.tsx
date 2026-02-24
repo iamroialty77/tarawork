@@ -1,7 +1,8 @@
 "use client";
 
 import { FreelancerProfile, FreelancerCategory } from "../types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Camera, Globe, Github, Linkedin, Link as LinkIcon, User, Briefcase, Mail } from "lucide-react";
 
 interface ProfileFormProps {
   initialProfile: FreelancerProfile;
@@ -12,6 +13,7 @@ interface ProfileFormProps {
 export default function ProfileForm({ initialProfile, onUpdate, isSaving = false }: ProfileFormProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [skillInput, setSkillInput] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
@@ -41,11 +43,57 @@ export default function ProfileForm({ initialProfile, onUpdate, isSaving = false
     onUpdate(newProfile);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // In a real app, you'd upload to Supabase Storage here
+      // For now, we'll use a local URL or just simulate
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile({ ...profile, avatar_url: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
-    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-      <h2 className="text-xl font-bold mb-6 text-slate-900">User Profile</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50">
+      <div className="flex flex-col items-center mb-8">
+        <div className="relative group">
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-1 shadow-lg group-hover:shadow-indigo-200 transition-all overflow-hidden">
+            {profile.avatar_url ? (
+              <img 
+                src={profile.avatar_url} 
+                alt="Profile" 
+                className="w-full h-full object-cover rounded-2xl"
+              />
+            ) : (
+              <div className="w-full h-full bg-slate-50 rounded-2xl flex items-center justify-center">
+                <User className="w-10 h-10 text-slate-300" />
+              </div>
+            )}
+          </div>
+          <button 
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg border border-slate-100 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:scale-110 transition-all cursor-pointer"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept="image/*"
+            onChange={handleImageUpload}
+          />
+        </div>
+        <h2 className="text-xl font-bold mt-4 text-slate-900">{profile.name || "Set your profile"}</h2>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{profile.role === 'jobseeker' ? 'Freelancer' : 'Hirer'}</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Account Role</label>
             <select

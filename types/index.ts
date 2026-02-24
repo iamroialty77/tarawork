@@ -101,6 +101,7 @@ export interface Project {
   meetingMinutes?: string[];
   githubRepo?: string;
   figmaFile?: string;
+  projectLink?: string;
 }
 
 export interface UserProfile {
@@ -113,6 +114,7 @@ export interface UserProfile {
   softSkills?: SoftSkill[];
   hourlyRate: string;
   bio: string;
+  avatar_url?: string;
   companyName?: string;
   activeProjects?: Project[];
   squad?: Squad;

@@ -12,6 +12,7 @@ import {
   ChevronRight,
   MessageSquare,
   ExternalLink,
+  Link as LinkIcon,
   Lock,
   Smile,
   Meh,
@@ -24,11 +25,21 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface WorkspaceProps {
   projects: Project[];
+  onUpdateProject?: (project: Project) => void;
 }
 
-export default function Workspace({ projects }: WorkspaceProps) {
+export default function Workspace({ projects, onUpdateProject }: WorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"active" | "reviews" | "calls">("active");
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
+  const [editingLink, setEditingLink] = useState<string | null>(null);
+  const [tempLink, setTempLink] = useState("");
+
+  const handleSaveLink = (project: Project) => {
+    if (onUpdateProject) {
+      onUpdateProject({ ...project, projectLink: tempLink });
+      setEditingLink(null);
+    }
+  };
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-6">
@@ -45,7 +56,10 @@ export default function Workspace({ projects }: WorkspaceProps) {
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-bold transition-all">
+            <button 
+              onClick={() => alert("Meeting module is initializing... Please wait for other participants.")}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-bold transition-all"
+            >
               <Video className="w-4 h-4" />
               Start Meeting
             </button>
@@ -123,10 +137,51 @@ export default function Workspace({ projects }: WorkspaceProps) {
                         <span className="text-sm font-bold text-slate-900">{project.budget} Due Mar 15</span>
                       </div>
                       <div className="flex items-center justify-end gap-3">
-                        <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                        {editingLink === project.id ? (
+                          <div className="flex items-center gap-2 bg-white border border-indigo-200 rounded-xl px-2 py-1 shadow-sm">
+                            <input 
+                              type="text" 
+                              className="text-xs focus:outline-none w-32" 
+                              placeholder="https://..."
+                              value={tempLink}
+                              onChange={(e) => setTempLink(e.target.value)}
+                              autoFocus
+                            />
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleSaveLink(project); }}
+                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setEditingLink(project.id); 
+                              setTempLink(project.projectLink || ""); 
+                            }}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-1"
+                            title="Edit Project Link"
+                          >
+                            <LinkIcon className="w-4 h-4" />
+                            <span className="text-[10px] font-bold">Link</span>
+                          </button>
+                        )}
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (project.projectLink) window.open(project.projectLink, '_blank');
+                            else alert("No project link saved yet. Click the 'Link' button to add one.");
+                          }}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        >
                           <ExternalLink className="w-5 h-5" />
                         </button>
-                        <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); alert("Work log submitted for " + project.title); }}
+                          className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                        >
                           Log Work
                         </button>
                       </div>

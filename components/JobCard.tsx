@@ -137,10 +137,16 @@ export default function JobCard({ job, index = 0 }: JobCardProps) {
             Posted {formatRelativeTime(job.createdAt)}
           </span>
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+            <button 
+              onClick={() => alert(`Details for "${job.title}" at ${job.company}:\n\n${job.description}`)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+            >
               Details
             </button>
-            <button className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all active:scale-95 cursor-pointer">
+            <button 
+              onClick={() => alert(`Application for "${job.title}" has been sent! The client (${job.company}) will review your profile and get back to you.`)}
+              className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all active:scale-95 cursor-pointer"
+            >
               Apply Now
               <ExternalLink className="w-4 h-4" />
             </button>

@@ -53,14 +53,20 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
           ) : (
             <div className="text-center py-6 border-2 border-dashed border-slate-100 rounded-2xl">
               <p className="text-sm text-slate-400">No technical data yet.</p>
-              <button className="mt-2 text-xs text-indigo-600 font-bold hover:underline">
+              <button 
+                onClick={() => alert("Initializing AI Vetting engine... You will be redirected to the assessment portal.")}
+                className="mt-2 text-xs text-indigo-600 font-bold hover:underline"
+              >
                 Start AI Vetting
               </button>
             </div>
           )}
         </div>
 
-        <button className="w-full mt-6 py-3 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-black transition-all shadow-lg shadow-slate-200">
+        <button 
+          onClick={() => alert("Redirecting to Skills Assessment Center...")}
+          className="w-full mt-6 py-3 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-black transition-all shadow-lg shadow-slate-200"
+        >
           Retake Assessments
         </button>
       </div>
@@ -89,7 +95,10 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
                         <span key={s} className="text-[9px] px-2 py-0.5 bg-indigo-500/30 rounded-md font-bold">{s}</span>
                       ))}
                     </div>
-                    <button className="p-1.5 bg-white/10 rounded-lg group-hover:bg-indigo-500 transition-all">
+                    <button 
+                      onClick={() => gap.learningResourceUrl ? window.open(gap.learningResourceUrl, '_blank') : alert("Opening suggested learning resource...")}
+                      className="p-1.5 bg-white/10 rounded-lg group-hover:bg-indigo-500 transition-all"
+                    >
                       <ExternalLink className="w-3 h-3" />
                     </button>
                   </div>
@@ -103,7 +112,10 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
                     Complete your profile and start vetting to unlock automated skill gap insights.
                   </p>
                 </div>
-                <button className="w-full py-2 bg-indigo-600 rounded-xl text-[10px] font-bold hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/20">
+                <button 
+                  onClick={() => alert("AI Audit requested! Our model will scan your profile and email you the full report within 24 hours.")}
+                  className="w-full py-2 bg-indigo-600 rounded-xl text-[10px] font-bold hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/20"
+                >
                   <Lightbulb className="w-3 h-3" />
                   Request AI Profile Audit
                   <ChevronRight className="w-3 h-3" />
