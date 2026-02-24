@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { 
@@ -14,23 +14,36 @@ import {
   MoreVertical,
   ArrowUpRight,
   Filter,
-  Database
+  Database,
+  CheckCircle2,
+  XCircle,
+  Code,
+  Copy
 } from "lucide-react";
 
 export default function AdminDashboard() {
   const [dbStatus, setDbStatus] = useState<"connecting" | "connected" | "error">("connecting");
+  const [tableStatus, setTableStatus] = useState<{
+    profiles: boolean;
+    jobs: boolean;
+    _test: boolean;
+  }>({ profiles: false, jobs: false, _test: false });
+  const [showSql, setShowSql] = useState(false);
 
   useEffect(() => {
     async function checkConnection() {
       try {
-        const { data, error } = await supabase.from('_test_connection').select('*').limit(1);
-        // Kahit walang table, basta nag-respond ang Supabase (kahit error 404 basta galing sa supabase)
-        if (error && error.code !== 'PGRST116' && error.message !== 'relation "_test_connection" does not exist') {
-           console.error("Supabase connection error:", error);
-           setDbStatus("error");
-        } else {
-           setDbStatus("connected");
-        }
+        const { error: testError } = await supabase.from('_test_connection').select('*').limit(1);
+        const { error: profilesError } = await supabase.from('profiles').select('id').limit(1);
+        const { error: jobsError } = await supabase.from('jobs').select('id').limit(1);
+
+        setTableStatus({
+          _test: !testError || (testError.code !== 'PGRST205' && !testError.message.includes('relation')),
+          profiles: !profilesError || (profilesError.code !== 'PGRST205' && !profilesError.message.includes('relation')),
+          jobs: !jobsError || (jobsError.code !== 'PGRST205' && !jobsError.message.includes('relation')),
+        });
+
+        setDbStatus("connected");
       } catch (err) {
         console.error("Failed to fetch from Supabase:", err);
         setDbStatus("error");
@@ -38,6 +51,61 @@ export default function AdminDashboard() {
     }
     checkConnection();
   }, []);
+
+  const sqlCode = `-- TARA MARKETPLACE SQL SETUP
+-- Run this in Supabase SQL Editor
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID REFERENCES auth.users NOT NULL PRIMARY KEY,
+    name TEXT,
+    role TEXT DEFAULT 'jobseeker',
+    category TEXT DEFAULT 'Developer',
+    skills TEXT[] DEFAULT '{}',
+    "hourlyRate" TEXT DEFAULT '$0',
+    bio TEXT,
+    "companyName" TEXT,
+    "verifiedSkills" JSONB DEFAULT '[]',
+    "softSkills" JSONB DEFAULT '[]',
+    "activeProjects" JSONB DEFAULT '[]',
+    squad JSONB,
+    "aiInsights" JSONB,
+    ranking INTEGER,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+CREATE TABLE IF NOT EXISTS public.jobs (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    company TEXT,
+    category TEXT,
+    "paymentMethod" TEXT,
+    rate TEXT,
+    duration TEXT,
+    skills TEXT[] DEFAULT '{}',
+    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    "jobType" TEXT,
+    budget NUMERIC,
+    milestones JSONB DEFAULT '[]',
+    deadline TEXT,
+    "customQuestions" JSONB DEFAULT '[]'
+);
+ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Jobs are viewable by everyone." ON public.jobs FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can post jobs." ON public.jobs FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE TABLE IF NOT EXISTS public._test_connection (id SERIAL PRIMARY KEY, created_at TIMESTAMP WITH TIME ZONE DEFAULT now());
+ALTER TABLE public._test_connection ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR SELECT USING (true);`;
+
+  const copySql = () => {
+    navigator.clipboard.writeText(sqlCode);
+    alert("SQL Code copied to clipboard!");
+  };
 
   const stats = [
     { label: "Total Users", value: "12,842", change: "+12%", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
@@ -161,6 +229,83 @@ export default function AdminDashboard() {
 
         {/* System Health / Quick Actions */}
         <div className="space-y-6">
+          <div className="bg-slate-900 rounded-2xl p-6 text-white">
+            <h3 className="font-bold mb-4 flex items-center gap-2">
+              <Database className="w-5 h-5 text-indigo-400" />
+              Database Health
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">profiles table</span>
+                {tableStatus.profiles ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">jobs table</span>
+                {tableStatus.jobs ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+              </div>
+            </div>
+            
+            {!tableStatus.profiles || !tableStatus.jobs ? (
+              <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                <p className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-2">Critical Action Needed</p>
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  Some required tables are missing. This causes profile and job posting errors.
+                </p>
+                <button 
+                  onClick={() => setShowSql(!showSql)}
+                  className="w-full bg-white text-slate-900 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2"
+                >
+                  <Code className="w-4 h-4" />
+                  {showSql ? "HIDE SETUP SQL" : "GET SETUP SQL"}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-1">Status: OK</p>
+                <p className="text-xs text-slate-300">All database tables are connected and accessible.</p>
+              </div>
+            )}
+          </div>
+
+          <AnimatePresence>
+            {showSql && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+              >
+                <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Setup SQL Code</h4>
+                  <button 
+                    onClick={copySql}
+                    className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-600"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-4">
+                  <pre className="text-[10px] bg-slate-900 text-indigo-300 p-4 rounded-xl overflow-x-auto max-h-48 font-mono">
+                    {sqlCode}
+                  </pre>
+                  <p className="mt-4 text-[10px] text-slate-500 leading-relaxed">
+                    1. Click copy icon above.<br/>
+                    2. Go to Supabase Dashboard &gt; SQL Editor.<br/>
+                    3. Paste and click "Run".
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="bg-slate-900 rounded-2xl p-6 text-white">
             <h3 className="font-bold mb-4 flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-indigo-400" />

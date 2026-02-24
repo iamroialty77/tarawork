@@ -99,8 +99,8 @@ export default function Home() {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        if (error.message.includes("relation \"profiles\" does not exist")) {
-          setToastMsg("Database Error: 'profiles' table not found. Please run the SQL setup script.");
+        if (error.message.includes("relation \"profiles\" does not exist") || error.code === 'PGRST205') {
+          setToastMsg("⚠️ Database Setup Required: The 'profiles' table is missing. Please run the SQL script in your Supabase dashboard.");
           setShowToast(true);
         }
         throw error;
@@ -148,9 +148,13 @@ export default function Home() {
       setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
       console.error("Error saving profile:", err);
-      setToastMsg(`Error: ${err.message}`);
+      if (err.code === 'PGRST205' || err.message?.includes("relation \"profiles\" does not exist")) {
+        setToastMsg("⚠️ Database Error: 'profiles' table not found. Go to Admin tab for setup instructions.");
+      } else {
+        setToastMsg(`Error: ${err.message || "Failed to save profile"}`);
+      }
       setShowToast(true);
-      setTimeout(() => setShowToast(false), 5000);
+      setTimeout(() => setShowToast(false), 6000);
     } finally {
       setIsSaving(false);
     }
