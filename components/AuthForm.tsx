@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -12,11 +12,16 @@ import {
   Github, 
   AlertCircle,
   CheckCircle2,
-  Zap
+  Zap,
+  PartyPopper
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { useSearchParams } from "next/navigation";
 
 export default function AuthForm() {
+  const searchParams = useSearchParams();
+  const confirmed = searchParams.get('confirmed');
+  
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -24,6 +29,13 @@ export default function AuthForm() {
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (confirmed === 'true') {
+      setSuccess("Email confirmed successfully! You can now log in.");
+      setMode("login");
+    }
+  }, [confirmed]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +52,11 @@ export default function AuthForm() {
             data: {
               full_name: fullName,
             },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
         if (error) throw error;
-        setSuccess("Check your email for the confirmation link!");
+        setSuccess("Registration successful! Please check your email to confirm your account.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,

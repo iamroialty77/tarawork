@@ -4,6 +4,7 @@ import AuthForm from "../../components/AuthForm";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export default function AuthPage() {
   return (
@@ -23,7 +24,9 @@ export default function AuthPage() {
           </Link>
         </div>
 
-        <AuthForm />
+        <Suspense fallback={<div className="text-center">Loading...</div>}>
+          <AuthForm />
+        </Suspense>
         
         <div className="mt-12 text-center">
           <p className="text-xs text-slate-400 font-medium">
