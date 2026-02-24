@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { PortfolioItem } from "../types";
-import { Plus, Trash2, ExternalLink, Code, Image as ImageIcon, Briefcase } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Code, Image as ImageIcon, Briefcase, MessageSquare } from "lucide-react";
+import Link from "next/link";
 
 interface PortfolioManagerProps {
   items: PortfolioItem[];
@@ -161,7 +162,18 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
                 <Code className="w-6 h-6 text-indigo-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-slate-900 truncate">{item.title}</h4>
+                <div className="flex justify-between items-start">
+                  <h4 className="font-bold text-slate-900 truncate">{item.title}</h4>
+                  {!isOwner && (
+                    <Link 
+                      href="/messages"
+                      className="text-slate-300 hover:text-indigo-600 transition-colors"
+                      title="Message freelancer about this project"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
                 <p className="text-sm text-slate-500 line-clamp-2 mt-1 leading-relaxed">
                   {item.description}
                 </p>

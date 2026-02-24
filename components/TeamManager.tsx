@@ -10,8 +10,10 @@ import {
   TrendingUp,
   Settings,
   MoreVertical,
-  Lock
+  Lock,
+  MessageSquare
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 interface TeamManagerProps {
@@ -105,6 +107,13 @@ export default function TeamManager({ squad }: TeamManagerProps) {
                   <p className="text-sm font-bold text-emerald-600">₱{(defaultSquad.totalBudget * (member.share / 100)).toLocaleString()}</p>
                   <p className="text-[10px] text-slate-400 uppercase font-bold">Amount</p>
                 </div>
+                <Link
+                  href="/messages"
+                  className="p-1.5 text-slate-300 hover:text-indigo-600 transition-colors"
+                  title={`Message ${member.name}`}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                </Link>
                 <button className="p-1.5 text-slate-300 hover:text-slate-600 transition-colors">
                   <MoreVertical className="w-4 h-4" />
                 </button>

@@ -53,9 +53,18 @@ export default function JobCard({ job, index = 0 }: JobCardProps) {
                 <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
                   {job.title}
                 </h3>
-                <span className="text-[10px] font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full border border-gray-200 uppercase tracking-wider">
-                  {job.category}
-                </span>
+                <div className="flex items-center gap-1.5 bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full border border-gray-200 hover:border-indigo-200 hover:bg-indigo-50 transition-colors group/cat">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
+                    {job.category}
+                  </span>
+                  <Link 
+                    href="/messages" 
+                    className="text-gray-400 hover:text-indigo-600 transition-colors"
+                    title={`Message ${job.company} about ${job.category} project`}
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                  </Link>
+                </div>
                 {job.budget && job.budget > 4000 && (
                   <span className="flex items-center text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider">
                     <TrendingUp className="w-3 h-3 mr-1" />

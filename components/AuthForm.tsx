@@ -122,7 +122,7 @@ export default function AuthForm() {
             <img 
               src="/tarawork-removebg-preview.png" 
               alt="Tara Logo" 
-              className="h-[2in] w-auto object-contain"
+              className="h-[1.5in] w-auto object-contain"
             />
           </div>
 
