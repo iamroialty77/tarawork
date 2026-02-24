@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MOCK_JOBS } from "../lib/mockData";
-import { FreelancerProfile } from "../types";
+import { FreelancerProfile, Job } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
@@ -42,6 +42,10 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
+  const [jobs, setJobs] = useState<Job[]>(MOCK_JOBS);
+  const jobsRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+
   const [profile, setProfile] = useState<FreelancerProfile>({
     name: "Alex Rivera",
     role: "jobseeker",
@@ -148,6 +152,29 @@ export default function Home() {
     }
   };
 
+  const fetchJobs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+      if (error) {
+        // Fallback to mock data if the table doesn't exist yet
+        if (error.code !== 'PGRST116') {
+          console.warn("Table 'jobs' not found, using mock data.");
+        }
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setJobs(data);
+      }
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+    }
+  };
+
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -158,6 +185,9 @@ export default function Home() {
         
         // Fetch real profile from DB
         await fetchProfile(session.user.id);
+        
+        // Fetch jobs from DB
+        await fetchJobs();
         
         // Check for first-time social login to show notification
         const isNewSocial = typeof window !== 'undefined' ? sessionStorage.getItem('social_login_pending') : null;
@@ -296,10 +326,16 @@ export default function Home() {
                   )}
                 </p>
                 <div className="flex flex-wrap gap-4">
-                  <button className="bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg">
+                  <button 
+                    onClick={() => jobsRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    className="bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg cursor-pointer"
+                  >
                     Browse Jobs
                   </button>
-                  <button className="bg-indigo-800/50 text-white border border-indigo-700 px-6 py-3 rounded-xl font-bold hover:bg-indigo-800 transition-colors">
+                  <button 
+                    onClick={() => profileRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    className="bg-indigo-800/50 text-white border border-indigo-700 px-6 py-3 rounded-xl font-bold hover:bg-indigo-800 transition-colors cursor-pointer"
+                  >
                     Update Profile
                   </button>
                 </div>
@@ -365,7 +401,7 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column */}
-              <div className="lg:col-span-4 space-y-6">
+              <div className="lg:col-span-4 space-y-6" ref={profileRef}>
                 <div className="sticky top-24 space-y-6">
                   <ProfileForm 
                     initialProfile={profile} 
@@ -471,20 +507,23 @@ export default function Home() {
                 <Workspace projects={profile.activeProjects || []} />
                 <TeamManager squad={profile.squad} />
 
-                <div className="pt-2">
+                <div className="pt-2" ref={jobsRef}>
                   <div className="flex justify-between items-end mb-6">
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Available Jobs</h2>
                       <p className="text-slate-500 mt-1">Browse opportunities that match your expertise.</p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all">
-                        <LayoutDashboard className="w-4 h-4" />
+                      <button 
+                        onClick={fetchJobs}
+                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all cursor-pointer group"
+                      >
+                        <LayoutDashboard className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
                       </button>
                     </div>
                   </div>
                   
-                  <JobFeed jobs={MOCK_JOBS} profile={profile} />
+                  <JobFeed jobs={jobs} profile={profile} />
                 </div>
               </div>
             </div>

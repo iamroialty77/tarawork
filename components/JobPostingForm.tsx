@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { Job, JobType, JobDuration, PaymentMethod, Milestone, ProposalQuestion } from "../types";
+import { supabase } from "../lib/supabase";
+import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import { cn } from "../lib/utils";
 
 export default function JobPostingForm() {
   const [step, setStep] = useState(1);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
   const [formData, setFormData] = useState<Partial<Job>>({
     title: "",
     description: "",
@@ -78,6 +83,56 @@ export default function JobPostingForm() {
       };
       setFormData({ ...formData, customQuestions: [...(formData.customQuestions || []), question] });
       setNewQuestion("");
+    }
+  };
+
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    setPublishStatus(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      // Fetch user's profile to get company name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('companyName')
+        .eq('id', user.id)
+        .single();
+
+      const jobData = {
+        ...formData,
+        id: Math.random().toString(36).substr(2, 9),
+        company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Hirer",
+        createdAt: new Date().toISOString(),
+        category: "Developer", // Default or could be inferred from title/description
+      };
+
+      const { error } = await supabase
+        .from('jobs')
+        .insert([jobData]);
+
+      if (error) throw error;
+
+      setPublishStatus({ type: 'success', msg: "Job published successfully! It's now live on the marketplace." });
+      setStep(1);
+      setFormData({
+        title: "",
+        description: "",
+        skills: [],
+        jobType: "Contract",
+        duration: "1-3 months",
+        paymentMethod: "Flat-Rate",
+        budget: 0,
+        milestones: [],
+        customQuestions: [],
+        deadline: "",
+      });
+    } catch (err: any) {
+      console.error("Error publishing job:", err);
+      setPublishStatus({ type: 'error', msg: `Failed to publish job: ${err.message}` });
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -517,13 +572,23 @@ export default function JobPostingForm() {
             </div>
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="relative">
+          <form onSubmit={(e) => { e.preventDefault(); if (step === 3) handlePublish(); }} className="relative">
             {isAiAnalyzing && (
               <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
                 <div className="flex flex-col items-center">
                   <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                   <p className="mt-4 text-sm font-bold text-indigo-600 animate-pulse uppercase tracking-widest">AI is analyzing your post...</p>
                 </div>
+              </div>
+            )}
+
+            {publishStatus && (
+              <div className={cn(
+                "mb-6 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300",
+                publishStatus.type === 'success' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"
+              )}>
+                {publishStatus.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                <p className="text-sm font-bold">{publishStatus.msg}</p>
               </div>
             )}
             
@@ -566,9 +631,19 @@ export default function JobPostingForm() {
                 ) : (
                   <button
                     type="submit"
-                    className="px-10 py-3 bg-gray-900 text-white rounded-2xl hover:bg-black font-black shadow-lg shadow-gray-200 transition-all active:scale-95"
+                    disabled={isPublishing}
+                    className="px-10 py-3 bg-gray-900 text-white rounded-2xl hover:bg-black font-black shadow-lg shadow-gray-200 transition-all active:scale-95 flex items-center gap-2"
                   >
-                    PUBLISH NOW 🚀
+                    {isPublishing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        PUBLISHING...
+                      </>
+                    ) : (
+                      <>
+                        PUBLISH NOW 🚀
+                      </>
+                    )}
                   </button>
                 )}
               </div>
