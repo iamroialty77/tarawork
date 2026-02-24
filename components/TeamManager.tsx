@@ -22,17 +22,24 @@ export default function TeamManager({ squad }: TeamManagerProps) {
   const [isManaging, setIsManaging] = useState(false);
   const currentUserId = "1"; // Simulating logged in user
 
-  const defaultSquad: Squad = squad || {
-    id: "squad-1",
-    name: "Alpha Dev Squad",
-    leadId: "1",
-    totalBudget: 50000,
-    members: [
-      { id: "1", name: "Alex Rivera", role: "Lead Frontend", share: 40, permissions: ["manage-budget", "add-members", "edit-tasks"] },
-      { id: "2", name: "Sarah Chen", role: "Backend Engineer", share: 30, permissions: ["view-only", "edit-tasks"] },
-      { id: "3", name: "Mike Ross", role: "UI/UX Designer", share: 30, permissions: ["view-only", "edit-tasks"] },
-    ]
-  };
+  const defaultSquad: Squad | null = squad || null;
+
+  if (!defaultSquad) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-6 p-10 text-center">
+        <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+          <Users className="w-8 h-8 text-slate-300" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-900 mb-1">No Squad Active</h3>
+        <p className="text-slate-500 max-w-xs mx-auto text-sm">
+          You haven't joined or created a squad yet. Squads allow you to apply for larger projects as a team.
+        </p>
+        <button className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all">
+          Create a Squad
+        </button>
+      </div>
+    );
+  }
 
   const isLead = defaultSquad.leadId === currentUserId;
 

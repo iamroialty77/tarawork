@@ -76,34 +76,36 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
           </div>
 
           <div className="space-y-4">
-            {aiInsights?.gapAnalysis.map((gap, i) => (
-              <div key={i} className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all group">
-                <p className="text-xs font-bold text-indigo-300 mb-1 uppercase tracking-widest">{gap.topic}</p>
-                <p className="text-[11px] text-white/80 leading-relaxed mb-3">
-                  {gap.suggestion}
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-1">
-                    {gap.missingSkills.map(s => (
-                      <span key={s} className="text-[9px] px-2 py-0.5 bg-indigo-500/30 rounded-md font-bold">{s}</span>
-                    ))}
+            {aiInsights && aiInsights.gapAnalysis && aiInsights.gapAnalysis.length > 0 ? (
+              aiInsights.gapAnalysis.map((gap, i) => (
+                <div key={i} className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all group">
+                  <p className="text-xs font-bold text-indigo-300 mb-1 uppercase tracking-widest">{gap.topic}</p>
+                  <p className="text-[11px] text-white/80 leading-relaxed mb-3">
+                    {gap.suggestion}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-1">
+                      {gap.missingSkills.map(s => (
+                        <span key={s} className="text-[9px] px-2 py-0.5 bg-indigo-500/30 rounded-md font-bold">{s}</span>
+                      ))}
+                    </div>
+                    <button className="p-1.5 bg-white/10 rounded-lg group-hover:bg-indigo-500 transition-all">
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
                   </div>
-                  <button className="p-1.5 bg-white/10 rounded-lg group-hover:bg-indigo-500 transition-all">
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
                 </div>
-              </div>
-            )) || (
+              ))
+            ) : (
               <div className="space-y-3">
                 <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <p className="text-xs font-bold text-indigo-300 mb-1">REDUX PATTERNS</p>
+                  <p className="text-xs font-bold text-indigo-300 mb-1 tracking-[0.1em] uppercase">Ready for Analysis</p>
                   <p className="text-[11px] text-white/80 leading-relaxed">
-                    Based on recent rejections, you need to improve on Redux Toolkit and Middleware logic.
+                    Complete your profile and start vetting to unlock automated skill gap insights.
                   </p>
                 </div>
-                <button className="w-full py-2 bg-indigo-600 rounded-xl text-[10px] font-bold hover:bg-indigo-500 transition-all flex items-center justify-center gap-2">
+                <button className="w-full py-2 bg-indigo-600 rounded-xl text-[10px] font-bold hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/20">
                   <Lightbulb className="w-3 h-3" />
-                  View Learning Path
+                  Request AI Profile Audit
                   <ChevronRight className="w-3 h-3" />
                 </button>
               </div>

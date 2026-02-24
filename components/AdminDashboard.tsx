@@ -23,6 +23,8 @@ import {
 
 export default function AdminDashboard() {
   const [dbStatus, setDbStatus] = useState<"connecting" | "connected" | "error">("connecting");
+  const [counts, setCounts] = useState({ users: 0, jobs: 0 });
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [tableStatus, setTableStatus] = useState<{
     profiles: boolean;
     jobs: boolean;
@@ -46,6 +48,34 @@ export default function AdminDashboard() {
         });
 
         setDbStatus("connected");
+        
+        // Fetch actual counts
+        if (!profilesError) {
+          const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+          setCounts(prev => ({ ...prev, users: userCount || 0 }));
+        }
+        if (!jobsError) {
+          const { count: jobCount } = await supabase.from('jobs').select('*', { count: 'exact', head: true });
+          setCounts(prev => ({ ...prev, jobs: jobCount || 0 }));
+
+          // Fetch recent jobs for activity
+          const { data: recentJobs } = await supabase
+            .from('jobs')
+            .select('*')
+            .order('createdAt', { ascending: false })
+            .limit(4);
+          
+          if (recentJobs) {
+            setRecentActivities(recentJobs.map(job => ({
+              id: job.id,
+              user: job.company,
+              action: "Job Posted",
+              details: job.title,
+              time: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "Just now",
+              status: "Live"
+            })));
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch from Supabase:", err);
         setDbStatus("error");
@@ -118,17 +148,10 @@ CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR
   };
 
   const stats = [
-    { label: "Total Users", value: "12,842", change: "+12%", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Active Jobs", value: "3,456", change: "+5%", icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { label: "Total Revenue", value: "$452,120", change: "+18%", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Disputes", value: "14", change: "-2%", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
-  ];
-
-  const recentActivities = [
-    { id: 1, user: "Alex Johnson", action: "Job Posted", details: "Senior React Dev", time: "2m ago", status: "Verified" },
-    { id: 2, user: "Maria Santos", action: "Payment Released", details: "$1,200.00", time: "15m ago", status: "Completed" },
-    { id: 3, user: "TechCorp Inc.", action: "New Account", details: "Enterprise Client", time: "1h ago", status: "Pending Verification" },
-    { id: 4, user: "John Doe", action: "Dispute Raised", details: "Project #882", time: "3h ago", status: "In Review" },
+    { label: "Total Users", value: counts.users.toLocaleString(), change: "+100%", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Active Jobs", value: counts.jobs.toLocaleString(), change: "+100%", icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { label: "Total Revenue", value: "₱0", change: "0%", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "Disputes", value: "0", change: "0%", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
   ];
 
   return (
@@ -228,7 +251,7 @@ CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          item.status === 'Verified' || item.status === 'Completed' 
+                          item.status === 'Verified' || item.status === 'Completed' || item.status === 'Live'
                             ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
                             : item.status === 'In Review'
                             ? 'bg-red-50 text-red-600 border-red-100'

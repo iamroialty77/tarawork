@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MOCK_JOBS } from "../lib/mockData";
 import { FreelancerProfile, Job } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
@@ -30,7 +29,8 @@ import {
   Linkedin,
   Github,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  DollarSign
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -42,57 +42,33 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
-  const [jobs, setJobs] = useState<Job[]>(MOCK_JOBS);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
   const [missingTables, setMissingTables] = useState<string[]>([]);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const [profile, setProfile] = useState<FreelancerProfile>({
-    name: "Alex Rivera",
+    name: "User",
     role: "jobseeker",
     category: "Developer",
-    skills: ["React", "TypeScript", "Tailwind CSS"],
-    verifiedSkills: [
-      { name: "React Framework", score: 92, lastAssessment: "2024-02-15", isVerified: true },
-      { name: "TypeScript", score: 85, lastAssessment: "2024-02-10", isVerified: true }
-    ],
-    softSkills: [
-      { name: "Fast Responder", badge: "⚡", level: "Master", count: 48 },
-      { name: "Crisis Solver", badge: "🛡️", level: "Expert", count: 12 },
-      { name: "Reliable Communicator", badge: "📞", level: "Master", count: 35 }
-    ],
+    skills: [],
+    verifiedSkills: [],
+    softSkills: [],
     aiInsights: {
-      gapAnalysis: [
-        { 
-          topic: "Redux Patterns", 
-          missingSkills: ["RTK Query", "Middleware"], 
-          suggestion: "Learn RTK Query for better data fetching logic based on your recent project rejections." 
-        }
-      ],
-      compatibilityScore: 94,
-      cultureMatch: ["Fast-paced", "Result-oriented"]
+      gapAnalysis: [],
+      compatibilityScore: 0,
+      cultureMatch: []
     },
-    ranking: 12,
-    hourlyRate: "$20",
-    bio: "I am a passionate developer with experience in React and Next.js.",
-    activeProjects: [
-      { 
-        id: "1", 
-        title: "E-commerce Redesign", 
-        client: "TechCorp", 
-        status: "Active", 
-        hoursLogged: 12, 
-        budget: "₱25,000",
-        workspaceType: "Code",
-        githubRepo: "techcorp/ecommerce-v2"
-      }
-    ],
+    ranking: 0,
+    hourlyRate: "$0",
+    bio: "",
+    activeProjects: [],
   });
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userAuth?: any) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -113,12 +89,20 @@ export default function Home() {
 
       if (data) {
         setProfile(data);
+        if (data.role === 'hirer') {
+          setView('client');
+        } else if (data.role === 'admin') {
+          setView('admin');
+        } else {
+          setView('freelancer');
+        }
       } else {
         // Create initial profile if it doesn't exist
+        const role = userAuth?.user_metadata?.role || "jobseeker";
         const initialData = {
           id: userId,
-          name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
-          role: "jobseeker" as const,
+          name: userAuth?.user_metadata?.full_name || userAuth?.email?.split('@')[0] || "User",
+          role: role as any,
           category: "Developer" as const,
           skills: [],
           hourlyRate: "$0",
@@ -134,6 +118,9 @@ export default function Home() {
            }
         }
         setProfile(prev => ({ ...prev, ...initialData }));
+        if (role === 'hirer') setView('client');
+        else if (role === 'admin') setView('admin');
+        else setView('freelancer');
       }
     } catch (err: any) {
       if (err.code !== 'PGRST205') {
@@ -157,6 +144,13 @@ export default function Home() {
       if (error) throw error;
       
       setProfile(updatedProfile);
+      if (updatedProfile.role === 'hirer') {
+        setView('client');
+      } else if (updatedProfile.role === 'admin') {
+        setView('admin');
+      } else {
+        setView('freelancer');
+      }
       setToastMsg("Profile saved successfully to database!");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
@@ -194,6 +188,8 @@ export default function Home() {
 
       if (data && data.length > 0) {
         setJobs(data);
+      } else {
+        setJobs([]);
       }
     } catch (err: any) {
       if (err.code !== 'PGRST205') {
@@ -211,7 +207,7 @@ export default function Home() {
         setUser(session.user);
         
         // Fetch real profile from DB
-        await fetchProfile(session.user.id);
+        await fetchProfile(session.user.id, session.user);
         
         // Fetch jobs from DB
         await fetchJobs();
@@ -234,7 +230,7 @@ export default function Home() {
         router.push("/auth");
       } else {
         setUser(session.user);
-        fetchProfile(session.user.id);
+        fetchProfile(session.user.id, session.user);
         setLoading(false);
       }
     });
@@ -271,43 +267,19 @@ export default function Home() {
         )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <img 
                   src="/tarawork-removebg-preview.png" 
                   alt="Tara Logo" 
-                  className="h-10 w-auto object-contain"
+                  className="h-9 w-auto object-contain"
                 />
               </div>
               
-              <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                <button
-                  onClick={() => setView("freelancer")}
-                  className={`flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                    view === "freelancer" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4" />
-                  Freelancer
-                </button>
-                <button
-                  onClick={() => setView("client")}
-                  className={`flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                    view === "client" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  Client
-                </button>
-                <button
-                  onClick={() => setView("admin")}
-                  className={`flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                    view === "admin" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <Shield className="w-4 h-4" />
-                  Admin
-                </button>
+              <div className="hidden lg:flex items-center gap-6">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                  {view === 'admin' ? 'Admin Portal' : view === 'client' ? 'Client Dashboard' : 'Freelancer Workspace'}
+                </span>
               </div>
             </div>
 
@@ -349,19 +321,19 @@ export default function Home() {
                 </h2>
                 <p className="text-indigo-100 text-lg mb-8 opacity-90">
                   {profile.category === "Developer" && (
-                    <>There are <span className="font-bold text-white">24 new dev jobs</span> matching your skills today.</>
+                    <>We found <span className="font-bold text-white">{jobs.filter(j => j.category === "Developer").length} development opportunities</span> for you today.</>
                   )}
                   {profile.category === "Virtual Assistant" && (
-                    <>You have <span className="font-bold text-white">18 assistant gigs</span> aligned with your experience.</>
+                    <>There are <span className="font-bold text-white">{jobs.filter(j => j.category === "Virtual Assistant").length} assistant roles</span> available right now.</>
                   )}
                   {profile.category === "Designer" && (
-                    <>Explore <span className="font-bold text-white">12 new design briefs</span> in your niche.</>
+                    <>Explore <span className="font-bold text-white">{jobs.filter(j => j.category === "Designer").length} creative projects</span> in your category.</>
                   )}
                   {profile.category === "Writer" && (
-                    <>Found <span className="font-bold text-white">15 content projects</span> tailored to your profile.</>
+                    <>We found <span className="font-bold text-white">{jobs.filter(j => j.category === "Writer").length} writing gigs</span> tailored to your skills.</>
                   )}
                   {profile.category === "Marketing Specialist" && (
-                    <>Discover <span className="font-bold text-white">9 growth campaigns</span> you can lead.</>
+                    <>Discover <span className="font-bold text-white">{jobs.filter(j => j.category === "Marketing Specialist").length} marketing campaigns</span> you can lead.</>
                   )}
                 </p>
                 <div className="flex flex-wrap gap-4">
@@ -390,42 +362,12 @@ export default function Home() {
 
             {/* Dashboard Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {(
-                profile.category === "Developer"
-                  ? [
-                      { label: "Earnings this month", value: "$1,240", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-                      { label: "Active Projects", value: "3", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-                      { label: "Commits (7d)", value: "84", icon: Clock, color: "text-indigo-600", bg: "bg-indigo-50" },
-                      { label: "Success Rate", value: "98%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
-                    ]
-                  : profile.category === "Virtual Assistant"
-                  ? [
-                      { label: "Hours Tracked", value: "36h", icon: Clock, color: "text-indigo-600", bg: "bg-indigo-50" },
-                      { label: "Tasks Due", value: "7", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-                      { label: "Inbox Zero Streak", value: "12d", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-                      { label: "Client Satisfaction", value: "4.9/5", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
-                    ]
-                  : profile.category === "Designer"
-                  ? [
-                      { label: "Design Reviews", value: "8", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-                      { label: "Approved Components", value: "24", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-                      { label: "Portfolio Views", value: "310", icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
-                      { label: "Success Rate", value: "96%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
-                    ]
-                  : profile.category === "Writer"
-                  ? [
-                      { label: "Articles This Month", value: "6", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-                      { label: "Average Read Time", value: "5m 20s", icon: Clock, color: "text-indigo-600", bg: "bg-indigo-50" },
-                      { label: "SEO Score Avg", value: "92", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-                      { label: "Client Rating", value: "4.8/5", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
-                    ]
-                  : [
-                      { label: "Campaigns Running", value: "4", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-                      { label: "CTR Avg", value: "3.2%", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-                      { label: "Leads (7d)", value: "128", icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
-                      { label: "Budget Utilization", value: "86%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
-                    ]
-              ).map((stat, i) => (
+              {[
+                { label: "Total Earnings", value: "₱0", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
+                { label: "Active Projects", value: profile.activeProjects?.length.toString() || "0", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
+                { label: "Success Rate", value: "0%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
+                { label: "Profile Views", value: "0", icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
+              ].map((stat, i) => (
                 <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
                   <div className={`w-12 h-12 ${stat.bg} rounded-xl flex items-center justify-center`}>
                     <stat.icon className={`w-6 h-6 ${stat.color}`} />

@@ -22,6 +22,7 @@ export default function JobPostingForm() {
     milestones: [],
     customQuestions: [],
     deadline: "",
+    category: "Developer",
   });
 
   const [skillInput, setSkillInput] = useState("");
@@ -105,7 +106,6 @@ export default function JobPostingForm() {
         id: Math.random().toString(36).substr(2, 9),
         company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Hirer",
         createdAt: new Date().toISOString(),
-        category: "Developer", // Default or could be inferred from title/description
       };
 
       const { error } = await supabase
@@ -132,6 +132,7 @@ export default function JobPostingForm() {
         milestones: [],
         customQuestions: [],
         deadline: "",
+        category: "Developer",
       });
     } catch (err: any) {
       console.error("Error publishing job:", err);
@@ -289,6 +290,26 @@ export default function JobPostingForm() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        <div>
+          <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2 text-indigo-600">Category</label>
+          <div className="relative">
+            <select
+              className="appearance-none block w-full rounded-2xl border-2 border-gray-100 bg-gray-50 px-5 py-3 font-bold text-gray-700 focus:border-indigo-600 focus:outline-none transition-all cursor-pointer"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+            >
+              <option value="Developer">Developer</option>
+              <option value="Virtual Assistant">Virtual Assistant</option>
+              <option value="Designer">Designer</option>
+              <option value="Writer">Writer</option>
+              <option value="Marketing Specialist">Marketing Specialist</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2 text-indigo-600">Work Type</label>
           <div className="relative">
