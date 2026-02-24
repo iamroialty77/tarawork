@@ -199,6 +199,60 @@ CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR
         ))}
       </div>
 
+      {/* Authentication Checklist */}
+      <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+            <ShieldCheck className="w-6 h-6 text-amber-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Authentication Setup Checklist</h3>
+            <p className="text-sm text-slate-500">Siguraduhin na ang mga sumusunod ay naka-enable sa iyong Supabase Dashboard.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white/50 p-4 rounded-2xl space-y-3">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Social Providers</h4>
+            <ul className="space-y-2">
+              <li className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                <div className="w-4 h-4 rounded-full border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                </div>
+                Google (Client ID & Secret Required)
+              </li>
+              <li className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                <div className="w-4 h-4 rounded-full border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                </div>
+                Facebook (App ID & Secret Required)
+              </li>
+              <li className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                <div className="w-4 h-4 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                </div>
+                LinkedIn (Use <b>linkedin_oidc</b> in Dashboard)
+              </li>
+              <li className="flex items-center gap-2 text-sm font-medium text-indigo-600 font-bold mt-2">
+                <div className="w-4 h-4 rounded-full border-2 border-indigo-500 bg-indigo-50 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                </div>
+                Enable "Link accounts with same email"
+              </li>
+            </ul>
+          </div>
+          <div className="bg-white/50 p-4 rounded-2xl space-y-3">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Redirect URLs</h4>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Dapat naka-whitelist ang mga sumusunod sa <b>Authentication &gt; URL Configuration</b>:
+            </p>
+            <div className="bg-slate-900 rounded-xl p-3 font-mono text-[10px] text-slate-300">
+              {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/*<br />
+              {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/auth/callback
+            </div>
+          </div>
+        </div>
+      </div>
+
       <AnimatePresence>
         {showToast && (
           <motion.div 

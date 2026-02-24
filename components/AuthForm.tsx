@@ -49,15 +49,25 @@ export default function AuthForm() {
       // Set a flag to show notification on redirect back
       sessionStorage.setItem('social_login_pending', provider);
       
+      // Use linkedin_oidc for newer projects as it's the standard now
+      const effectiveProvider = provider === 'linkedin' ? 'linkedin_oidc' : provider;
+      
       const { error } = await supabase.auth.signInWithOAuth({
-        provider,
+        provider: effectiveProvider as any,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) throw error;
     } catch (err: any) {
-      setError(err.message || "An error occurred during social login.");
+      console.error("Social login error:", err);
+      let message = err.message || "An error occurred during social login.";
+      
+      if (message.includes("provider is not enabled")) {
+        message = `Authentication Error: Ang ${provider} login ay hindi pa enabled sa Supabase Dashboard. Pakipuntahan ang Authentication > Providers at i-enable ang ${provider}.`;
+      }
+      
+      setError(message);
       setLoading(false);
     }
   };
