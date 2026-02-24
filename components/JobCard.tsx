@@ -12,10 +12,12 @@ import {
   ShieldCheck,
   TrendingUp,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from "lucide-react";
 import { useState } from "react";
 import { cn, formatRelativeTime } from "../lib/utils";
+import Link from "next/link";
 
 export interface JobCardProps {
   job: Job;
@@ -137,6 +139,13 @@ export default function JobCard({ job, index = 0 }: JobCardProps) {
             Posted {formatRelativeTime(job.createdAt)}
           </span>
           <div className="flex gap-2">
+            <Link
+              href="/messages"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Message
+            </Link>
             <button 
               onClick={() => alert(`Details for "${job.title}" at ${job.company}:\n\n${job.description}`)}
               className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"

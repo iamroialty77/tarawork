@@ -1,8 +1,9 @@
 "use client";
 
-import { FreelancerProfile, FreelancerCategory } from "../types";
+import { FreelancerProfile, FreelancerCategory, PortfolioItem } from "../types";
 import { useState, useEffect, useRef } from "react";
 import { Camera, Globe, Github, Linkedin, Link as LinkIcon, User, Briefcase, Mail } from "lucide-react";
+import PortfolioManager from "./PortfolioManager";
 
 interface ProfileFormProps {
   initialProfile: FreelancerProfile;
@@ -38,6 +39,33 @@ export default function ProfileForm({ initialProfile, onUpdate, isSaving = false
     const newProfile = {
       ...profile,
       skills: profile.skills.filter((s) => s !== skillToRemove),
+    };
+    setProfile(newProfile);
+    onUpdate(newProfile);
+  };
+
+  const addPortfolioItem = (item: Partial<PortfolioItem>) => {
+    const newItem: PortfolioItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      profile_id: profile.id || "",
+      title: item.title || "",
+      description: item.description || "",
+      project_url: item.project_url || "",
+      technologies: item.technologies || [],
+      created_at: new Date().toISOString(),
+    };
+    const newProfile = {
+      ...profile,
+      portfolio: [...(profile.portfolio || []), newItem],
+    };
+    setProfile(newProfile);
+    onUpdate(newProfile);
+  };
+
+  const removePortfolioItem = (id: string) => {
+    const newProfile = {
+      ...profile,
+      portfolio: (profile.portfolio || []).filter((item) => item.id !== id),
     };
     setProfile(newProfile);
     onUpdate(newProfile);
@@ -204,6 +232,17 @@ export default function ProfileForm({ initialProfile, onUpdate, isSaving = false
                 </span>
               ))}
             </div>
+          </div>
+        )}
+
+        {profile.role === "jobseeker" && (
+          <div className="pt-6 border-t border-slate-100">
+            <PortfolioManager
+              items={profile.portfolio || []}
+              onAdd={addPortfolioItem}
+              onRemove={removePortfolioItem}
+              isOwner={true}
+            />
           </div>
         )}
 

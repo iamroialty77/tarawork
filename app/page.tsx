@@ -314,6 +314,13 @@ export default function Home() {
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
               </button>
+              <Link
+                href="/messages"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative"
+              >
+                <Mail className="w-5 h-5" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white"></span>
+              </Link>
               <button 
                 onClick={() => alert("Settings module coming soon! You can update your profile below for now.")}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"

@@ -120,6 +120,38 @@ export interface UserProfile {
   squad?: Squad;
   aiInsights?: AIAnalysis;
   ranking?: number; // Leaderboard position
+  portfolio?: PortfolioItem[];
+}
+
+export interface PortfolioItem {
+  id: string;
+  profile_id: string;
+  title: string;
+  description: string;
+  image_url?: string;
+  project_url?: string;
+  technologies: string[];
+  completed_date?: string;
+  created_at: string;
+}
+
+export interface Conversation {
+  id: string;
+  participant_1: string;
+  participant_2: string;
+  created_at: string;
+  updated_at: string;
+  last_message?: Message;
+  other_participant?: UserProfile;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
 }
 
 export interface FreelancerProfile extends UserProfile {} // Deprecated, use UserProfile
