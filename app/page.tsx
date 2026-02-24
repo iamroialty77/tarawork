@@ -44,6 +44,7 @@ export default function Home() {
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [profile, setProfile] = useState<FreelancerProfile>({
     name: "Alex Rivera",
+    role: "jobseeker",
     category: "Developer",
     skills: ["React", "TypeScript", "Tailwind CSS"],
     verifiedSkills: [
@@ -83,6 +84,70 @@ export default function Home() {
     ],
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setProfile(data);
+      } else {
+        // Create initial profile if it doesn't exist
+        const initialData = {
+          id: userId,
+          name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
+          role: "jobseeker" as const,
+          category: "Developer" as const,
+          skills: [],
+          hourlyRate: "$0",
+          bio: "",
+        };
+        const { error: insertError } = await supabase.from('profiles').insert([initialData]);
+        if (insertError) console.error("Error creating profile:", insertError);
+        setProfile(prev => ({ ...prev, ...initialData }));
+      }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
+
+  const handleProfileSave = async (updatedProfile: FreelancerProfile) => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          ...updatedProfile,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+      
+      setProfile(updatedProfile);
+      setToastMsg("Profile saved successfully to database!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err: any) {
+      console.error("Error saving profile:", err);
+      setToastMsg(`Error: ${err.message}`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -91,6 +156,9 @@ export default function Home() {
       } else {
         setUser(session.user);
         
+        // Fetch real profile from DB
+        await fetchProfile(session.user.id);
+        
         // Check for first-time social login to show notification
         const isNewSocial = typeof window !== 'undefined' ? sessionStorage.getItem('social_login_pending') : null;
         if (isNewSocial) {
@@ -98,12 +166,6 @@ export default function Home() {
           setShowToast(true);
           sessionStorage.removeItem('social_login_pending');
           setTimeout(() => setShowToast(false), 5000);
-        }
-
-        if (session.user.user_metadata?.full_name) {
-          setProfile(prev => ({ ...prev, name: session.user.user_metadata.full_name }));
-        } else if (session.user.email) {
-          setProfile(prev => ({ ...prev, name: session.user.email!.split('@')[0] }));
         }
         setLoading(false);
       }
@@ -115,11 +177,7 @@ export default function Home() {
         router.push("/auth");
       } else {
         setUser(session.user);
-        if (session.user.user_metadata?.full_name) {
-          setProfile(prev => ({ ...prev, name: session.user.user_metadata.full_name }));
-        } else if (session.user.email) {
-          setProfile(prev => ({ ...prev, name: session.user.email!.split('@')[0] }));
-        }
+        fetchProfile(session.user.id);
         setLoading(false);
       }
     });
@@ -309,7 +367,11 @@ export default function Home() {
               {/* Left Column */}
               <div className="lg:col-span-4 space-y-6">
                 <div className="sticky top-24 space-y-6">
-                  <ProfileForm initialProfile={profile} onUpdate={setProfile} />
+                  <ProfileForm 
+                    initialProfile={profile} 
+                    onUpdate={handleProfileSave} 
+                    isSaving={isSaving}
+                  />
                   
                   {/* Soft Skills & Badges */}
                   <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
@@ -428,19 +490,63 @@ export default function Home() {
             </div>
           </div>
         ) : view === "client" ? (
-          <div className="space-y-8 max-w-4xl mx-auto">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-2xl mb-6">
-                <Briefcase className="w-8 h-8 text-indigo-600" />
+          <div className="space-y-8">
+            <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 md:p-12 text-white">
+              <div className="relative z-10 max-w-2xl">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">
+                  Hire top talent for <span className="text-indigo-400">{profile.companyName || "your company"}</span>
+                </h2>
+                <p className="text-slate-300 text-lg mb-8 opacity-90">
+                  Ready to scale your team? Post a job and get matches in minutes.
+                </p>
               </div>
-              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Post a New Job</h2>
-              <p className="mt-4 text-lg text-slate-600">
-                Find the best freelancer for your project in just a few minutes.
-              </p>
+              <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-indigo-500 rounded-full blur-3xl opacity-10"></div>
             </div>
-            
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 p-8">
-              <JobPostingForm />
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-4 space-y-6">
+                <ProfileForm 
+                  initialProfile={profile} 
+                  onUpdate={handleProfileSave} 
+                  isSaving={isSaving}
+                />
+                
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-indigo-600" />
+                    Hirer Stats
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 font-medium">Active Postings</span>
+                      <span className="text-sm font-bold text-slate-900">2</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 font-medium">Total Spent</span>
+                      <span className="text-sm font-bold text-emerald-600">₱45,200</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 font-medium">Hired Freelancers</span>
+                      <span className="text-sm font-bold text-slate-900">5</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-8">
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 p-8">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                      <Briefcase className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">Post a New Job</h2>
+                      <p className="text-slate-500">Find the perfect talent for your project.</p>
+                    </div>
+                  </div>
+                  <JobPostingForm />
+                </div>
+              </div>
             </div>
           </div>
         ) : (

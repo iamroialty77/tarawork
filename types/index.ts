@@ -103,16 +103,21 @@ export interface Project {
   figmaFile?: string;
 }
 
-export interface FreelancerProfile {
+export interface UserProfile {
+  id?: string;
   name: string;
+  role: "jobseeker" | "hirer";
   category: FreelancerCategory;
   skills: string[];
   verifiedSkills?: VerifiedSkill[];
   softSkills?: SoftSkill[];
   hourlyRate: string;
   bio: string;
+  companyName?: string;
   activeProjects?: Project[];
   squad?: Squad;
   aiInsights?: AIAnalysis;
   ranking?: number; // Leaderboard position
 }
+
+export interface FreelancerProfile extends UserProfile {} // Deprecated, use UserProfile
