@@ -21,8 +21,10 @@ import {
   TrendingUp,
   Award,
   Shield,
-  Clock
+  Clock,
+  LogIn
 } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
@@ -75,10 +77,11 @@ export default function Home() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white fill-current" />
-                </div>
-                <span className="text-xl font-bold tracking-tight text-slate-900">tara.</span>
+                <img 
+                  src="/tarawork-removebg-preview.png" 
+                  alt="Tara Logo" 
+                  className="h-10 w-auto object-contain"
+                />
               </div>
               
               <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -113,6 +116,13 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-4">
+              <Link 
+                href="/auth"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-all"
+              >
+                <LogIn className="w-4 h-4" />
+                Login
+              </Link>
               <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
@@ -316,10 +326,11 @@ export default function Home() {
       <footer className="bg-white border-t border-slate-200 py-12 mt-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-slate-200 rounded flex items-center justify-center">
-              <Zap className="w-4 h-4 text-slate-400 fill-current" />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-slate-400">tara.</span>
+            <img 
+              src="/tarawork-removebg-preview.png" 
+              alt="Tara Logo" 
+              className="h-8 w-auto grayscale opacity-50"
+            />
           </div>
           <p className="text-slate-400 text-sm">© 2024 Tara Marketplace. All rights reserved.</p>
         </div>
