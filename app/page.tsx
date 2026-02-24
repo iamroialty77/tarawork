@@ -43,6 +43,8 @@ export default function Home() {
   const [toastMsg, setToastMsg] = useState("");
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [jobs, setJobs] = useState<Job[]>(MOCK_JOBS);
+  const [dbError, setDbError] = useState<boolean>(false);
+  const [missingTables, setMissingTables] = useState<string[]>([]);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -99,9 +101,12 @@ export default function Home() {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        if (error.message.includes("relation \"profiles\" does not exist") || error.code === 'PGRST205') {
-          setToastMsg("⚠️ Database Setup Required: The 'profiles' table is missing. Please run the SQL script in your Supabase dashboard.");
+        if (error.message.includes("relation \"profiles\" does not exist") || error.code === 'PGRST205' || error.message.includes("Could not find the table")) {
+          setDbError(true);
+          setMissingTables(prev => [...new Set([...prev, "profiles"])]);
+          setToastMsg("⚠️ Database Setup Required: The 'profiles' table is missing. Go to Admin tab for setup SQL.");
           setShowToast(true);
+          return; // Stop here to avoid further errors
         }
         throw error;
       }
@@ -120,11 +125,20 @@ export default function Home() {
           bio: "",
         };
         const { error: insertError } = await supabase.from('profiles').insert([initialData]);
-        if (insertError) console.error("Error creating profile:", insertError);
+        if (insertError) {
+           if (insertError.code === 'PGRST205' || insertError.message.includes('relation')) {
+             setDbError(true);
+             setMissingTables(prev => [...new Set([...prev, "profiles"])]);
+           } else {
+             console.error("Error creating profile:", insertError);
+           }
+        }
         setProfile(prev => ({ ...prev, ...initialData }));
       }
-    } catch (err) {
-      console.error("Error fetching profile:", err);
+    } catch (err: any) {
+      if (err.code !== 'PGRST205') {
+        console.error("Error fetching profile:", err);
+      }
     }
   };
 
@@ -168,9 +182,10 @@ export default function Home() {
         .order('createdAt', { ascending: false });
 
       if (error) {
-        if (error.message.includes("relation \"jobs\" does not exist")) {
+        if (error.message.includes("relation \"jobs\" does not exist") || error.code === 'PGRST205' || error.message.includes("Could not find the table")) {
+          setDbError(true);
+          setMissingTables(prev => [...new Set([...prev, "jobs"])]);
           console.warn("Table 'jobs' not found. Please run the SQL setup script.");
-          // Don't show toast here as it might be annoying on every refresh, just log it
         } else if (error.code !== 'PGRST116') {
           console.error("Error fetching jobs:", error);
         }
@@ -180,8 +195,10 @@ export default function Home() {
       if (data && data.length > 0) {
         setJobs(data);
       }
-    } catch (err) {
-      console.error("Error fetching jobs:", err);
+    } catch (err: any) {
+      if (err.code !== 'PGRST205') {
+        console.error("Error fetching jobs:", err);
+      }
     }
   };
 
@@ -240,6 +257,18 @@ export default function Home() {
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
+        {dbError && (
+          <div className="bg-red-600 text-white text-[10px] sm:text-xs font-bold py-2 px-4 text-center animate-in fade-in slide-in-from-top-2 duration-500 flex items-center justify-center gap-2">
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>ACTION REQUIRED: Your Supabase database tables are missing ({missingTables.join(", ")}).</span>
+            <button 
+              onClick={() => setView("admin")}
+              className="ml-1 underline hover:bg-white/30 transition-all font-black bg-white/20 px-2 py-0.5 rounded cursor-pointer"
+            >
+              FIX NOW IN ADMIN
+            </button>
+          </div>
+        )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-8">

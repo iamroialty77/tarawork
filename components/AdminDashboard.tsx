@@ -29,6 +29,8 @@ export default function AdminDashboard() {
     _test: boolean;
   }>({ profiles: false, jobs: false, _test: false });
   const [showSql, setShowSql] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
 
   useEffect(() => {
     async function checkConnection() {
@@ -73,8 +75,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
 CREATE POLICY "Users can insert their own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
 CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 CREATE TABLE IF NOT EXISTS public.jobs (
@@ -95,16 +100,21 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     "customQuestions" JSONB DEFAULT '[]'
 );
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Jobs are viewable by everyone." ON public.jobs;
 CREATE POLICY "Jobs are viewable by everyone." ON public.jobs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Authenticated users can post jobs." ON public.jobs;
 CREATE POLICY "Authenticated users can post jobs." ON public.jobs FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 CREATE TABLE IF NOT EXISTS public._test_connection (id SERIAL PRIMARY KEY, created_at TIMESTAMP WITH TIME ZONE DEFAULT now());
 ALTER TABLE public._test_connection ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select from test table" ON public._test_connection;
 CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR SELECT USING (true);`;
 
   const copySql = () => {
     navigator.clipboard.writeText(sqlCode);
-    alert("SQL Code copied to clipboard!");
+    setToastMsg("SQL Code copied to clipboard! Paste it into Supabase SQL Editor.");
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 4000);
   };
 
   const stats = [
@@ -164,6 +174,22 @@ CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR
           </motion.div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 right-8 z-50 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700"
+          >
+            <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-white" />
+            </div>
+            <p className="font-bold text-sm">{toastMsg}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Table Section */}

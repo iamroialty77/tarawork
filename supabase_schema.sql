@@ -26,14 +26,17 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Policies for PROFILES
 -- Anyone can view profiles (to see freelancer/client details)
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles
     FOR SELECT USING (true);
 
 -- Only the owner can insert their own profile
+DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
 CREATE POLICY "Users can insert their own profile." ON public.profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Only the owner can update their own profile
+DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
 CREATE POLICY "Users can update own profile." ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
@@ -63,10 +66,12 @@ ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
 
 -- Policies for JOBS
 -- Anyone can view jobs
+DROP POLICY IF EXISTS "Jobs are viewable by everyone." ON public.jobs;
 CREATE POLICY "Jobs are viewable by everyone." ON public.jobs
     FOR SELECT USING (true);
 
 -- Any authenticated user can post a job
+DROP POLICY IF EXISTS "Authenticated users can post jobs." ON public.jobs;
 CREATE POLICY "Authenticated users can post jobs." ON public.jobs
     FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
@@ -77,4 +82,7 @@ CREATE TABLE IF NOT EXISTS public._test_connection (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 ALTER TABLE public._test_connection ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select from test table" ON public._test_connection;
 CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR SELECT USING (true);
+
+-- FINAL STEP: If you still see errors, try running "RELOAD SCHEMA" in Supabase settings or refresh your app.
