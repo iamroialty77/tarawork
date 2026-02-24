@@ -12,7 +12,12 @@ import {
   ChevronRight,
   MessageSquare,
   ExternalLink,
-  Lock
+  Lock,
+  Smile,
+  Meh,
+  Frown,
+  TrendingUp,
+  Award
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -234,8 +239,8 @@ export default function Workspace({ projects }: WorkspaceProps) {
               <div className="space-y-3">
                 <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Recent Meeting Minutes (AI Generated)</h5>
                 {[
-                  { title: "Sprint 4 Planning", date: "Today, 10:30 AM", notes: "Agreed on API spec; Client requested dark mode preview by Friday." },
-                  { title: "Initial Discovery Call", date: "Feb 22, 2024", notes: "Budget confirmed at $1500; Project timeline: 3 months." },
+                  { title: "Sprint 4 Planning", date: "Today, 10:30 AM", notes: "Agreed on API spec; Client requested dark mode preview by Friday.", sentiment: "Positive" },
+                  { title: "Initial Discovery Call", date: "Feb 22, 2024", notes: "Budget confirmed at $1500; Project timeline: 3 months.", sentiment: "Neutral" },
                 ].map((call, i) => (
                   <div key={i} className="p-4 bg-white border border-slate-100 rounded-2xl hover:bg-slate-50 transition-all group">
                     <div className="flex justify-between items-start mb-2">
@@ -243,10 +248,23 @@ export default function Workspace({ projects }: WorkspaceProps) {
                         <FileText className="w-4 h-4 text-slate-400" />
                         <span className="text-sm font-bold text-slate-900">{call.title}</span>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-400">{call.date}</span>
+                      <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                          call.sentiment === "Positive" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-500"
+                        }`}>
+                          {call.sentiment === "Positive" ? <Smile className="w-2.5 h-2.5" /> : <Meh className="w-2.5 h-2.5" />}
+                          {call.sentiment} Sentiment
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400">{call.date}</span>
+                      </div>
                     </div>
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed italic">"{call.notes}"</p>
-                    <div className="mt-3 flex justify-end">
+                    <div className="mt-3 flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        <Award className="w-3 h-3 text-amber-500" />
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">AI Performance Tip: </span>
+                        <span className="text-[9px] font-bold text-slate-500">Fast bug resolution detected (+5 score)</span>
+                      </div>
                       <button className="text-[10px] font-bold text-indigo-600 hover:underline group-hover:translate-x-1 transition-transform">
                         Read Full Minutes →
                       </button>

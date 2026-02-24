@@ -9,7 +9,8 @@ import {
   Briefcase, 
   TrendingUp,
   Settings,
-  MoreVertical
+  MoreVertical,
+  Lock
 } from "lucide-react";
 import { useState } from "react";
 
@@ -19,6 +20,7 @@ interface TeamManagerProps {
 
 export default function TeamManager({ squad }: TeamManagerProps) {
   const [isManaging, setIsManaging] = useState(false);
+  const currentUserId = "1"; // Simulating logged in user
 
   const defaultSquad: Squad = squad || {
     id: "squad-1",
@@ -26,11 +28,13 @@ export default function TeamManager({ squad }: TeamManagerProps) {
     leadId: "1",
     totalBudget: 50000,
     members: [
-      { id: "1", name: "Alex Rivera", role: "Lead Frontend", share: 40 },
-      { id: "2", name: "Sarah Chen", role: "Backend Engineer", share: 30 },
-      { id: "3", name: "Mike Ross", role: "UI/UX Designer", share: 30 },
+      { id: "1", name: "Alex Rivera", role: "Lead Frontend", share: 40, permissions: ["manage-budget", "add-members", "edit-tasks"] },
+      { id: "2", name: "Sarah Chen", role: "Backend Engineer", share: 30, permissions: ["view-only", "edit-tasks"] },
+      { id: "3", name: "Mike Ross", role: "UI/UX Designer", share: 30, permissions: ["view-only", "edit-tasks"] },
     ]
   };
+
+  const isLead = defaultSquad.leadId === currentUserId;
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-6">
@@ -98,10 +102,17 @@ export default function TeamManager({ squad }: TeamManagerProps) {
             </div>
           ))}
 
-          <button className="w-full py-4 border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 font-bold text-sm">
-            <UserPlus className="w-4 h-4" />
-            Add Squad Member
-          </button>
+          {isLead ? (
+            <button className="w-full py-4 border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 font-bold text-sm">
+              <UserPlus className="w-4 h-4" />
+              Add Squad Member
+            </button>
+          ) : (
+            <div className="w-full py-4 border-2 border-dashed border-slate-50 rounded-2xl text-slate-300 flex items-center justify-center gap-2 font-bold text-xs grayscale">
+              <Lock className="w-3.5 h-3.5" />
+              Member management restricted to Lead
+            </div>
+          )}
         </div>
       </div>
 

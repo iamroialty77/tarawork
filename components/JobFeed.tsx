@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Job, FreelancerProfile, PaymentMethod, JobDuration } from "../types";
+import { Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCategory } from "../types";
 import JobCard from "./JobCard";
 
 import { Search, Filter, Sparkles } from "lucide-react";
@@ -15,6 +15,7 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | "All">("All");
   const [durationFilter, setDurationFilter] = useState<JobDuration | "All">("All");
+  const [categoryFilter, setCategoryFilter] = useState<FreelancerCategory | "All">(profile.category || "All");
   const [useSmartMatching, setUseSmartMatching] = useState(true);
 
   const filteredJobs = useMemo(() => {
@@ -29,7 +30,12 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
         if (!hasMatchingSkill) return false;
       }
 
-      // 2. Search Term
+      // 2. Category Filter
+      if (categoryFilter !== "All" && job.category !== categoryFilter) {
+        return false;
+      }
+
+      // 3. Search Term
       const matchesSearch =
         job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         job.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -47,7 +53,7 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
 
       return true;
     });
-  }, [jobs, profile.skills, searchTerm, paymentFilter, durationFilter, useSmartMatching]);
+  }, [jobs, profile.skills, searchTerm, paymentFilter, durationFilter, useSmartMatching, categoryFilter]);
 
   return (
     <div className="space-y-6">
@@ -87,6 +93,19 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
               <option value="1-2 weeks">1-2 weeks</option>
               <option value="1-3 months">1-3 months</option>
               <option value="Ongoing">Ongoing</option>
+            </select>
+
+            <select
+              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as any)}
+            >
+              <option value="All">All Categories</option>
+              <option value="Developer">Developer</option>
+              <option value="Virtual Assistant">Virtual Assistant</option>
+              <option value="Designer">Designer</option>
+              <option value="Writer">Writer</option>
+              <option value="Marketing Specialist">Marketing Specialist</option>
             </select>
           </div>
         </div>

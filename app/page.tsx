@@ -20,13 +20,15 @@ import {
   Search as SearchIcon,
   TrendingUp,
   Award,
-  Shield
+  Shield,
+  Clock
 } from "lucide-react";
 
 export default function Home() {
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [profile, setProfile] = useState<FreelancerProfile>({
     name: "Alex Rivera",
+    category: "Developer",
     skills: ["React", "TypeScript", "Tailwind CSS"],
     verifiedSkills: [
       { name: "React Framework", score: 92, lastAssessment: "2024-02-15", isVerified: true },
@@ -138,7 +140,21 @@ export default function Home() {
                   Welcome back, <span className="text-indigo-400">{profile.name.split(' ')[0]}!</span>
                 </h2>
                 <p className="text-indigo-100 text-lg mb-8 opacity-90">
-                  There are <span className="font-bold text-white">24 new jobs</span> matching your skills posted today.
+                  {profile.category === "Developer" && (
+                    <>There are <span className="font-bold text-white">24 new dev jobs</span> matching your skills today.</>
+                  )}
+                  {profile.category === "Virtual Assistant" && (
+                    <>You have <span className="font-bold text-white">18 assistant gigs</span> aligned with your experience.</>
+                  )}
+                  {profile.category === "Designer" && (
+                    <>Explore <span className="font-bold text-white">12 new design briefs</span> in your niche.</>
+                  )}
+                  {profile.category === "Writer" && (
+                    <>Found <span className="font-bold text-white">15 content projects</span> tailored to your profile.</>
+                  )}
+                  {profile.category === "Marketing Specialist" && (
+                    <>Discover <span className="font-bold text-white">9 growth campaigns</span> you can lead.</>
+                  )}
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <button className="bg-white text-indigo-900 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors shadow-lg">
@@ -160,12 +176,42 @@ export default function Home() {
 
             {/* Dashboard Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Earnings this month", value: "$1,240", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-                { label: "Active Projects", value: "3", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
-                { label: "Profile Views", value: "142", icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
-                { label: "Success Rate", value: "98%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
-              ].map((stat, i) => (
+              {(
+                profile.category === "Developer"
+                  ? [
+                      { label: "Earnings this month", value: "$1,240", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+                      { label: "Active Projects", value: "3", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
+                      { label: "Commits (7d)", value: "84", icon: Clock, color: "text-indigo-600", bg: "bg-indigo-50" },
+                      { label: "Success Rate", value: "98%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
+                    ]
+                  : profile.category === "Virtual Assistant"
+                  ? [
+                      { label: "Hours Tracked", value: "36h", icon: Clock, color: "text-indigo-600", bg: "bg-indigo-50" },
+                      { label: "Tasks Due", value: "7", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
+                      { label: "Inbox Zero Streak", value: "12d", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+                      { label: "Client Satisfaction", value: "4.9/5", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
+                    ]
+                  : profile.category === "Designer"
+                  ? [
+                      { label: "Design Reviews", value: "8", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
+                      { label: "Approved Components", value: "24", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+                      { label: "Portfolio Views", value: "310", icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
+                      { label: "Success Rate", value: "96%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
+                    ]
+                  : profile.category === "Writer"
+                  ? [
+                      { label: "Articles This Month", value: "6", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
+                      { label: "Average Read Time", value: "5m 20s", icon: Clock, color: "text-indigo-600", bg: "bg-indigo-50" },
+                      { label: "SEO Score Avg", value: "92", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+                      { label: "Client Rating", value: "4.8/5", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
+                    ]
+                  : [
+                      { label: "Campaigns Running", value: "4", icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
+                      { label: "CTR Avg", value: "3.2%", icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+                      { label: "Leads (7d)", value: "128", icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
+                      { label: "Budget Utilization", value: "86%", icon: Award, color: "text-amber-600", bg: "bg-amber-50" },
+                    ]
+              ).map((stat, i) => (
                 <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
                   <div className={`w-12 h-12 ${stat.bg} rounded-xl flex items-center justify-center`}>
                     <stat.icon className={`w-6 h-6 ${stat.color}`} />

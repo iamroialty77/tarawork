@@ -1,0 +1,59 @@
+openapi: 3.0.0
+info:
+  title: Tara Marketplace API
+  description: API for the Tara Freelance Marketplace platform. Supports architectural scaling and microservices transition.
+  version: 1.0.0
+servers:
+  - url: https://api.tara-market.com/v1
+    description: Production server
+paths:
+  /transactions/payout:
+    post:
+      summary: Process a payout to a freelancer
+      tags:
+        - Financial
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                method:
+                  type: string
+                  enum: [GCash, Maya, Bank]
+      responses:
+        '200':
+          description: Payout processed successfully
+  /webhooks/github:
+    post:
+      summary: Handle GitHub events for auto-escrow
+      tags:
+        - Webhooks
+      responses:
+        '200':
+          description: Event processed
+  /squads/{squadId}/members:
+    post:
+      summary: Add a member to a squad (Lead only)
+      tags:
+        - Squads
+      security:
+        - RBAC: [add-members]
+      parameters:
+        - name: squadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Member added
+components:
+  securitySchemes:
+    RBAC:
+      type: apiKey
+      in: header
+      name: X-User-Permissions

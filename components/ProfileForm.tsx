@@ -1,6 +1,6 @@
 "use client";
 
-import { FreelancerProfile } from "../types";
+import { FreelancerProfile, FreelancerCategory } from "../types";
 import { useState } from "react";
 
 interface ProfileFormProps {
@@ -47,6 +47,25 @@ export default function ProfileForm({ initialProfile, onUpdate }: ProfileFormPro
             value={profile.name}
             onChange={(e) => setProfile({ ...profile, name: e.target.value })}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Category</label>
+          <select
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-black"
+            value={profile.category}
+            onChange={(e) => {
+              const newProfile = { ...profile, category: e.target.value as FreelancerCategory };
+              setProfile(newProfile);
+              onUpdate(newProfile);
+            }}
+          >
+            <option value="Developer">Developer</option>
+            <option value="Virtual Assistant">Virtual Assistant</option>
+            <option value="Designer">Designer</option>
+            <option value="Writer">Writer</option>
+            <option value="Marketing Specialist">Marketing Specialist</option>
+          </select>
         </div>
 
         <div>

@@ -1,8 +1,11 @@
+export type FreelancerCategory = "Developer" | "Virtual Assistant" | "Designer" | "Writer" | "Marketing Specialist";
 export type PaymentMethod = "Hourly" | "Flat-Rate";
 export type JobType = "Full-time" | "Part-time" | "Contract" | "One-time Project";
 export type JobDuration = "1-2 weeks" | "1-3 months" | "Ongoing";
 export type ProjectStatus = "Active" | "Completed" | "Pending" | "In-Review";
 export type WorkspaceType = "Code" | "Design" | "General";
+
+export type RolePermission = "manage-budget" | "add-members" | "view-only" | "edit-tasks";
 
 export interface SquadMember {
   id: string;
@@ -10,6 +13,7 @@ export interface SquadMember {
   role: string;
   avatar?: string;
   share: number; // percentage of budget
+  permissions: RolePermission[];
 }
 
 export interface Squad {
@@ -29,6 +33,11 @@ export interface AIAnalysis {
   }[];
   compatibilityScore: number; // 0-100
   cultureMatch: string[]; // e.g. ["Fast-paced", "Detail-oriented"]
+  performanceMetrics?: {
+    technicalDebtResolved: number;
+    responseTime: string;
+    clientSentiment: "Positive" | "Neutral" | "Negative";
+  };
 }
 
 export interface SoftSkill {
@@ -61,6 +70,7 @@ export interface Job {
   title: string;
   description: string;
   company: string;
+  category: FreelancerCategory;
   paymentMethod: PaymentMethod;
   rate: string;
   duration: JobDuration;
@@ -95,6 +105,7 @@ export interface Project {
 
 export interface FreelancerProfile {
   name: string;
+  category: FreelancerCategory;
   skills: string[];
   verifiedSkills?: VerifiedSkill[];
   softSkills?: SoftSkill[];
