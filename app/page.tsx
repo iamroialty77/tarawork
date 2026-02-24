@@ -280,13 +280,13 @@ export default function Home() {
           </div>
         )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center min-h-[1.5in] py-4">
+          <div className="flex justify-between items-center min-h-[5cm] py-4">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <img 
                   src="/tarawork-removebg-preview.png" 
                   alt="Tara Logo" 
-                  className="h-[1.5in] w-auto object-contain"
+                  className="h-[5cm] w-auto object-contain"
                 />
               </div>
               
@@ -645,7 +645,7 @@ export default function Home() {
             <img 
               src="/tarawork-removebg-preview.png" 
               alt="Tara Logo" 
-              className="h-[1.5in] w-auto grayscale opacity-50"
+              className="h-[5cm] w-auto grayscale opacity-50"
             />
           </button>
           <p className="text-slate-400 text-sm">© 2024 Tara Marketplace. All rights reserved.</p>
