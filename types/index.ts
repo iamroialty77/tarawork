@@ -106,7 +106,7 @@ export interface Project {
 export interface UserProfile {
   id?: string;
   name: string;
-  role: "jobseeker" | "hirer";
+  role: "jobseeker" | "hirer" | "admin";
   category: FreelancerCategory;
   skills: string[];
   verifiedSkills?: VerifiedSkill[];
