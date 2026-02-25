@@ -18,13 +18,30 @@ import {
   CheckCircle2,
   XCircle,
   Code,
-  Copy
+  Copy,
+  LayoutDashboard,
+  UserCheck,
+  FileText,
+  Activity,
+  ChevronRight,
+  Clock,
+  ExternalLink,
+  Shield,
+  Eye,
+  Flag,
+  Check,
+  BarChart3
 } from "lucide-react";
 
+type TabType = "overview" | "users" | "jobs" | "system";
+
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [dbStatus, setDbStatus] = useState<"connecting" | "connected" | "error">("connecting");
-  const [counts, setCounts] = useState({ users: 0, jobs: 0 });
+  const [counts, setCounts] = useState({ users: 0, jobs: 0, hirers: 0, seekers: 0 });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tableStatus, setTableStatus] = useState<{
     profiles: boolean;
     jobs: boolean;
@@ -34,13 +51,16 @@ export default function AdminDashboard() {
     messagingColumns: boolean;
     _test: boolean;
   }>({ profiles: false, jobs: false, messages: false, conversations: false, portfolio_items: false, messagingColumns: false, _test: false });
+  
   const [showSql, setShowSql] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
 
   useEffect(() => {
-    async function checkConnection() {
+    async function fetchData() {
+      setLoading(true);
       try {
+        // Check Connection & Tables
         const { error: testError } = await supabase.from('_test_connection').select('*').limit(1);
         const { error: profilesError } = await supabase.from('profiles').select('id').limit(1);
         const { error: jobsError } = await supabase.from('jobs').select('id').limit(1);
@@ -60,40 +80,56 @@ export default function AdminDashboard() {
         });
 
         setDbStatus("connected");
-        
-        // Fetch actual counts
-        if (!profilesError) {
-          const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-          setCounts(prev => ({ ...prev, users: userCount || 0 }));
-        }
-        if (!jobsError) {
-          const { count: jobCount } = await supabase.from('jobs').select('*', { count: 'exact', head: true });
-          setCounts(prev => ({ ...prev, jobs: jobCount || 0 }));
 
-          // Fetch recent jobs for activity
-          const { data: recentJobs } = await supabase
-            .from('jobs')
-            .select('*')
-            .order('createdAt', { ascending: false })
-            .limit(4);
-          
-          if (recentJobs) {
-            setRecentActivities(recentJobs.map(job => ({
-              id: job.id,
-              user: job.company,
-              action: "Job Posted",
-              details: job.title,
-              time: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "Just now",
-              status: "Live"
-            })));
-          }
+        // Fetch Stats
+        const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        const { count: hirerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'hirer');
+        const { count: seekerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'jobseeker');
+        const { count: jobCount } = await supabase.from('jobs').select('*', { count: 'exact', head: true });
+
+        setCounts({
+          users: userCount || 0,
+          hirers: hirerCount || 0,
+          seekers: seekerCount || 0,
+          jobs: jobCount || 0
+        });
+
+        // Fetch Users for Screening
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(10);
+        
+        if (userData) setUsers(userData);
+
+        // Fetch Recent Jobs for Activity
+        const { data: recentJobs } = await supabase
+          .from('jobs')
+          .select('*')
+          .order('createdAt', { ascending: false })
+          .limit(5);
+        
+        if (recentJobs) {
+          setRecentActivities(recentJobs.map(job => ({
+            id: job.id,
+            user: job.company || "Unknown Company",
+            action: "Job Posted",
+            details: job.title,
+            time: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "Just now",
+            status: "Live"
+          })));
         }
+
       } catch (err) {
-        console.error("Failed to fetch from Supabase:", err);
+        console.error("Dashboard data fetch error:", err);
         setDbStatus("error");
+      } finally {
+        setLoading(false);
       }
     }
-    checkConnection();
+
+    fetchData();
   }, []);
 
   const sqlCode = `-- TARA MARKETPLACE SQL SETUP
@@ -204,7 +240,6 @@ DROP POLICY IF EXISTS "Users can send messages" ON public.messages;
 CREATE POLICY "Users can send messages" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
 
 -- Storage bucket for attachments
--- Run this in Supabase SQL Editor
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('attachments', 'attachments', true) 
 ON CONFLICT (id) DO NOTHING;
@@ -221,16 +256,11 @@ CREATE POLICY "Anyone can view attachments"
 ON storage.objects FOR SELECT 
 USING (bucket_id = 'attachments');
 
--- FIX FOR MISSING COLUMNS (Run if you have existing tables)
+-- FIX FOR MISSING COLUMNS
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_url TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_name TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_type TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
-
--- FIX FOR CONVERSATIONS UPDATE
-DROP POLICY IF EXISTS "Users can update their own conversations" ON public.conversations;
-CREATE POLICY "Users can update their own conversations" ON public.conversations
-    FOR UPDATE USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
 
 -- ENABLE REAL-TIME REPLICATION
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
@@ -240,381 +270,468 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
 
   const copySql = () => {
     navigator.clipboard.writeText(sqlCode);
-    setToastMsg("SQL Code copied to clipboard! Paste it into Supabase SQL Editor.");
+    setToastMsg("SQL Code copied to clipboard!");
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 4000);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
-  const stats = [
-    { label: "Total Users", value: counts.users.toLocaleString(), change: "+100%", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Active Jobs", value: counts.jobs.toLocaleString(), change: "+100%", icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { label: "Total Revenue", value: "₱0", change: "0%", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Disputes", value: "0", change: "0%", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
+  const navItems = [
+    { id: "overview", label: "Overview", icon: LayoutDashboard },
+    { id: "users", label: "User Screening", icon: UserCheck },
+    { id: "jobs", label: "Job Monitoring", icon: Briefcase },
+    { id: "system", label: "System Health", icon: Activity },
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-start">
+    <div className="min-h-screen bg-[#F8FAFC] -mt-8 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-8">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Admin Control Center</h2>
-          <p className="text-slate-500 mt-1">Global platform overview and management.</p>
-        </div>
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
-          dbStatus === "connected" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-          dbStatus === "error" ? "bg-red-50 text-red-600 border-red-100" :
-          "bg-slate-50 text-slate-400 border-slate-100"
-        }`}>
-          <Database className="w-3.5 h-3.5" />
-          {dbStatus === "connected" ? "Supabase Connected" : 
-           dbStatus === "error" ? "Supabase Error" : "Connecting to Supabase..."}
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className={`w-12 h-12 ${stat.bg} rounded-xl flex items-center justify-center`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-              </div>
-              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                stat.change.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-              }`}>
-                {stat.change}
-              </span>
-            </div>
-            <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Authentication Checklist */}
-      <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6 text-amber-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">Authentication Setup Checklist</h3>
-            <p className="text-sm text-slate-500">Siguraduhin na ang mga sumusunod ay naka-enable sa iyong Supabase Dashboard.</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white/50 p-4 rounded-2xl space-y-3">
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Social Providers</h4>
-            <ul className="space-y-2">
-              <li className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                <div className="w-4 h-4 rounded-full border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                </div>
-                Google (Client ID & Secret Required)
-              </li>
-              <li className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                <div className="w-4 h-4 rounded-full border-2 border-emerald-500 bg-emerald-50 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                </div>
-                Facebook (App ID & Secret Required)
-              </li>
-              <li className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                <div className="w-4 h-4 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                </div>
-                LinkedIn (Use <b>linkedin_oidc</b> in Dashboard)
-              </li>
-              <li className="flex items-center gap-2 text-sm font-medium text-indigo-600 font-bold mt-2">
-                <div className="w-4 h-4 rounded-full border-2 border-indigo-500 bg-indigo-50 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                </div>
-                Enable "Link accounts with same email"
-              </li>
-              <li className="flex items-center gap-2 text-sm font-medium text-red-600 font-bold mt-2">
-                <div className="w-4 h-4 rounded-full border-2 border-red-500 bg-red-50 flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                </div>
-                Fix "Email rate limit exceeded" (See below)
-              </li>
-            </ul>
-          </div>
-          <div className="bg-white/50 p-4 rounded-2xl space-y-3">
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Redirect URLs</h4>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Dapat naka-whitelist ang mga sumusunod sa <b>Authentication &gt; URL Configuration</b>:
-            </p>
-            <div className="bg-slate-900 rounded-xl p-3 font-mono text-[10px] text-slate-300">
-              {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/*<br />
-              {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/auth/callback
-            </div>
-          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Admin Dashboard</h1>
+          <p className="text-slate-500 font-medium mt-1">Manage and monitor Tara Marketplace ecosystem.</p>
         </div>
         
-        <div className="mt-6 p-4 bg-white/40 rounded-2xl border border-amber-200">
-          <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest mb-2">Troubleshooting 500 Errors & Email Limits</h4>
-          <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
-            Kung nakakakuha ka ng <b>500 Internal Server Error</b> sa signup, o email limits:
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold text-slate-700">1. Check SMTP Settings</p>
-              <p className="text-[10px] text-slate-500">
-                Ang pinakamadalas na sanhi ng 500 error ay failed email sending. I-setup ang <b>Custom SMTP</b> (Resend/SendGrid) sa <b>Authentication &gt; SMTP Settings</b>.
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold text-slate-700">2. Review Auth Logs</p>
-              <p className="text-[10px] text-slate-500">
-                Pumunta sa <b>Authentication > Logs</b> sa Supabase. Hanapin ang "signup" request na may status 500 para makita ang Error Message (hal. "error sending confirmation mail").
-              </p>
-            </div>
-            <div className="space-y-1 col-span-1 sm:col-span-2 border-t border-amber-100 pt-2 mt-1">
-              <p className="text-[10px] font-bold text-slate-700">3. Disable "Confirm Email" (Temporary Fix)</p>
-              <p className="text-[10px] text-slate-500">
-                Kung ayaw gumana ng email, pumunta sa <b>Authentication > Providers > Email</b> at i-disable ang <b>"Confirm email"</b>. Makakapag-signup na ang mga users nang walang email verification.
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center gap-3 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id as TabType)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                activeTab === item.id 
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" 
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <item.icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{item.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      <AnimatePresence>
-        {showToast && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
+      <AnimatePresence mode="wait">
+        {activeTab === "overview" && (
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-8 right-8 z-50 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700"
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-8"
           >
-            <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-white" />
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { label: "Total Users", value: counts.users, trend: "+12%", icon: Users, color: "indigo" },
+                { label: "Job Seekers", value: counts.seekers, trend: "+8%", icon: UserCheck, color: "emerald" },
+                { label: "Active Hirers", value: counts.hirers, trend: "+15%", icon: Shield, color: "blue" },
+                { label: "Open Jobs", value: counts.jobs, trend: "+20%", icon: Briefcase, color: "amber" },
+              ].map((stat, i) => (
+                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div className={`p-3 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600`}>
+                      <stat.icon className="w-6 h-6" />
+                    </div>
+                    <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                      <TrendingUp className="w-3 h-3" /> {stat.trend}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
+                    <h3 className="text-3xl font-black text-slate-900 mt-1">{stat.value.toLocaleString()}</h3>
+                  </div>
+                </div>
+              ))}
             </div>
-            <p className="font-bold text-sm">{toastMsg}</p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Analytics Summary */}
+              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Platform Analytics</h3>
+                    <p className="text-sm text-slate-500 font-medium">Growth and engagement over time</p>
+                  </div>
+                  <select className="bg-slate-50 border-none text-sm font-bold text-slate-600 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500/20">
+                    <option>Last 30 Days</option>
+                    <option>Last 6 Months</option>
+                    <option>All Time</option>
+                  </select>
+                </div>
+                
+                <div className="h-64 flex items-end gap-2 px-2">
+                  {[40, 65, 45, 90, 55, 75, 85, 60, 95, 70, 80, 100].map((h, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                      <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: `${h}%` }}
+                        transition={{ delay: i * 0.05, duration: 1 }}
+                        className={`w-full rounded-t-lg transition-all group-hover:bg-indigo-500 ${i === 11 ? 'bg-indigo-600' : 'bg-indigo-100'}`}
+                      ></motion.div>
+                      <span className="text-[10px] font-bold text-slate-400">M{i+1}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-slate-50">
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase">Retention</p>
+                    <p className="text-xl font-black text-slate-900">84.2%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase">Conversion</p>
+                    <p className="text-xl font-black text-slate-900">12.5%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase">Avg. Deal</p>
+                    <p className="text-xl font-black text-slate-900">₱4.5k</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity Card */}
+              <div className="bg-slate-900 rounded-3xl shadow-xl p-8 text-white flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold">Recent Activity</h3>
+                  <Activity className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="space-y-6 flex-1">
+                  {recentActivities.map((activity, i) => (
+                    <div key={i} className="flex gap-4 items-start">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
+                      <div>
+                        <p className="text-sm font-bold text-white">{activity.user}</p>
+                        <p className="text-xs text-slate-400 mt-1">{activity.details}</p>
+                        <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-wider">{activity.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button className="w-full mt-8 bg-white/10 hover:bg-white/20 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                  View Full Logs <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "users" && (
+          <motion.div
+            key="users"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between gap-4 md:items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">User Screening & Verification</h3>
+                  <p className="text-sm text-slate-500 font-medium">Verify identities and monitor user roles.</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search users..." 
+                      className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 w-full md:w-64"
+                    />
+                  </div>
+                  <button className="p-2 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                    <Filter className="w-4 h-4 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">User Details</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Role</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 uppercase">
+                              {user.name?.[0] || user.id.slice(0, 1)}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900">{user.name || "Anonymous User"}</div>
+                              <div className="text-xs text-slate-500 font-medium">{user.category || "General"}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                            user.role === 'hirer' ? 'bg-blue-50 text-blue-600' : 'bg-indigo-50 text-indigo-600'
+                          }`}>
+                            {user.role || 'jobseeker'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                            <span className="text-sm font-bold text-slate-700">Active</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors border border-transparent hover:border-emerald-100" title="Verify User">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 hover:bg-slate-50 text-slate-400 rounded-lg transition-colors" title="View Details">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 hover:bg-red-50 text-red-400 rounded-lg transition-colors" title="Flag User">
+                              <Flag className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {users.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-8 py-12 text-center">
+                          <div className="flex flex-col items-center gap-2 text-slate-400">
+                            <Users className="w-12 h-12 opacity-20" />
+                            <p className="font-bold text-sm">No users found in database.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="p-6 bg-slate-50/50 border-t border-slate-50 text-center">
+                <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                  View All Platform Users
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "jobs" && (
+          <motion.div
+            key="jobs"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { label: "Pending Approval", value: "12", color: "amber" },
+                { label: "Active Postings", value: counts.jobs, color: "emerald" },
+                { label: "Completed Projects", value: "156", color: "indigo" },
+              ].map((stat, i) => (
+                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                  <p className={`text-4xl font-black text-${stat.color}-600 mt-2`}>{stat.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-8 border-b border-slate-50">
+                <h3 className="text-xl font-bold text-slate-900">Live Job Monitoring</h3>
+                <p className="text-sm text-slate-500 font-medium">Tracking all marketplace activities and content quality.</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Job Title</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Hirer</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Budget</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Posted</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {recentActivities.filter(a => a.action === "Job Posted").map((job) => (
+                      <tr key={job.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-8 py-6">
+                          <div className="font-bold text-slate-900">{job.details}</div>
+                          <div className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter mt-1">Ref: {job.id.slice(0, 8)}</div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                              {job.user[0]}
+                            </div>
+                            <span className="text-sm font-bold text-slate-700">{job.user}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span className="text-sm font-black text-slate-900">₱---</span>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span className="text-xs font-medium">{job.time}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "system" && (
+          <motion.div
+            key="system"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-8"
+          >
+            {/* Connection Status Card */}
+            <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-4 rounded-2xl ${dbStatus === 'connected' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                      <Database className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black">Database Connection</h3>
+                      <p className="text-slate-400 font-medium">Supabase Backend Status</p>
+                    </div>
+                  </div>
+                  <div className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${
+                    dbStatus === 'connected' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                  }`}>
+                    {dbStatus === 'connected' ? 'Operational' : 'Issue Detected'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { name: "Profiles Table", ok: tableStatus.profiles },
+                    { name: "Jobs Table", ok: tableStatus.jobs },
+                    { name: "Messaging System", ok: tableStatus.messages && tableStatus.messagingColumns },
+                  ].map((sys, i) => (
+                    <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-300">{sys.name}</span>
+                      {sys.ok ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <XCircle className="w-5 h-5 text-red-400" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Auth Checklist & Troubleshooting (Moved from previous version) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Auth Configuration</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-600">Google OAuth</span>
+                    <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">Enabled</span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-600">Facebook Login</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-200 px-2 py-1 rounded-lg">Config Required</span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-600">Email Verification</span>
+                    <span className="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">Rate Limited</span>
+                  </div>
+                </div>
+                
+                <div className="mt-8 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                  <p className="text-xs font-bold text-indigo-700 uppercase tracking-widest mb-2">Pro Tip</p>
+                  <p className="text-xs text-indigo-600 leading-relaxed">
+                    Always whitelist your production domain in <b>Authentication &gt; URL Configuration</b> to prevent redirect errors.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Troubleshooting</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  <button 
+                    onClick={() => setShowSql(!showSql)}
+                    className="w-full p-4 bg-slate-900 text-white rounded-2xl flex items-center justify-between hover:bg-slate-800 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Code className="w-4 h-4 text-indigo-400" />
+                      <span className="text-sm font-bold">Show Schema SQL</span>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 transition-transform ${showSql ? 'rotate-90' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {showSql && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-slate-50 rounded-2xl p-4 overflow-hidden"
+                      >
+                        <pre className="text-[10px] font-mono text-slate-600 overflow-x-auto max-h-48 whitespace-pre-wrap">
+                          {sqlCode}
+                        </pre>
+                        <button 
+                          onClick={copySql}
+                          className="mt-4 flex items-center gap-2 text-xs font-bold text-indigo-600"
+                        >
+                          <Copy className="w-4 h-4" /> Copy SQL Code
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="p-4 border border-slate-100 rounded-2xl">
+                    <h4 className="text-sm font-bold text-slate-900 mb-2">Fix 500 Signup Error</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Go to <b>Authentication > Providers > Email</b> and disable <b>Confirm Email</b> to skip mandatory verification if your SMTP is not yet configured.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Table Section */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-900">Recent Platform Activity</h3>
-              <div className="flex gap-2">
-                <button className="p-2 hover:bg-slate-50 rounded-lg transition-colors border border-slate-100">
-                  <Search className="w-4 h-4 text-slate-400" />
-                </button>
-                <button className="p-2 hover:bg-slate-50 rounded-lg transition-colors border border-slate-100">
-                  <Filter className="w-4 h-4 text-slate-400" />
-                </button>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-slate-50/50">
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">User</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Time</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {recentActivities.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900">{item.user}</div>
-                        <div className="text-xs text-slate-400">{item.details}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-slate-600">{item.action}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          item.status === 'Verified' || item.status === 'Completed' || item.status === 'Live'
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                            : item.status === 'In Review'
-                            ? 'bg-red-50 text-red-600 border-red-100'
-                            : 'bg-amber-50 text-amber-600 border-amber-100'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right text-xs text-slate-400 font-medium">
-                        {item.time}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-4 border-t border-slate-50 text-center">
-              <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700">
-                View All Activity
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* System Health / Quick Actions */}
-        <div className="space-y-6">
-          <div className="bg-slate-900 rounded-2xl p-6 text-white">
-            <h3 className="font-bold mb-4 flex items-center gap-2">
-              <Database className="w-5 h-5 text-indigo-400" />
-              Database Health
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">profiles table</span>
-                {tableStatus.profiles ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-400" />
-                )}
-              </div>
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">jobs table</span>
-                {tableStatus.jobs ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-400" />
-                )}
-              </div>
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">conversations table</span>
-                {tableStatus.conversations ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-400" />
-                )}
-              </div>
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">messages table</span>
-                {tableStatus.messages ? (
-                  tableStatus.messagingColumns ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <AlertTriangle className="w-4 h-4 text-amber-400" />
-                      <span className="text-[8px] text-amber-400 font-bold">MISSING COLS</span>
-                    </div>
-                  )
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-400" />
-                )}
-              </div>
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">portfolio_items table</span>
-                {tableStatus.portfolio_items ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-400" />
-                )}
-              </div>
-            </div>
-            
-            {!tableStatus.profiles || !tableStatus.jobs || !tableStatus.conversations || !tableStatus.messages || !tableStatus.messagingColumns || !tableStatus.portfolio_items ? (
-              <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <p className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-2">Critical Action Needed</p>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Some required tables are missing. This causes profile and job posting errors.
-                </p>
-                <button 
-                  onClick={() => setShowSql(!showSql)}
-                  className="w-full bg-white text-slate-900 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2"
-                >
-                  <Code className="w-4 h-4" />
-                  {showSql ? "HIDE SETUP SQL" : "GET SETUP SQL"}
-                </button>
-              </div>
-            ) : (
-              <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-1">Status: OK</p>
-                <p className="text-xs text-slate-300">All database tables are connected and accessible.</p>
-              </div>
-            )}
-          </div>
-
-          <AnimatePresence>
-            {showSql && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden"
-              >
-                <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Setup SQL Code</h4>
-                  <button 
-                    onClick={copySql}
-                    className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-600"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="p-4">
-                  <pre className="text-[10px] bg-slate-900 text-indigo-300 p-4 rounded-xl overflow-x-auto max-h-48 font-mono">
-                    {sqlCode}
-                  </pre>
-                  <p className="mt-4 text-[10px] text-slate-500 leading-relaxed">
-                    1. Click copy icon above.<br/>
-                    2. Go to Supabase Dashboard &gt; SQL Editor.<br/>
-                    3. Paste and click "Run".
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="bg-slate-900 rounded-2xl p-6 text-white">
-            <h3 className="font-bold mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-indigo-400" />
-              Security Overview
-            </h3>
-            <div className="space-y-4">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">System Health</span>
-                  <span className="text-emerald-400 font-bold">99.9%</span>
-                </div>
-                <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full w-[99.9%]"></div>
-                </div>
-              </div>
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">Vetting Queue</span>
-                  <span className="text-amber-400 font-bold">24 Pending</span>
-                </div>
-                <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-amber-500 h-full w-[40%]"></div>
-                </div>
-              </div>
-            </div>
-            <button className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-              System Audit <ArrowUpRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="font-bold text-slate-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                "User Search", "Flags", "Payouts", "Settings", "Reports", "Support"
-              ].map((action) => (
-                <button key={action} className="p-3 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all border border-transparent hover:border-indigo-100">
-                  {action}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-800"
+          >
+            <Check className="w-4 h-4 text-emerald-400" />
+            <p className="text-sm font-bold">{toastMsg}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
