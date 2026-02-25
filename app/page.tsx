@@ -35,6 +35,7 @@ import {
   AlertCircle,
   XCircle,
   Code,
+  FileText,
   ExternalLink,
   DollarSign,
   Lock,
@@ -62,6 +63,9 @@ export default function Home() {
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
+  const [showApplicantsModal, setShowApplicantsModal] = useState(false);
+  const [selectedJobApplicants, setSelectedJobApplicants] = useState<any[]>([]);
+  const [selectedJobTitle, setSelectedJobTitle] = useState("");
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -276,6 +280,25 @@ export default function Home() {
       }
     } catch (err) {
       console.error("Unexpected error fetching hirer jobs:", err);
+    }
+  };
+
+  const fetchApplicants = async (jobId: string, jobTitle: string) => {
+    setSelectedJobTitle(jobTitle);
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*, profiles(*)')
+        .eq('job_id', jobId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSelectedJobApplicants(data || []);
+      setShowApplicantsModal(true);
+    } catch (err: any) {
+      console.error("Error fetching applicants:", err);
+      setToastMsg(`Failed to load applicants: ${err.message}`);
+      setShowToast(true);
     }
   };
 
@@ -1121,7 +1144,10 @@ export default function Home() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <button className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider">
+                              <button 
+                                onClick={() => fetchApplicants(job.id, job.title)}
+                                className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
+                              >
                                 View Applicants
                               </button>
                               <button className="px-4 py-2 text-[10px] font-bold text-white bg-slate-900 rounded-lg hover:bg-black transition-all uppercase tracking-wider">
@@ -1269,6 +1295,106 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Job Applicants Modal */}
+      <AnimatePresence>
+        {showApplicantsModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowApplicantsModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+            >
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Applicants for</h3>
+                  <p className="text-sm font-medium text-indigo-600 truncate max-w-md">{selectedJobTitle}</p>
+                </div>
+                <button 
+                  onClick={() => setShowApplicantsModal(false)}
+                  className="p-2 hover:bg-slate-50 rounded-xl transition-all"
+                >
+                  <XCircle className="w-6 h-6 text-slate-300 hover:text-slate-500" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {selectedJobApplicants.length > 0 ? (
+                  selectedJobApplicants.map((app) => (
+                    <div key={app.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 transition-all group">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
+                          {app.profiles?.avatar_url ? (
+                            <img src={app.profiles.avatar_url} className="w-full h-full object-cover" alt="" />
+                          ) : (
+                            <Users className="w-6 h-6 text-indigo-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-lg">{app.profiles?.name || "Unknown Freelancer"}</h4>
+                              <span className="text-[10px] font-bold bg-white text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">{app.profiles?.category}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Applied</span>
+                              <p className="text-xs font-bold text-slate-600">{new Date(app.created_at).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-white/50 p-4 rounded-xl border border-slate-100 mb-4">
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                              <FileText className="w-3.5 h-3.5 text-slate-400" />
+                              Cover Letter
+                            </p>
+                            <p className="text-sm text-slate-600 leading-relaxed italic">
+                              {app.cover_letter || "No cover letter provided."}
+                            </p>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                setSelectedFreelancer(app.profiles);
+                                setShowFreelancerModal(true);
+                              }}
+                              className="px-4 py-2 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-lg hover:bg-slate-50 transition-all uppercase tracking-widest"
+                            >
+                              View Profile
+                            </button>
+                            <Link 
+                              href={`/messages?with=${app.seeker_id}`}
+                              className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              Interview Seeker
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-8 h-8 text-slate-200" />
+                    </div>
+                    <p className="text-slate-500 font-medium">No applications for this job yet.</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
