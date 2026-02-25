@@ -576,7 +576,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4">
+    <div className="w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Form */}
         <div className="lg:col-span-7 bg-white p-8 rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100">

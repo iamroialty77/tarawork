@@ -587,7 +587,7 @@ export default function Home() {
             </div>
           </div>
         )}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full px-4 sm:px-10">
           <div className="flex justify-between items-center h-16 py-4">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
@@ -660,7 +660,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-full px-4 sm:px-10 py-8">
         {view === "freelancer" ? (
           <div className="space-y-8">
             {/* Hero / Welcome Section */}
@@ -1502,7 +1502,7 @@ export default function Home() {
       </AnimatePresence>
 
       <footer className="bg-slate-50 border-t border-slate-200 py-16 mt-20">
-        <div className="max-w-7xl mx-auto px-4 text-center">
+        <div className="max-w-full px-4 sm:px-10 text-center">
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center justify-center gap-2 mb-6 mx-auto hover:opacity-80 transition-opacity"
