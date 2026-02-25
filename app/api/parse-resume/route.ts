@@ -2,20 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
-import { PDFParse } from 'pdf-parse';
+// PDFParse is imported dynamically inside POST handler
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   console.log('AI Resume Parser: Request received');
   try {
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    // Siguraduhin na ang Content-Type ay tama para sa formData
+    const contentType = req.headers.get('content-type') || '';
+    if (!contentType.includes('multipart/form-data')) {
+      return NextResponse.json({ error: 'Invalid content type. Expected multipart/form-data.' }, { status: 400 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
       console.error('AI Resume Parser: No file uploaded');
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400, headers });
     }
 
     console.log(`AI Resume Parser: Processing ${file.name} (${file.size} bytes)`);
@@ -24,20 +37,33 @@ export async function POST(req: NextRequest) {
     console.log('AI Resume Parser: Extracting text from PDF...');
     let text = '';
     try {
-      const parser = new PDFParse({ data: buffer });
+      // Dynamic import para maiwasan ang top-level initialization errors sa ilang environments
+      const { PDFParse } = await import('pdf-parse');
+      
+      // I-wrap sa Promise para siguradong asynchronous execution
+      const parser = new PDFParse({ 
+        data: buffer,
+        verbosity: 0 // Iwasan ang masyadong maraming logs mula sa pdfjs
+      });
+      
       const data = await parser.getText();
       text = data.text;
     } catch (parseError: any) {
       console.error('AI Resume Parser: PDF Parse Error:', parseError);
-      return NextResponse.json({ error: `Failed to read PDF file: ${parseError.message}` }, { status: 400 });
+      return NextResponse.json({ error: `Failed to read PDF file: ${parseError.message}` }, { status: 400, headers });
     }
 
     if (!text || text.trim().length === 0) {
       console.error('AI Resume Parser: No text extracted');
-      return NextResponse.json({ error: 'Could not extract text from PDF. Please ensure it is not a scanned image.' }, { status: 400 });
+      return NextResponse.json({ error: 'Could not extract text from PDF. Please ensure it is not a scanned image.' }, { status: 400, headers });
     }
 
     console.log(`AI Resume Parser: Extracted ${text.length} characters. Calling AI...`);
+    
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('AI Resume Parser: OPENAI_API_KEY is missing');
+    }
+
     const { object } = await generateObject({
       model: openai('gpt-4o-mini'),
       schema: z.object({
@@ -56,11 +82,29 @@ export async function POST(req: NextRequest) {
     });
 
     console.log('AI Resume Parser: Successfully parsed');
-    return NextResponse.json(object);
+    return NextResponse.json(object, { headers });
   } catch (error: any) {
     console.error('AI Resume Parser: Unhandled Error:', error);
     return NextResponse.json({ 
       error: error.message || 'An unexpected error occurred during resume parsing'
-    }, { status: 500 });
+    }, { status: 500, headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }});
   }
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
+}
+
+export async function GET() {
+  return NextResponse.json({ message: 'AI Resume Parser API is online. Use POST to parse a resume file.' });
 }

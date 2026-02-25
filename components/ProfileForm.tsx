@@ -111,7 +111,7 @@ export default function ProfileForm({
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/parse-resume', {
+      const response = await fetch('/api/parse-resume/', {
         method: 'POST',
         body: formData,
       });
@@ -128,7 +128,8 @@ export default function ProfileForm({
       }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to parse resume');
+        // Ipakita ang status code para mas madaling i-debug ang 405, 500, etc.
+        throw new Error(data.error || `Server Error (${response.status}): Ang server ay nagbigay ng hindi wastong response.`);
       }
 
       const updatedProfile = {
