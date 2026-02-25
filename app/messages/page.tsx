@@ -136,8 +136,9 @@ function MessagesContent() {
   };
 
   useEffect(() => {
-    if (currentUser?.id) {
-      fetchConversations(currentUser.id);
+    const userId = currentUser?.id;
+    if (userId) {
+      fetchConversations(userId);
 
       // Subscribe to global message changes to update conversation list
       const channel = supabase
@@ -147,7 +148,7 @@ function MessagesContent() {
           schema: 'public', 
           table: 'messages' 
         }, () => {
-          fetchConversations(currentUser.id);
+          fetchConversations(userId);
         })
         .subscribe();
 
