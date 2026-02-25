@@ -220,17 +220,23 @@ function MessagesContent() {
   ) => {
     if (!currentUser?.id) return;
 
-    const newMessage = {
+    const newMessage: any = {
       conversation_id: convId,
       sender_id: currentUser.id,
       content,
       is_read: false,
       created_at: new Date().toISOString(),
-      attachment_url: attachment?.url,
-      attachment_name: attachment?.name,
-      attachment_type: attachment?.type,
-      offer_data: offer_data
     };
+
+    if (attachment) {
+      newMessage.attachment_url = attachment.url;
+      newMessage.attachment_name = attachment.name;
+      newMessage.attachment_type = attachment.type;
+    }
+
+    if (offer_data) {
+      newMessage.offer_data = offer_data;
+    }
 
     try {
       const { data, error } = await supabase

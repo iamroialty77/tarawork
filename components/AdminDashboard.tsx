@@ -28,8 +28,11 @@ export default function AdminDashboard() {
   const [tableStatus, setTableStatus] = useState<{
     profiles: boolean;
     jobs: boolean;
+    messages: boolean;
+    conversations: boolean;
+    messagingColumns: boolean;
     _test: boolean;
-  }>({ profiles: false, jobs: false, _test: false });
+  }>({ profiles: false, jobs: false, messages: false, conversations: false, messagingColumns: false, _test: false });
   const [showSql, setShowSql] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
@@ -40,11 +43,17 @@ export default function AdminDashboard() {
         const { error: testError } = await supabase.from('_test_connection').select('*').limit(1);
         const { error: profilesError } = await supabase.from('profiles').select('id').limit(1);
         const { error: jobsError } = await supabase.from('jobs').select('id').limit(1);
+        const { error: convsError } = await supabase.from('conversations').select('id').limit(1);
+        const { error: messagesError } = await supabase.from('messages').select('id').limit(1);
+        const { error: msgColsError } = await supabase.from('messages').select('attachment_url').limit(1);
 
         setTableStatus({
           _test: !testError || (testError.code !== 'PGRST205' && !testError.message.includes('relation')),
           profiles: !profilesError || (profilesError.code !== 'PGRST205' && !profilesError.message.includes('relation')),
           jobs: !jobsError || (jobsError.code !== 'PGRST205' && !jobsError.message.includes('relation')),
+          conversations: !convsError || (convsError.code !== 'PGRST205' && !convsError.message.includes('relation')),
+          messages: !messagesError || (messagesError.code !== 'PGRST205' && !messagesError.message.includes('relation')),
+          messagingColumns: !msgColsError,
         });
 
         setDbStatus("connected");
@@ -191,6 +200,17 @@ DROP POLICY IF EXISTS "Anyone can view attachments" ON storage.objects;
 CREATE POLICY "Anyone can view attachments" 
 ON storage.objects FOR SELECT 
 USING (bucket_id = 'attachments');
+
+-- FIX FOR MISSING COLUMNS (Run if you have existing tables)
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_url TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_name TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_type TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
+
+-- FIX FOR CONVERSATIONS UPDATE
+DROP POLICY IF EXISTS "Users can update their own conversations" ON public.conversations;
+CREATE POLICY "Users can update their own conversations" ON public.conversations
+    FOR UPDATE USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
 `;
 
   const copySql = () => {
@@ -407,9 +427,32 @@ USING (bucket_id = 'attachments');
                   <XCircle className="w-4 h-4 text-red-400" />
                 )}
               </div>
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">conversations table</span>
+                {tableStatus.conversations ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+              </div>
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">messages table</span>
+                {tableStatus.messages ? (
+                  tableStatus.messagingColumns ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      <span className="text-[8px] text-amber-400 font-bold">MISSING COLS</span>
+                    </div>
+                  )
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+              </div>
             </div>
             
-            {!tableStatus.profiles || !tableStatus.jobs ? (
+            {!tableStatus.profiles || !tableStatus.jobs || !tableStatus.conversations || !tableStatus.messages || !tableStatus.messagingColumns ? (
               <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                 <p className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-2">Critical Action Needed</p>
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">

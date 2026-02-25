@@ -137,6 +137,12 @@ ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_items ENABLE ROW LEVEL SECURITY;
 
+-- 8. FIX FOR MISSING COLUMNS (Run if you have existing tables)
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_url TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_name TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_type TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
+
 -- Policies for CONVERSATIONS
 DROP POLICY IF EXISTS "Users can view their own conversations" ON public.conversations;
 CREATE POLICY "Users can view their own conversations" ON public.conversations
