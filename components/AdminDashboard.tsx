@@ -356,21 +356,21 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
         </div>
         
         <div className="mt-6 p-4 bg-white/40 rounded-2xl border border-amber-200">
-          <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest mb-2">How to fix "Email rate limit exceeded"</h4>
+          <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest mb-2">Troubleshooting 500 Errors & Email Limits</h4>
           <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
-            Ang default provider ng Supabase ay may limit na <b>3 emails per hour</b>. Para maayos ito:
+            Kung nakakakuha ka ng <b>500 Internal Server Error</b> sa signup, o email limits:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold text-slate-700">Option 1: Custom SMTP (Recommended)</p>
+              <p className="text-[10px] font-bold text-slate-700">1. Check SMTP Settings</p>
               <p className="text-[10px] text-slate-500">
-                Pumunta sa <b>Authentication &gt; SMTP Settings</b> at gamitin ang SendGrid, Resend, o Mailgun para sa unlimited emails.
+                Ang pinakamadalas na sanhi ng 500 error ay failed email sending. I-setup ang <b>Custom SMTP</b> (Resend/SendGrid) sa <b>Authentication &gt; SMTP Settings</b>.
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-bold text-slate-700">Option 2: Increase Limits</p>
+              <p className="text-[10px] font-bold text-slate-700">2. Review Auth Logs</p>
               <p className="text-[10px] text-slate-500">
-                Pumunta sa <b>Authentication &gt; Auth Settings &gt; Rate Limits</b> at itaas ang "Max Emails per Hour".
+                Pumunta sa <b>Authentication &gt; Logs</b> sa Supabase para makita ang eksaktong error message.
               </p>
             </div>
           </div>

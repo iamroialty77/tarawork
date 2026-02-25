@@ -80,7 +80,7 @@ export default function AuthForm() {
 
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { error, data } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -91,7 +91,18 @@ export default function AuthForm() {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
-        if (error) throw error;
+        
+        if (error) {
+          // Explicitly check for 500 or SMTP errors in the error object
+          console.error("Signup error details:", error);
+          throw error;
+        }
+        
+        if (data?.user && data.user.identities?.length === 0) {
+          setError("Ang email na ito ay rehistrado na. Subukang mag-login o gumamit ng ibang email.");
+          return;
+        }
+
         setSuccess("Registration successful! Please check your email to confirm your account.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -104,10 +115,13 @@ export default function AuthForm() {
         window.location.href = "/";
       }
     } catch (err: any) {
+      console.error("Auth error:", err);
       let message = err.message || "An error occurred during authentication.";
       
       if (message.includes("Email rate limit exceeded")) {
         message = "Authentication Error: Sobra na ang dami ng email requests. Pakihintay ng isang oras bago sumubok muli o i-contact ang admin para i-setup ang Custom SMTP.";
+      } else if (err.status === 500 || err.code === '500' || message.includes("500") || message.toLowerCase().includes("internal server error") || message.includes("Database error")) {
+        message = "Supabase 500 Error: May isyu sa server ng Supabase. Karaniwang sanhi nito ay maling SMTP settings (maling email password/host) o failed database triggers. Pakicheck ang Supabase Auth Logs para sa detalye.";
       }
       
       setError(message);
