@@ -43,7 +43,8 @@ import {
   PlusCircle,
   User,
   Layout,
-  PieChart
+  PieChart,
+  ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
