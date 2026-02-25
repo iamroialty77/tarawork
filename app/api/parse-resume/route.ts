@@ -31,12 +31,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400, headers });
     }
 
+    // New: Check for PDF MIME type
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+      console.error('AI Resume Parser: Invalid file type:', file.type);
+      return NextResponse.json({ error: 'Please upload a PDF file.' }, { status: 400, headers });
+    }
+
+    // New: Check for file size (5MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      console.error('AI Resume Parser: File too large:', file.size);
+      return NextResponse.json({ error: 'File too large. Maximum size is 10MB.' }, { status: 400, headers });
+    }
+
     console.log(`AI Resume Parser: Processing ${file.name} (${file.size} bytes)`);
     const buffer = Buffer.from(await file.arrayBuffer());
     
     console.log('AI Resume Parser: Extracting text from PDF...');
     let text = '';
     try {
+      // Polyfill necessary for pdfjs-dist in Node.js environment
+      try {
+        const canvas = await import('@napi-rs/canvas');
+        console.log('AI Resume Parser: Injecting polyfills...');
+        (globalThis as any).DOMMatrix = canvas.DOMMatrix;
+        (globalThis as any).Path2D = canvas.Path2D;
+        (globalThis as any).DOMPoint = canvas.DOMPoint;
+        (globalThis as any).DOMRect = canvas.DOMRect;
+      } catch (e) {
+        console.warn('AI Resume Parser: Failed to load canvas polyfills:', e);
+      }
+
       // Dynamic import para maiwasan ang top-level initialization errors sa ilang environments
       const { PDFParse } = await import('pdf-parse');
       
@@ -55,13 +79,22 @@ export async function POST(req: NextRequest) {
 
     if (!text || text.trim().length === 0) {
       console.error('AI Resume Parser: No text extracted');
-      return NextResponse.json({ error: 'Could not extract text from PDF. Please ensure it is not a scanned image.' }, { status: 400, headers });
+      return NextResponse.json({ 
+        error: 'Could not extract text from PDF. Please ensure the PDF is not just a scanned image or try a different file.' 
+      }, { status: 400, headers });
     }
 
     console.log(`AI Resume Parser: Extracted ${text.length} characters. Calling AI...`);
     
     if (!process.env.OPENAI_API_KEY) {
       console.warn('AI Resume Parser: OPENAI_API_KEY is missing');
+      // Return a basic extraction if OpenAI is not available
+      return NextResponse.json({
+        name: file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' '),
+        bio: `Successfully extracted text (${text.length} chars) but AI parsing is currently unavailable. Manual profile completion required.`,
+        skills: [],
+        category: 'Developer'
+      }, { headers });
     }
 
     const { object } = await generateObject({

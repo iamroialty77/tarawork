@@ -342,7 +342,7 @@ export default function Home() {
 
       if (error) {
         if (error.code === '23505') {
-          setToastMsg("You have na applied for this job!");
+          setToastMsg("You have already applied for this job!");
         } else {
           throw error;
         }
