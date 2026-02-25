@@ -211,6 +211,16 @@ CREATE POLICY "Admins can view all audit logs" ON public.admin_audit_logs
         )
     );
 
+-- IMMUTABILITY: Only allow INSERT, no UPDATE or DELETE for audit logs
+DROP POLICY IF EXISTS "Admins can insert audit logs" ON public.admin_audit_logs;
+CREATE POLICY "Admins can insert audit logs" ON public.admin_audit_logs
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
 -- 8. FIX FOR MISSING COLUMNS (Run if you have existing tables)
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_url TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_name TEXT;

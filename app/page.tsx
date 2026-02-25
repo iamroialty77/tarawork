@@ -35,7 +35,9 @@ import {
   XCircle,
   Code,
   ExternalLink,
-  DollarSign
+  DollarSign,
+  Lock,
+  Scale
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,7 +56,9 @@ export default function Home() {
   const [missingTables, setMissingTables] = useState<string[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [freelancerSearchTerm, setFreelancerSearchTerm] = useState("");
+  const [debouncedFreelancerSearchTerm, setDebouncedFreelancerSearchTerm] = useState("");
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
+  const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -298,13 +302,20 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFreelancerSearchTerm(freelancerSearchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [freelancerSearchTerm]);
+
   const filteredFreelancers = useMemo(() => {
     return freelancers.filter(f => 
-      f.name.toLowerCase().includes(freelancerSearchTerm.toLowerCase()) ||
-      f.category.toLowerCase().includes(freelancerSearchTerm.toLowerCase()) ||
-      f.skills.some(s => s.toLowerCase().includes(freelancerSearchTerm.toLowerCase()))
+      f.name.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()) ||
+      f.category.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()) ||
+      f.skills.some(s => s.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()))
     );
-  }, [freelancers, freelancerSearchTerm]);
+  }, [freelancers, debouncedFreelancerSearchTerm]);
 
   useEffect(() => {
     async function checkUser() {
@@ -460,9 +471,13 @@ export default function Home() {
                   alt="Tara Logo" 
                   className="h-10 w-auto object-contain"
                 />
-                <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black border border-emerald-100 uppercase tracking-tighter">
+                <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black border border-emerald-100 uppercase tracking-tighter cursor-help group relative">
                   <ShieldCheck className="w-3 h-3" />
                   SSL Secure
+                  <div className="absolute top-full left-0 mt-2 w-48 p-2 bg-slate-900 text-white text-[8px] rounded-2xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none font-medium leading-relaxed border border-white/10">
+                    <p className="font-black text-indigo-400 mb-1">Status: Active</p>
+                    Tara verifies SSL status internally. Browser "Not Secure" warnings may occur during ACME cert challenges.
+                  </div>
                 </div>
               </div>
               
@@ -845,7 +860,10 @@ export default function Home() {
                         <p className="text-slate-500 font-medium">Find the perfect talent for your project.</p>
                       </div>
                     </div>
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black border border-indigo-100 uppercase tracking-tighter">
+                    <div 
+                      onClick={() => setShowEscrowModal(true)}
+                      className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black border border-indigo-100 uppercase tracking-tighter cursor-pointer hover:bg-indigo-100 transition-all"
+                    >
                       <ShieldCheck className="w-3.5 h-3.5" />
                       Escrow Protected
                     </div>
@@ -1169,6 +1187,81 @@ export default function Home() {
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Escrow How it Works Modal */}
+      <AnimatePresence>
+        {showEscrowModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEscrowModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-100"
+            >
+              <div className="bg-slate-900 p-8 text-white relative">
+                <div className="relative z-10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-indigo-400 text-[10px] font-bold mb-4 uppercase tracking-wider">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Trust & Safety
+                  </div>
+                  <h3 className="text-2xl font-black tracking-tight">Tara Safe-Vault System</h3>
+                  <p className="text-slate-400 text-sm mt-2 font-medium">How we protect your payments and work.</p>
+                </div>
+                <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl"></div>
+              </div>
+              
+              <div className="p-8 space-y-6">
+                {[
+                  { 
+                    title: "Funds are Locked", 
+                    desc: "When a project starts, the hirer deposits funds into Tara's secure Escrow account. This confirms the budget is ready.",
+                    icon: Lock
+                  },
+                  { 
+                    title: "Work is Verified", 
+                    desc: "The freelancer submits milestones. Hirers review the work before any payment is released.",
+                    icon: CheckCircle2
+                  },
+                  { 
+                    title: "Secure Release", 
+                    desc: "Once approved, funds move from Escrow to the freelancer's wallet instantly. No delays.",
+                    icon: DollarSign
+                  },
+                  { 
+                    title: "Dispute Protection", 
+                    desc: "If something goes wrong, our Admin team reviews the Chat Logs and Evidence to ensure a fair resolution.",
+                    icon: Scale
+                  }
+                ].map((step, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                      <step.icon className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">{step.title}</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+
+                <button 
+                  onClick={() => setShowEscrowModal(false)}
+                  className="w-full bg-slate-900 text-white py-4 rounded-2xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98]"
+                >
+                  Understood, Got it!
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

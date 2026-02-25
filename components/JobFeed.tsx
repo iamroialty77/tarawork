@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCategory } from "../types";
 import JobCard from "./JobCard";
 
@@ -13,6 +13,14 @@ interface JobFeedProps {
 
 export default function JobFeed({ jobs, profile }: JobFeedProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | "All">("All");
   const [durationFilter, setDurationFilter] = useState<JobDuration | "All">("All");
   const [categoryFilter, setCategoryFilter] = useState<FreelancerCategory | "All">(profile.category || "All");
@@ -37,9 +45,9 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
 
       // 3. Search Term
       const matchesSearch =
-        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+        job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        job.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        job.skills.some(skill => skill.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
       if (!matchesSearch) return false;
 
       // 3. Payment Method Filter
@@ -54,7 +62,7 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
 
       return true;
     });
-  }, [jobs, profile.skills, searchTerm, paymentFilter, durationFilter, useSmartMatching, categoryFilter]);
+  }, [jobs, profile.skills, debouncedSearchTerm, paymentFilter, durationFilter, useSmartMatching, categoryFilter]);
 
   return (
     <div className="space-y-6">
