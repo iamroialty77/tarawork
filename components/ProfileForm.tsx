@@ -116,13 +116,21 @@ export default function ProfileForm({
         body: formData,
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to parse resume');
+      // Basahin muna bilang text para maiwasan ang JSON parse error sa empty response
+      const responseText = await response.text();
+      let data;
+      
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse response as JSON:', responseText);
+        throw new Error('Ang server ay nagbigay ng hindi wastong response. Pakisubukang muli.');
       }
 
-      const data = await response.json();
-      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to parse resume');
+      }
+
       const updatedProfile = {
         ...profile,
         name: data.name || profile.name,
