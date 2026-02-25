@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     squad JSONB,
     "aiInsights" JSONB,
     ranking INTEGER,
+    status TEXT DEFAULT 'pending', -- pending, approved, suspended
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -60,7 +61,8 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     milestones JSONB DEFAULT '[]',
     deadline TEXT,
     "customQuestions" JSONB DEFAULT '[]',
-    hirer_id UUID REFERENCES public.profiles(id)
+    hirer_id UUID REFERENCES public.profiles(id),
+    status TEXT DEFAULT 'live' -- live, closed, flagged, pending
 );
 
 -- Enable Row Level Security
@@ -115,6 +117,19 @@ CREATE TABLE IF NOT EXISTS public.portfolio_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
+-- 6. Create ESCROWS table
+CREATE TABLE IF NOT EXISTS public.escrows (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id TEXT REFERENCES public.jobs(id) ON DELETE SET NULL,
+    hirer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    seeker_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    amount NUMERIC NOT NULL,
+    status TEXT DEFAULT 'pending', -- pending, funded, released, disputed, refunded
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
 -- 6. Storage bucket for attachments
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('attachments', 'attachments', true) 
@@ -136,6 +151,17 @@ USING (bucket_id = 'attachments');
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.escrows ENABLE ROW LEVEL SECURITY;
+
+-- 8. Policies for ESCROWS
+DROP POLICY IF EXISTS "Admins can view all escrows" ON public.escrows;
+CREATE POLICY "Admins can view all escrows" ON public.escrows
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
 
 -- 8. FIX FOR MISSING COLUMNS (Run if you have existing tables)
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_url TEXT;
