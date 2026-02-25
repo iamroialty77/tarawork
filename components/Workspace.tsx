@@ -21,7 +21,8 @@ import {
   Award,
   Shield,
   Zap,
-  DollarSign
+  DollarSign,
+  Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,7 +36,7 @@ interface WorkspaceProps {
 }
 
 export default function Workspace({ projects, onUpdateProject }: WorkspaceProps) {
-  const [activeTab, setActiveTab] = useState<"active" | "reviews" | "calls">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "warroom" | "reviews" | "calls">("active");
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
   const [editingLink, setEditingLink] = useState<string | null>(null);
   const [tempLink, setTempLink] = useState("");
@@ -131,7 +132,7 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as any);
+                setActiveTab(tab.id as "active" | "warroom" | "reviews" | "calls");
                 if (tab.id === 'warroom') setShowWarRoom(true);
                 else setShowWarRoom(false);
               }}
