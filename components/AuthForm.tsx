@@ -34,6 +34,7 @@ export default function AuthForm() {
   const [role, setRole] = useState<"jobseeker" | "hirer">("jobseeker");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showSMTPHelp, setShowSMTPHelp] = useState(false);
 
   useEffect(() => {
     if (confirmed === 'true') {
@@ -100,8 +101,10 @@ export default function AuthForm() {
           
           if (message.includes("Database error saving new user") || error.status === 500) {
             message = "Authentication Error (500): Ang iyong Supabase project ay may problema sa email sending o database configuration. Pakisuri ang Supabase Dashboard > Authentication > Logs.";
+            setShowSMTPHelp(true);
           } else if (message.includes("Email rate limit exceeded")) {
-            message = "Limitasyon sa Email: Masyadong maraming signup attempt. Subukan muli pagkaraan ng isang oras (Limit: 3 per hour para sa free tier).";
+            message = "Communication Bottleneck Detected: Masyadong maraming email requests. Ang platform ay kasalukuyang may limitasyon na 5 emails per hour para sa security purposes. Subukan muli pagkalipas ng isang oras.";
+            setShowSMTPHelp(true);
           }
           
           setError(message);
@@ -129,9 +132,9 @@ export default function AuthForm() {
       let message = err.message || "An error occurred during authentication.";
       
       if (message.includes("Email rate limit exceeded")) {
-        message = "Authentication Error: Sobra na ang dami ng email requests. Pakihintay ng isang oras bago sumubok muli o i-contact ang admin para i-setup ang Custom SMTP.";
+        message = "System Limit Reached: Sobra na ang dami ng email requests (5 per hour limit). Pakihintay ng isang oras bago sumubok muli o makipag-ugnayan sa aming technical team para sa scaling options.";
       } else if (err.status === 500 || err.code === '500' || message.includes("500") || message.toLowerCase().includes("internal server error") || message.includes("Database error")) {
-        message = "Supabase 500 Error: May isyu sa server ng Supabase. Karaniwang sanhi nito ay maling SMTP settings (maling email password/host) o failed database triggers. Pakicheck ang Supabase Auth Logs para sa detalye.";
+        message = "Security & Trust Alert: May teknikal na isyu sa aming backend configuration. Sinisiguro namin na ang iyong data ay mananatiling ligtas habang inaayos namin ito. Pakicheck ang platform health sa admin dashboard.";
       }
       
       setError(message);
@@ -263,14 +266,50 @@ export default function AuthForm() {
             </div>
 
             {error && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold"
-              >
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
-              </motion.div>
+              <div className="space-y-3">
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <div className="flex-1">{error}</div>
+                  {showSMTPHelp && (
+                    <button 
+                      type="button"
+                      onClick={() => setShowSMTPHelp(!showSMTPHelp)}
+                      className="text-[10px] underline hover:text-red-800 transition-colors"
+                    >
+                      Fix
+                    </button>
+                  )}
+                </motion.div>
+
+                <AnimatePresence>
+                  {showSMTPHelp && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 rounded-xl bg-slate-900 text-white text-[10px] space-y-3 mb-2">
+                        <p className="font-bold text-indigo-400 uppercase tracking-widest text-[9px]">💡 Admin Tip (Supabase Fix):</p>
+                        <ul className="space-y-2 opacity-90">
+                          <li className="flex gap-2">
+                            <span className="text-indigo-400 font-bold">1.</span>
+                            <span>Pumunta sa <b>Authentication {">"} Providers {">"} Email</b> at i-disable ang <b>"Confirm email"</b> para sa temporary fix.</span>
+                          </li>
+                          <li className="flex gap-2">
+                            <span className="text-indigo-400 font-bold">2.</span>
+                            <span>Para sa production, gamitin ang <b>Custom SMTP</b> (gaya ng Resend o SendGrid) sa SMTP Settings.</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             {success && (

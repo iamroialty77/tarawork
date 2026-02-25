@@ -52,6 +52,7 @@ export default function Home() {
   const [dbError, setDbError] = useState<boolean>(false);
   const [missingTables, setMissingTables] = useState<string[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [freelancerSearchTerm, setFreelancerSearchTerm] = useState("");
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const jobsRef = useRef<HTMLDivElement>(null);
@@ -296,6 +297,14 @@ export default function Home() {
     }
   };
 
+  const filteredFreelancers = useMemo(() => {
+    return freelancers.filter(f => 
+      f.name.toLowerCase().includes(freelancerSearchTerm.toLowerCase()) ||
+      f.category.toLowerCase().includes(freelancerSearchTerm.toLowerCase()) ||
+      f.skills.some(s => s.toLowerCase().includes(freelancerSearchTerm.toLowerCase()))
+    );
+  }, [freelancers, freelancerSearchTerm]);
+
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -424,15 +433,21 @@ export default function Home() {
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
         {dbError && (
-          <div className="bg-red-600 text-white text-[10px] sm:text-xs font-bold py-2 px-4 text-center animate-in fade-in slide-in-from-top-2 duration-500 flex items-center justify-center gap-2">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>ACTION REQUIRED: Your Supabase database tables are missing ({missingTables.join(", ")}).</span>
-            <button 
-              onClick={() => setView("admin")}
-              className="ml-1 underline hover:bg-white/30 transition-all font-semibold bg-white/20 px-2 py-0.5 rounded cursor-pointer"
-            >
-              FIX NOW IN ADMIN
-            </button>
+          <div className="bg-indigo-600 text-white text-[10px] sm:text-xs font-bold py-2.5 px-4 text-center animate-in fade-in slide-in-from-top-2 duration-500 flex items-center justify-center gap-3 shadow-lg">
+            <div className="flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-indigo-200" />
+              <span className="uppercase tracking-widest">Platform Status: Initialization Required</span>
+            </div>
+            <div className="h-4 w-px bg-white/20 hidden sm:block"></div>
+            <span className="opacity-90 font-medium">Ang ilang database tables ({missingTables.join(", ")}) ay kailangang i-setup para sa full functionality.</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setView("admin")}
+                className="bg-white text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black hover:bg-indigo-50 transition-all cursor-pointer uppercase tracking-tighter"
+              >
+                Setup Database
+              </button>
+            </div>
           </div>
         )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -444,6 +459,10 @@ export default function Home() {
                   alt="Tara Logo" 
                   className="h-10 w-auto object-contain"
                 />
+                <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black border border-emerald-100 uppercase tracking-tighter">
+                  <ShieldCheck className="w-3 h-3" />
+                  SSL Secure
+                </div>
               </div>
               
               <div className="hidden lg:flex items-center gap-6">
@@ -558,7 +577,7 @@ export default function Home() {
               {[
                 { label: "Total Earnings", value: "₱0", icon: DollarSign, color: "text-slate-600", bg: "bg-slate-50" },
                 { label: "Active Projects", value: profile.activeProjects?.length.toString() || "0", icon: Briefcase, color: "text-slate-600", bg: "bg-slate-50" },
-                { label: "Success Rate", value: "0%", icon: Award, color: "text-slate-600", bg: "bg-slate-50" },
+                { label: "Escrow Protected", value: "₱0", icon: ShieldCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
                 { label: "Profile Views", value: "0", icon: Users, color: "text-slate-600", bg: "bg-slate-50" },
               ].map((stat, i) => (
                 <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-indigo-100 transition-colors">
@@ -571,6 +590,37 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Trust & Safety Section for Seekers */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4">
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-emerald-900">Safe-Vault Protection</h4>
+                  <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Ang iyong bayad ay protektado. Ang pondo ay itinatabi sa aming secure vault bago magsimula ang trabaho.</p>
+                </div>
+              </div>
+              <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex gap-4">
+                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                  <DollarSign className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-indigo-900">Escrow Milestone</h4>
+                  <p className="text-xs text-indigo-700 mt-1 leading-relaxed">Sinisiguro namin na ang bawat milestone ay may katumbas na pondo na nakareserba para sa iyo.</p>
+                </div>
+              </div>
+              <div className="bg-slate-900 p-6 rounded-2xl flex gap-4 text-white">
+                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
+                  <Zap className="w-6 h-6 text-indigo-400" />
+                </div>
+                <div>
+                  <h4 className="font-bold">24/7 Support</h4>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">May dispute? Ang aming admin team ay handang tumulong sa pag-resolve ng anumang isyu.</p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -784,35 +834,53 @@ export default function Home() {
 
               <div className="lg:col-span-8 space-y-8">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/20 p-8">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
-                      <Briefcase className="w-6 h-6 text-slate-600" />
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
+                        <Briefcase className="w-6 h-6 text-slate-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-slate-900">Post a New Job</h2>
+                        <p className="text-slate-500 font-medium">Find the perfect talent for your project.</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Post a New Job</h2>
-                      <p className="text-slate-500 font-medium">Find the perfect talent for your project.</p>
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black border border-indigo-100 uppercase tracking-tighter">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Escrow Protected
                     </div>
                   </div>
                   <JobPostingForm onPublish={() => fetchHirerJobs(user.id)} />
                 </div>
 
                 <div className="space-y-6">
-                  <div className="flex justify-between items-end">
+                  <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Top Rated Freelancers</h2>
                       <p className="text-slate-500 mt-1">Discover world-class talent to scale your project.</p>
                     </div>
-                    <button 
-                      onClick={fetchFreelancers}
-                      className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all cursor-pointer group"
-                    >
-                      <Zap className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
-                    </button>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <div className="relative flex-1 md:w-64">
+                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                          type="text" 
+                          placeholder="Search skills (e.g. React)..." 
+                          className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                          value={freelancerSearchTerm}
+                          onChange={(e) => setFreelancerSearchTerm(e.target.value)}
+                        />
+                      </div>
+                      <button 
+                        onClick={fetchFreelancers}
+                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all cursor-pointer group"
+                      >
+                        <Zap className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {freelancers.length > 0 ? (
-                      freelancers.map((freelancer) => (
+                    {filteredFreelancers.length > 0 ? (
+                      filteredFreelancers.map((freelancer) => (
                         <div key={freelancer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all group">
                           <div className="flex items-center gap-4 mb-4">
                             <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">

@@ -38,7 +38,8 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
       // 3. Search Term
       const matchesSearch =
         job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.description.toLowerCase().includes(searchTerm.toLowerCase());
+        job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
       if (!matchesSearch) return false;
 
       // 3. Payment Method Filter

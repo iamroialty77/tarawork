@@ -119,7 +119,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
 
       if (error) {
         if (error.message.includes("relation \"jobs\" does not exist")) {
-          throw new Error("The 'jobs' table does not exist in your database. Please run the SQL setup script in your Supabase dashboard.");
+          throw new Error("Initialization Required: Ang 'jobs' table ay kasalukuyang hindi pa naka-setup sa platform. Bilang isang seryosong platform, kailangan ang tamang database configuration para sa security ng inyong escrow funds. Pakisuri ang Admin Dashboard > System Health.");
         }
         throw error;
       }
