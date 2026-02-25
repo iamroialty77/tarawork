@@ -194,7 +194,11 @@ function MessagesContent() {
           filter: `conversation_id=eq.${selectedId}`
         }, async payload => {
           const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
+          setMessages(prev => {
+            // Iwasan ang duplicate messages kung na-add na ito locally
+            if (prev.find(m => m.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
           
           // Awtomatikong i-mark as read kung ang user ay nasa active conversation at hindi siya ang sender
           if (currentUser?.id && newMessage.sender_id !== currentUser.id) {
@@ -247,17 +251,28 @@ function MessagesContent() {
 
       if (error) throw error;
 
-      // Update conversation timestamp
+      // Local update para sa instant feedback
+      setMessages(prev => {
+        if (prev.find(m => m.id === data.id)) return prev;
+        return [...prev, data];
+      });
+
+      // Update conversation timestamp sa database
       await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', convId);
 
-      // Local update will be handled by subscription, 
-      // but we update the conversation list last message locally
-      setConversations(prev => prev.map(c => 
-        c.id === convId ? { ...c, last_message: data } : c
-      ));
+      // I-update ang conversation list locally para lumipat sa itaas at magbago ang last message
+      setConversations(prev => {
+        const otherConvs = prev.filter(c => c.id !== convId);
+        const targetConv = prev.find(c => c.id === convId);
+        if (targetConv) {
+          const updatedConv = { ...targetConv, last_message: data, updated_at: new Date().toISOString() };
+          return [updatedConv, ...otherConvs];
+        }
+        return prev;
+      });
     } catch (err) {
       console.error("Error sending message:", err);
     }

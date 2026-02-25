@@ -8,10 +8,18 @@ import PortfolioManager from "./PortfolioManager";
 interface ProfileFormProps {
   initialProfile: FreelancerProfile;
   onUpdate: (profile: FreelancerProfile) => void;
+  onAddPortfolio?: (item: Partial<PortfolioItem>) => void;
+  onRemovePortfolio?: (id: string) => void;
   isSaving?: boolean;
 }
 
-export default function ProfileForm({ initialProfile, onUpdate, isSaving = false }: ProfileFormProps) {
+export default function ProfileForm({ 
+  initialProfile, 
+  onUpdate, 
+  onAddPortfolio,
+  onRemovePortfolio,
+  isSaving = false 
+}: ProfileFormProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [skillInput, setSkillInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +53,10 @@ export default function ProfileForm({ initialProfile, onUpdate, isSaving = false
   };
 
   const addPortfolioItem = (item: Partial<PortfolioItem>) => {
+    if (onAddPortfolio) {
+      onAddPortfolio(item);
+      return;
+    }
     const newItem: PortfolioItem = {
       id: Math.random().toString(36).substr(2, 9),
       profile_id: profile.id || "",
@@ -63,6 +75,10 @@ export default function ProfileForm({ initialProfile, onUpdate, isSaving = false
   };
 
   const removePortfolioItem = (id: string) => {
+    if (onRemovePortfolio) {
+      onRemovePortfolio(id);
+      return;
+    }
     const newProfile = {
       ...profile,
       portfolio: (profile.portfolio || []).filter((item) => item.id !== id),

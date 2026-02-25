@@ -30,9 +30,10 @@ export default function AdminDashboard() {
     jobs: boolean;
     messages: boolean;
     conversations: boolean;
+    portfolio_items: boolean;
     messagingColumns: boolean;
     _test: boolean;
-  }>({ profiles: false, jobs: false, messages: false, conversations: false, messagingColumns: false, _test: false });
+  }>({ profiles: false, jobs: false, messages: false, conversations: false, portfolio_items: false, messagingColumns: false, _test: false });
   const [showSql, setShowSql] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
@@ -45,6 +46,7 @@ export default function AdminDashboard() {
         const { error: jobsError } = await supabase.from('jobs').select('id').limit(1);
         const { error: convsError } = await supabase.from('conversations').select('id').limit(1);
         const { error: messagesError } = await supabase.from('messages').select('id').limit(1);
+        const { error: portfolioError } = await supabase.from('portfolio_items').select('id').limit(1);
         const { error: msgColsError } = await supabase.from('messages').select('attachment_url').limit(1);
 
         setTableStatus({
@@ -53,6 +55,7 @@ export default function AdminDashboard() {
           jobs: !jobsError || (jobsError.code !== 'PGRST205' && !jobsError.message.includes('relation')),
           conversations: !convsError || (convsError.code !== 'PGRST205' && !convsError.message.includes('relation')),
           messages: !messagesError || (messagesError.code !== 'PGRST205' && !messagesError.message.includes('relation')),
+          portfolio_items: !portfolioError || (portfolioError.code !== 'PGRST205' && !portfolioError.message.includes('relation')),
           messagingColumns: !msgColsError,
         });
 
@@ -178,6 +181,23 @@ CREATE TABLE IF NOT EXISTS public.messages (
     offer_data JSONB
 );
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- PORTFOLIO ITEMS
+CREATE TABLE IF NOT EXISTS public.portfolio_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    image_url TEXT,
+    project_url TEXT,
+    technologies TEXT[] DEFAULT '{}',
+    completed_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.portfolio_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Portfolio items are viewable by everyone" ON public.portfolio_items FOR SELECT USING (true);
+CREATE POLICY "Users can manage their own portfolio items" ON public.portfolio_items FOR ALL USING (auth.uid() = profile_id);
+
 DROP POLICY IF EXISTS "Users can view messages in their conversations" ON public.messages;
 CREATE POLICY "Users can view messages in their conversations" ON public.messages FOR SELECT USING (EXISTS (SELECT 1 FROM public.conversations WHERE id = messages.conversation_id AND (participant_1 = auth.uid() OR participant_2 = auth.uid())));
 DROP POLICY IF EXISTS "Users can send messages" ON public.messages;
@@ -211,6 +231,11 @@ ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
 DROP POLICY IF EXISTS "Users can update their own conversations" ON public.conversations;
 CREATE POLICY "Users can update their own conversations" ON public.conversations
     FOR UPDATE USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
+
+-- ENABLE REAL-TIME REPLICATION
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
 `;
 
   const copySql = () => {
@@ -310,6 +335,12 @@ CREATE POLICY "Users can update their own conversations" ON public.conversations
                 </div>
                 Enable "Link accounts with same email"
               </li>
+              <li className="flex items-center gap-2 text-sm font-medium text-red-600 font-bold mt-2">
+                <div className="w-4 h-4 rounded-full border-2 border-red-500 bg-red-50 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                </div>
+                Fix "Email rate limit exceeded" (See below)
+              </li>
             </ul>
           </div>
           <div className="bg-white/50 p-4 rounded-2xl space-y-3">
@@ -320,6 +351,27 @@ CREATE POLICY "Users can update their own conversations" ON public.conversations
             <div className="bg-slate-900 rounded-xl p-3 font-mono text-[10px] text-slate-300">
               {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/*<br />
               {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/auth/callback
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-6 p-4 bg-white/40 rounded-2xl border border-amber-200">
+          <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest mb-2">How to fix "Email rate limit exceeded"</h4>
+          <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
+            Ang default provider ng Supabase ay may limit na <b>3 emails per hour</b>. Para maayos ito:
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-700">Option 1: Custom SMTP (Recommended)</p>
+              <p className="text-[10px] text-slate-500">
+                Pumunta sa <b>Authentication &gt; SMTP Settings</b> at gamitin ang SendGrid, Resend, o Mailgun para sa unlimited emails.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-700">Option 2: Increase Limits</p>
+              <p className="text-[10px] text-slate-500">
+                Pumunta sa <b>Authentication &gt; Auth Settings &gt; Rate Limits</b> at itaas ang "Max Emails per Hour".
+              </p>
             </div>
           </div>
         </div>
@@ -450,9 +502,17 @@ CREATE POLICY "Users can update their own conversations" ON public.conversations
                   <XCircle className="w-4 h-4 text-red-400" />
                 )}
               </div>
+              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">portfolio_items table</span>
+                {tableStatus.portfolio_items ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+              </div>
             </div>
             
-            {!tableStatus.profiles || !tableStatus.jobs || !tableStatus.conversations || !tableStatus.messages || !tableStatus.messagingColumns ? (
+            {!tableStatus.profiles || !tableStatus.jobs || !tableStatus.conversations || !tableStatus.messages || !tableStatus.messagingColumns || !tableStatus.portfolio_items ? (
               <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                 <p className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-2">Critical Action Needed</p>
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">

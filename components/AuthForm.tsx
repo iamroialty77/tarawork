@@ -104,7 +104,13 @@ export default function AuthForm() {
         window.location.href = "/";
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred during authentication.");
+      let message = err.message || "An error occurred during authentication.";
+      
+      if (message.includes("Email rate limit exceeded")) {
+        message = "Authentication Error: Sobra na ang dami ng email requests. Pakihintay ng isang oras bago sumubok muli o i-contact ang admin para i-setup ang Custom SMTP.";
+      }
+      
+      setError(message);
     } finally {
       setLoading(false);
     }

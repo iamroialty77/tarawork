@@ -143,6 +143,12 @@ ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_name TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_type TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
 
+-- 9. ENABLE REAL-TIME REPLICATION
+-- This allows the app to show new messages instantly without reloading.
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
+
 -- Policies for CONVERSATIONS
 DROP POLICY IF EXISTS "Users can view their own conversations" ON public.conversations;
 CREATE POLICY "Users can view their own conversations" ON public.conversations
