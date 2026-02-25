@@ -173,8 +173,23 @@ CREATE POLICY "Users can view messages in their conversations" ON public.message
 DROP POLICY IF EXISTS "Users can send messages" ON public.messages;
 CREATE POLICY "Users can send messages" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
 
--- Storage bucket for attachments (Run separately if needed)
--- INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', true) ON CONFLICT (id) DO NOTHING;
+-- Storage bucket for attachments
+-- Run this in Supabase SQL Editor
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('attachments', 'attachments', true) 
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy para payagan ang authenticated users na mag-upload
+DROP POLICY IF EXISTS "Authenticated users can upload attachments" ON storage.objects;
+CREATE POLICY "Authenticated users can upload attachments" 
+ON storage.objects FOR INSERT 
+WITH CHECK (bucket_id = 'attachments' AND auth.role() = 'authenticated');
+
+-- Policy para makita ng lahat ang attachments (dahil public: true)
+DROP POLICY IF EXISTS "Anyone can view attachments" ON storage.objects;
+CREATE POLICY "Anyone can view attachments" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'attachments');
 `;
 
   const copySql = () => {

@@ -115,7 +115,24 @@ CREATE TABLE IF NOT EXISTS public.portfolio_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- Enable RLS for new tables
+-- 6. Storage bucket for attachments
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('attachments', 'attachments', true) 
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy para payagan ang authenticated users na mag-upload
+DROP POLICY IF EXISTS "Authenticated users can upload attachments" ON storage.objects;
+CREATE POLICY "Authenticated users can upload attachments" 
+ON storage.objects FOR INSERT 
+WITH CHECK (bucket_id = 'attachments' AND auth.role() = 'authenticated');
+
+-- Policy para makita ng lahat ang attachments (dahil public: true)
+DROP POLICY IF EXISTS "Anyone can view attachments" ON storage.objects;
+CREATE POLICY "Anyone can view attachments" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'attachments');
+
+-- 7. Enable RLS for new tables
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_items ENABLE ROW LEVEL SECURITY;

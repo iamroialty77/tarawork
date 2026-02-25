@@ -175,8 +175,17 @@ function MessagesContent() {
           schema: 'public', 
           table: 'messages',
           filter: `conversation_id=eq.${selectedId}`
-        }, payload => {
-          setMessages(prev => [...prev, payload.new as Message]);
+        }, async payload => {
+          const newMessage = payload.new as Message;
+          setMessages(prev => [...prev, newMessage]);
+          
+          // Awtomatikong i-mark as read kung ang user ay nasa active conversation at hindi siya ang sender
+          if (currentUser?.id && newMessage.sender_id !== currentUser.id) {
+            await supabase
+              .from('messages')
+              .update({ is_read: true })
+              .eq('id', newMessage.id);
+          }
         })
         .subscribe();
 

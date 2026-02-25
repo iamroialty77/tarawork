@@ -72,22 +72,28 @@ export default function Messaging({
       if (selectedFile) {
         setIsUploading(true);
         try {
+          // Create a unique file name to avoid collisions
           const fileExt = selectedFile.name.split('.').pop();
-          const fileName = `${Math.random()}.${fileExt}`;
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
           const filePath = `${currentUser.id}/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
             .from('attachments')
-            .upload(filePath, selectedFile);
+            .upload(filePath, selectedFile, {
+              cacheControl: '3600',
+              upsert: false
+            });
 
           if (uploadError) throw uploadError;
 
-          const { data: { publicUrl } } = supabase.storage
+          const { data } = supabase.storage
             .from('attachments')
             .getPublicUrl(filePath);
 
+          if (!data?.publicUrl) throw new Error("Could not get public URL");
+
           attachment = {
-            url: publicUrl,
+            url: data.publicUrl,
             name: selectedFile.name,
             type: selectedFile.type
           };
