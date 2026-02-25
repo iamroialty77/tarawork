@@ -140,7 +140,33 @@ CREATE POLICY "Authenticated users can post jobs." ON public.jobs FOR INSERT WIT
 CREATE TABLE IF NOT EXISTS public._test_connection (id SERIAL PRIMARY KEY, created_at TIMESTAMP WITH TIME ZONE DEFAULT now());
 ALTER TABLE public._test_connection ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can select from test table" ON public._test_connection;
-CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR SELECT USING (true);`;
+CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR SELECT USING (true);
+
+-- CONVERSATIONS & MESSAGES
+CREATE TABLE IF NOT EXISTS public.conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    participant_1 UUID REFERENCES public.profiles(id) NOT NULL,
+    participant_2 UUID REFERENCES public.profiles(id) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(participant_1, participant_2)
+);
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own conversations" ON public.conversations FOR SELECT USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
+CREATE POLICY "Users can insert conversations" ON public.conversations FOR INSERT WITH CHECK (auth.uid() = participant_1 OR auth.uid() = participant_2);
+
+CREATE TABLE IF NOT EXISTS public.messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
+    sender_id UUID REFERENCES public.profiles(id) NOT NULL,
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view messages in their conversations" ON public.messages FOR SELECT USING (EXISTS (SELECT 1 FROM public.conversations WHERE id = messages.conversation_id AND (participant_1 = auth.uid() OR participant_2 = auth.uid())));
+CREATE POLICY "Users can send messages" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
+`;
 
   const copySql = () => {
     navigator.clipboard.writeText(sqlCode);

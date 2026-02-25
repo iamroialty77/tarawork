@@ -58,7 +58,7 @@ export default function JobCard({ job, index = 0 }: JobCardProps) {
                     {job.category}
                   </span>
                   <Link 
-                    href="/messages" 
+                    href={job.hirer_id ? `/messages?with=${job.hirer_id}` : "/messages"} 
                     className="text-gray-400 hover:text-indigo-600 transition-colors"
                     title={`Message ${job.company} about ${job.category} project`}
                   >
@@ -149,7 +149,7 @@ export default function JobCard({ job, index = 0 }: JobCardProps) {
           </span>
           <div className="flex gap-2">
             <Link
-              href="/messages"
+              href={job.hirer_id ? `/messages?with=${job.hirer_id}` : "/messages"}
               className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer uppercase tracking-wider"
             >
               <MessageSquare className="w-3.5 h-3.5" />

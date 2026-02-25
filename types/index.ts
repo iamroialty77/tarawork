@@ -81,6 +81,7 @@ export interface Job {
   milestones?: Milestone[];
   deadline?: string;
   customQuestions?: ProposalQuestion[];
+  hirer_id?: string;
 }
 
 export interface VerifiedSkill {

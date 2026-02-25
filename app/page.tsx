@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FreelancerProfile, Job } from "../types";
+import { UserProfile, Job } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
@@ -45,12 +45,13 @@ export default function Home() {
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [hirerJobs, setHirerJobs] = useState<Job[]>([]);
+  const [freelancers, setFreelancers] = useState<UserProfile[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
   const [missingTables, setMissingTables] = useState<string[]>([]);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const [profile, setProfile] = useState<FreelancerProfile>({
+  const [profile, setProfile] = useState<UserProfile>({
     name: "User",
     role: "jobseeker",
     category: "Developer",
@@ -101,7 +102,7 @@ export default function Home() {
       } else {
         // Create initial profile if it doesn't exist
         const role = userAuth?.user_metadata?.role || "jobseeker";
-        const initialData = {
+        const initialData: UserProfile = {
           id: userId,
           name: userAuth?.user_metadata?.full_name || userAuth?.email?.split('@')[0] || "User",
           role: role as any,
@@ -131,7 +132,7 @@ export default function Home() {
     }
   };
 
-  const handleProfileSave = async (updatedProfile: FreelancerProfile) => {
+  const handleProfileSave = async (updatedProfile: UserProfile) => {
     if (!user) return;
     setIsSaving(true);
     try {
@@ -235,6 +236,28 @@ export default function Home() {
     }
   };
 
+  const fetchFreelancers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'jobseeker')
+        .order('ranking', { ascending: true })
+        .limit(10);
+
+      if (error) {
+        console.error("Error fetching freelancers:", error);
+        return;
+      }
+
+      if (data) {
+        setFreelancers(data);
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching freelancers:", err);
+    }
+  };
+
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -249,6 +272,7 @@ export default function Home() {
         // Fetch jobs from DB
         await fetchJobs();
         await fetchHirerJobs(session.user.id);
+        await fetchFreelancers();
         
         // Check for first-time social login to show notification
         const isNewSocial = typeof window !== 'undefined' ? sessionStorage.getItem('social_login_pending') : null;
@@ -656,6 +680,76 @@ export default function Home() {
                     </div>
                   </div>
                   <JobPostingForm onPublish={() => fetchHirerJobs(user.id)} />
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">Top Rated Freelancers</h2>
+                      <p className="text-slate-500 mt-1">Discover world-class talent to scale your project.</p>
+                    </div>
+                    <button 
+                      onClick={fetchFreelancers}
+                      className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all cursor-pointer group"
+                    >
+                      <Zap className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {freelancers.length > 0 ? (
+                      freelancers.map((freelancer) => (
+                        <div key={freelancer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all group">
+                          <div className="flex items-center gap-4 mb-4">
+                            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
+                              {freelancer.avatar_url ? (
+                                <img src={freelancer.avatar_url} alt={freelancer.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Users className="w-6 h-6 text-indigo-400" />
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
+                                {freelancer.ranking && (
+                                  <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
+                                    <Award className="w-3 h-3" />
+                                    Top {freelancer.ranking}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <p className="text-xs text-slate-500 line-clamp-2 mb-4 h-8">
+                            {freelancer.bio || "No bio provided yet."}
+                          </p>
+
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {freelancer.skills.slice(0, 3).map(skill => (
+                              <span key={skill} className="text-[9px] font-bold bg-slate-50 text-slate-500 border border-slate-100 px-2 py-0.5 rounded uppercase">{skill}</span>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                            <span className="text-sm font-bold text-slate-900">{freelancer.hourlyRate || "₱0"}/hr</span>
+                            <Link 
+                              href={`/messages?with=${freelancer.id}`}
+                              className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              Message
+                            </Link>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full text-center py-12 bg-white rounded-xl border-2 border-dashed border-slate-100">
+                        <p className="text-slate-500 text-sm">No freelancers found.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-6">
