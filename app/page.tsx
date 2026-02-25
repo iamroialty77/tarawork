@@ -52,6 +52,7 @@ export default function Home() {
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [hirerJobs, setHirerJobs] = useState<Job[]>([]);
+  const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
   const [freelancers, setFreelancers] = useState<UserProfile[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
   const [missingTables, setMissingTables] = useState<string[]>([]);
@@ -254,9 +255,10 @@ export default function Home() {
 
   const fetchHirerJobs = async (userId: string) => {
     try {
+      // Fetch jobs along with their application counts
       const { data, error } = await supabase
         .from('jobs')
-        .select('*')
+        .select('*, applications(count)')
         .eq('hirer_id', userId)
         .order('createdAt', { ascending: false });
 
@@ -266,10 +268,67 @@ export default function Home() {
       }
 
       if (data) {
-        setHirerJobs(data);
+        const formattedJobs = data.map((job: any) => ({
+          ...job,
+          applicantCount: job.applications?.[0]?.count || 0
+        }));
+        setHirerJobs(formattedJobs);
       }
     } catch (err) {
       console.error("Unexpected error fetching hirer jobs:", err);
+    }
+  };
+
+  const fetchAppliedJobs = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select('job_id')
+        .eq('seeker_id', userId);
+      
+      if (!error && data) {
+        setAppliedJobIds(data.map((app: any) => app.job_id));
+      }
+    } catch (err) {
+      console.error("Error fetching applied jobs:", err);
+    }
+  };
+
+  const handleApply = async (jobId: string) => {
+    if (!user) {
+      setToastMsg("Please login to apply for jobs.");
+      setShowToast(true);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .insert([{ 
+          job_id: jobId, 
+          seeker_id: user.id,
+          status: 'pending' 
+        }]);
+
+      if (error) {
+        if (error.code === '23505') {
+          setToastMsg("You have na applied for this job!");
+        } else {
+          throw error;
+        }
+      } else {
+        setAppliedJobIds(prev => [...prev, jobId]);
+        setToastMsg("Application sent successfully to the hirer!");
+        
+        // Refresh hirer jobs if the user is also a hirer (rare but possible in dev)
+        if (profile.role === 'hirer') fetchHirerJobs(user.id);
+      }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err: any) {
+      console.error("Error applying for job:", err);
+      setToastMsg(`Error: ${err.message || "Failed to send application"}`);
+      setShowToast(true);
     }
   };
 
@@ -346,6 +405,7 @@ export default function Home() {
         
         // Fetch jobs from DB
         await fetchJobs();
+        await fetchAppliedJobs(session.user.id);
         await fetchHirerJobs(session.user.id);
         await fetchFreelancers();
         await fetchUnreadCount(session.user.id);
@@ -372,6 +432,19 @@ export default function Home() {
             filter: `id=eq.${session.user.id}`
           }, (payload) => {
             setProfile(prev => ({ ...prev, ...payload.new }));
+          })
+          .subscribe();
+
+        // Subscribe to applications for realtime updates
+        const applicationsChannel = supabase
+          .channel('applications-changes')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'applications' 
+          }, () => {
+            fetchHirerJobs(session.user.id);
+            fetchAppliedJobs(session.user.id);
           })
           .subscribe();
         
@@ -800,7 +873,12 @@ export default function Home() {
                     </div>
                   </div>
                   
-                  <JobFeed jobs={jobs} profile={profile} />
+                  <JobFeed 
+                    jobs={jobs} 
+                    profile={profile} 
+                    onApply={handleApply}
+                    appliedJobIds={appliedJobIds}
+                  />
                 </div>
               </div>
             </div>
@@ -1034,7 +1112,7 @@ export default function Home() {
                           <div className="flex justify-between items-center pt-4 border-t border-slate-50">
                             <div className="flex gap-4">
                               <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-900">0</span>
+                                <span className="text-sm font-bold text-slate-900">{(job as any).applicantCount || 0}</span>
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Proposals</span>
                               </div>
                               <div className="flex flex-col">

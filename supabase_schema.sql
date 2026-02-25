@@ -234,6 +234,45 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 
+-- 10. Create APPLICATIONS table
+CREATE TABLE IF NOT EXISTS public.applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id TEXT REFERENCES public.jobs(id) ON DELETE CASCADE NOT NULL,
+    seeker_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    status TEXT DEFAULT 'pending', -- pending, interviewing, hired, rejected
+    cover_letter TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(job_id, seeker_id)
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+
+-- Policies for APPLICATIONS
+-- Seeker can view their own applications
+DROP POLICY IF EXISTS "Users can view their own applications" ON public.applications;
+CREATE POLICY "Users can view their own applications" ON public.applications
+    FOR SELECT USING (auth.uid() = seeker_id);
+
+-- Hirer can view applications for their own jobs
+DROP POLICY IF EXISTS "Hirers can view applications for their jobs" ON public.applications;
+CREATE POLICY "Hirers can view applications for their jobs" ON public.applications
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.jobs
+            WHERE jobs.id = applications.job_id
+            AND jobs.hirer_id = auth.uid()
+        )
+    );
+
+-- Seeker can insert their own application
+DROP POLICY IF EXISTS "Users can insert their own applications" ON public.applications;
+CREATE POLICY "Users can insert their own applications" ON public.applications
+    FOR INSERT WITH CHECK (auth.uid() = seeker_id);
+
+-- Add to Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.applications;
+
 -- Policies for CONVERSATIONS
 DROP POLICY IF EXISTS "Users can view their own conversations" ON public.conversations;
 CREATE POLICY "Users can view their own conversations" ON public.conversations

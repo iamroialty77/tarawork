@@ -9,9 +9,11 @@ import { Search, Filter, Sparkles } from "lucide-react";
 interface JobFeedProps {
   jobs: Job[];
   profile: FreelancerProfile;
+  onApply?: (jobId: string) => void;
+  appliedJobIds?: string[];
 }
 
-export default function JobFeed({ jobs, profile }: JobFeedProps) {
+export default function JobFeed({ jobs, profile, onApply, appliedJobIds = [] }: JobFeedProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
@@ -162,6 +164,8 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
                 matchScore={matchScore} 
                 matchedSkills={matchedSkills}
                 missingSkills={missingSkills}
+                onApply={onApply}
+                isApplied={appliedJobIds.includes(job.id)}
               />
             );
           })

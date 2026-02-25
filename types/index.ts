@@ -82,6 +82,7 @@ export interface Job {
   deadline?: string;
   customQuestions?: ProposalQuestion[];
   hirer_id?: string;
+  applicantCount?: number;
 }
 
 export interface VerifiedSkill {

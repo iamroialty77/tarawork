@@ -25,6 +25,8 @@ export interface JobCardProps {
   matchScore?: number;
   matchedSkills?: string[];
   missingSkills?: string[];
+  onApply?: (jobId: string) => void;
+  isApplied?: boolean;
 }
 
 export default function JobCard({ 
@@ -32,10 +34,13 @@ export default function JobCard({
   index = 0, 
   matchScore,
   matchedSkills = [],
-  missingSkills = []
+  missingSkills = [],
+  onApply,
+  isApplied = false
 }: JobCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [showMatchDetails, setShowMatchDetails] = useState(false);
+  const [isApplyingLocal, setIsApplyingLocal] = useState(false);
 
   return (
     <motion.div
@@ -233,11 +238,34 @@ export default function JobCard({
               Details
             </button>
             <button 
-              onClick={() => alert(`Application for "${job.title}" has been sent! The client (${job.company}) will review your profile and get back to you.`)}
-              className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-slate-900 rounded-lg hover:bg-black shadow-lg shadow-slate-200 transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
+              onClick={async () => {
+                if (isApplied || isApplyingLocal) return;
+                setIsApplyingLocal(true);
+                if (onApply) {
+                  await onApply(job.id);
+                }
+                setIsApplyingLocal(false);
+              }}
+              disabled={isApplied || isApplyingLocal}
+              className={cn(
+                "flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-lg transition-all active:scale-95 cursor-pointer uppercase tracking-wider",
+                isApplied ? "bg-emerald-600 shadow-emerald-100" : "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200",
+                (isApplied || isApplyingLocal) && "opacity-80 cursor-not-allowed"
+              )}
             >
-              Apply Now
-              <ExternalLink className="w-3.5 h-3.5" />
+              {isApplyingLocal ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Applying...
+                </span>
+              ) : isApplied ? (
+                "Applied ✓"
+              ) : (
+                <>
+                  Apply Now
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
           </div>
         </div>
