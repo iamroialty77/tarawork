@@ -22,9 +22,10 @@ import Link from "next/link";
 export interface JobCardProps {
   job: Job;
   index?: number;
+  matchScore?: number;
 }
 
-export default function JobCard({ job, index = 0 }: JobCardProps) {
+export default function JobCard({ job, index = 0, matchScore }: JobCardProps) {
   const [isSaved, setIsSaved] = useState(false);
 
   return (
@@ -65,16 +66,23 @@ export default function JobCard({ job, index = 0 }: JobCardProps) {
                     <MessageSquare className="w-3 h-3" />
                   </Link>
                 </div>
+                {matchScore !== undefined && matchScore > 0 && (
+                  <span className={cn(
+                    "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest",
+                    matchScore >= 80 ? "bg-indigo-50 text-indigo-700 border-indigo-100 shadow-sm shadow-indigo-100" :
+                    matchScore >= 50 ? "bg-amber-50 text-amber-700 border-amber-100" :
+                    "bg-slate-50 text-slate-700 border-slate-100"
+                  )}>
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    {matchScore}% Match
+                  </span>
+                )}
                 {job.budget && job.budget > 4000 && (
                   <span className="flex items-center text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg border border-emerald-100 uppercase tracking-widest">
                     <TrendingUp className="w-3 h-3 mr-1" />
                     High Budget
                   </span>
                 )}
-                <span className="flex items-center text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg border border-indigo-100 uppercase tracking-widest">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Smart Match
-                </span>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
                 <span className="hover:text-slate-900 transition-colors cursor-pointer">{job.company}</span>

@@ -18,11 +18,16 @@ import {
   Meh,
   Frown,
   TrendingUp,
-  Award
+  Award,
+  Shield,
+  Zap,
+  DollarSign
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { cn } from "../lib/utils";
+import VideoCall from "./VideoCall";
 
 interface WorkspaceProps {
   projects: Project[];
@@ -34,6 +39,18 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
   const [editingLink, setEditingLink] = useState<string | null>(null);
   const [tempLink, setTempLink] = useState("");
+  const [showWarRoom, setShowWarRoom] = useState(false);
+  const [activeCall, setActiveCall] = useState(false);
+
+  // Sync selected project when projects prop changes
+  useEffect(() => {
+    if (selectedProject) {
+      const updated = projects.find(p => p.id === selectedProject.id);
+      if (updated) setSelectedProject(updated);
+    } else if (projects.length > 0) {
+      setSelectedProject(projects[0]);
+    }
+  }, [projects]);
 
   const handleSaveLink = (project: Project) => {
     if (onUpdateProject) {
@@ -42,8 +59,30 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
     }
   };
 
+  const handleUpdateMilestone = (projectId: string, milestoneId: string, status: Milestone["status"]) => {
+    if (!onUpdateProject || !selectedProject) return;
+
+    // Optimistic Update
+    const updatedMilestones = (selectedProject.milestones || []).map(m => 
+      m.id === milestoneId ? { ...m, status } : m
+    );
+    const updatedProject = { ...selectedProject, milestones: updatedMilestones };
+    
+    // Update local state immediately
+    setSelectedProject(updatedProject);
+    
+    // Call parent update
+    onUpdateProject(updatedProject);
+  };
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+      {activeCall && (
+        <VideoCall 
+          projectId={selectedProject?.id} 
+          onLeave={() => setActiveCall(false)} 
+        />
+      )}
       {/* Workspace Header */}
       <div className="bg-slate-900 p-6 text-white">
         <div className="flex justify-between items-center mb-6">
@@ -58,7 +97,7 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={() => alert("Meeting module is initializing... Please wait for other participants.")}
+              onClick={() => setActiveCall(true)}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 uppercase tracking-wider"
             >
               <Video className="w-3.5 h-3.5" />
@@ -70,17 +109,22 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
         <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-fit border border-white/5">
           {[
             { id: "active", label: "Active Projects", icon: Clock },
+            { id: "warroom", label: "Project War Room", icon: Shield },
             { id: "reviews", label: "Code & Design", icon: Code2 },
             { id: "calls", label: "AI Meeting Notes", icon: MessageSquare },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                if (tab.id === 'warroom') setShowWarRoom(true);
+                else setShowWarRoom(false);
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
                 activeTab === tab.id ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <tab.icon className="w-3.5 h-3.5" />
+              {tab.id === 'warroom' ? <Shield className="w-3.5 h-3.5" /> : <tab.icon className="w-3.5 h-3.5" />}
               {tab.label}
             </button>
           ))}
@@ -100,7 +144,10 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                 projects.map((project) => (
                   <div 
                     key={project.id} 
-                    className="group p-5 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all cursor-pointer"
+                    className={cn(
+                      "group p-5 border rounded-xl transition-all cursor-pointer",
+                      selectedProject?.id === project.id ? "border-indigo-500 bg-indigo-50/50" : "border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30"
+                    )}
                     onClick={() => setSelectedProject(project)}
                   >
                     <div className="flex justify-between items-start mb-4">
@@ -111,9 +158,14 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                           {project.workspaceType === "Code" ? <Github className="w-6 h-6" /> : <Layout className="w-6 h-6" />}
                         </div>
                         <div>
-                          <h4 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight">
-                            {project.title}
-                          </h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight">
+                              {project.title}
+                            </h4>
+                            {selectedProject?.id === project.id && (
+                              <span className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Selected</span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <p className="text-xs text-slate-500 font-medium">Client: <span className="font-bold text-slate-700 uppercase tracking-tight">{project.client}</span></p>
                             <Link 
@@ -148,49 +200,12 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                         <span className="text-sm font-bold text-slate-900">{project.budget} Due Mar 15</span>
                       </div>
                       <div className="flex items-center justify-end gap-3">
-                        {editingLink === project.id ? (
-                          <div className="flex items-center gap-2 bg-white border border-indigo-200 rounded-lg px-2 py-1 shadow-sm">
-                            <input 
-                              type="text" 
-                              className="text-xs focus:outline-none w-32" 
-                              placeholder="https://..."
-                              value={tempLink}
-                              onChange={(e) => setTempLink(e.target.value)}
-                              autoFocus
-                            />
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleSaveLink(project); }}
-                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setEditingLink(project.id); 
-                              setTempLink(project.projectLink || ""); 
-                            }}
-                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-1"
-                            title="Edit Project Link"
-                          >
-                            <LinkIcon className="w-4 h-4" />
-                          </button>
-                        )}
-                        <Link
-                          href={project.clientId ? `/messages?with=${project.clientId}` : "/messages"}
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                          title="Message Party"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </Link>
                         <button 
-                          onClick={(e) => { e.stopPropagation(); alert("Work log submitted for " + project.title); }}
-                          className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm uppercase tracking-wider"
+                          onClick={(e) => { e.stopPropagation(); setSelectedProject(project); setActiveTab("warroom"); }}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 uppercase tracking-wider flex items-center gap-2"
                         >
-                          Log Work
+                          <Zap className="w-3 h-3" />
+                          War Room
                         </button>
                       </div>
                     </div>
@@ -208,6 +223,144 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
             </motion.div>
           )}
 
+          {activeTab === "warroom" && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="space-y-6"
+            >
+              {selectedProject ? (
+                <div className="bg-slate-50 rounded-3xl border border-slate-200 p-8">
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                          <Shield className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">{selectedProject.title}</h3>
+                      </div>
+                      <p className="text-slate-500 font-medium">Collaborating with <span className="text-slate-900 font-bold">{selectedProject.client}</span></p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 uppercase tracking-widest">Live War Room</span>
+                      <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Optimistic UI Enabled</p>
+                    </div>
+                  </div>
+
+                  {/* Progress Section */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div className="md:col-span-3 space-y-3">
+                      <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-500">
+                        <span>Project Completion</span>
+                        <span className="text-indigo-600">
+                          {Math.round(((selectedProject.milestones?.filter(m => m.status === 'Completed' || m.status === 'Released').length || 0) / Math.max(selectedProject.milestones?.length || 1, 1)) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden p-0.5">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${((selectedProject.milestones?.filter(m => m.status === 'Completed' || m.status === 'Released').length || 0) / Math.max(selectedProject.milestones?.length || 1, 1)) * 100}%` }}
+                          className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full shadow-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Budget</span>
+                      <span className="text-xl font-black text-slate-900">{selectedProject.budget}</span>
+                    </div>
+                  </div>
+
+                  {/* Milestones Grid */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Milestones Tracking</h4>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                        <Zap className="w-3 h-3" />
+                        Real-time Sync Active
+                      </div>
+                    </div>
+                    
+                    <div className="grid gap-3">
+                      {(selectedProject.milestones || [
+                        { id: '1', title: 'Initial Project Setup', dueDate: 'Mar 1', amount: 5000, status: 'Released' },
+                        { id: '2', title: 'Core Functionality', dueDate: 'Mar 15', amount: 10000, status: 'In-Progress' },
+                        { id: '3', title: 'Final Review & Handover', dueDate: 'Apr 1', amount: 5000, status: 'Pending' }
+                      ]).map((milestone) => (
+                        <div 
+                          key={milestone.id} 
+                          className={cn(
+                            "p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4",
+                            milestone.status === 'Released' ? "bg-white border-emerald-100" :
+                            milestone.status === 'Completed' ? "bg-white border-indigo-100" :
+                            "bg-white border-slate-100 hover:border-indigo-100"
+                          )}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                              milestone.status === 'Released' ? "bg-emerald-500 text-white" :
+                              milestone.status === 'Completed' ? "bg-indigo-500 text-white" :
+                              milestone.status === 'In-Progress' ? "bg-amber-500 text-white" :
+                              "bg-slate-100 text-slate-400"
+                            )}>
+                              {milestone.status === 'Released' ? <CheckCircle2 className="w-6 h-6" /> : 
+                               milestone.status === 'Completed' ? <CheckCircle2 className="w-6 h-6" /> : 
+                               milestone.status === 'In-Progress' ? <Clock className="w-6 h-6" /> : 
+                               <Lock className="w-5 h-5" />}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900">{milestone.title}</p>
+                              <div className="flex items-center gap-3 mt-0.5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  Due {milestone.dueDate}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                  <DollarSign className="w-3 h-3" />
+                                  ₱{milestone.amount}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <div className="flex flex-col items-end mr-2">
+                              <span className={cn(
+                                "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border",
+                                milestone.status === 'Released' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                milestone.status === 'Completed' ? "bg-indigo-50 text-indigo-700 border-indigo-100" :
+                                milestone.status === 'In-Progress' ? "bg-amber-50 text-amber-700 border-amber-100" :
+                                "bg-slate-50 text-slate-500 border-slate-100"
+                              )}>
+                                {milestone.status}
+                              </span>
+                            </div>
+                            <select 
+                              value={milestone.status}
+                              onChange={(e) => handleUpdateMilestone(selectedProject.id, milestone.id, e.target.value as any)}
+                              className="text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white rounded-xl px-4 py-2 hover:bg-black transition-all cursor-pointer outline-none border-none"
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="In-Progress">In-Progress</option>
+                              <option value="Completed">Completed</option>
+                              <option value="Released">Released</option>
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-100">
+                  <Shield className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                  <h4 className="font-bold text-slate-900">Select a project to enter War Room</h4>
+                  <p className="text-sm text-slate-500 mt-1">Real-time collaboration is just a click away.</p>
+                </div>
+              )}
+            </motion.div>
+          )}
           {activeTab === "reviews" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -308,7 +461,10 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                         <p className="text-xs text-indigo-700">No more Zoom links. Everything stays here.</p>
                       </div>
                     </div>
-                    <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100">
+                    <button 
+                      onClick={() => setActiveCall(true)}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100"
+                    >
                       New Call
                     </button>
                   </div>

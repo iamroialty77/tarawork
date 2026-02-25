@@ -7,6 +7,7 @@ import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
 import Workspace from "../components/Workspace";
 import TeamManager from "../components/TeamManager";
+import CareerPath from "../components/CareerPath";
 import JobPostingForm from "../components/JobPostingForm";
 import AdminDashboard from "../components/AdminDashboard";
 import { supabase } from "../lib/supabase";
@@ -343,6 +344,19 @@ export default function Home() {
             table: 'messages' 
           }, () => {
             fetchUnreadCount(session.user.id);
+          })
+          .subscribe();
+
+        // Subscribe to profile changes for real-time projects
+        const profileChannel = supabase
+          .channel('profile-changes')
+          .on('postgres_changes', { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'profiles',
+            filter: `id=eq.${session.user.id}`
+          }, (payload) => {
+            setProfile(prev => ({ ...prev, ...payload.new }));
           })
           .subscribe();
         
@@ -750,6 +764,9 @@ export default function Home() {
                   projects={profile.activeProjects || []} 
                   onUpdateProject={handleUpdateProject}
                 />
+                
+                <CareerPath profile={profile} allJobs={jobs} />
+
                 <TeamManager squad={profile.squad} />
 
                 <div className="pt-2" ref={jobsRef}>

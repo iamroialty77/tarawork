@@ -104,6 +104,7 @@ export interface Project {
   githubRepo?: string;
   figmaFile?: string;
   projectLink?: string;
+  milestones?: Milestone[];
 }
 
 export interface UserProfile {

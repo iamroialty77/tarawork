@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { PortfolioItem } from "../types";
-import { Plus, Trash2, ExternalLink, Code, Image as ImageIcon, Briefcase, MessageSquare } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Code, Image as ImageIcon, Briefcase, MessageSquare, Github, Layout, Sparkles } from "lucide-react";
 import Link from "next/link";
+import PortfolioPreview from "./PortfolioPreview";
 
 interface PortfolioManagerProps {
   items: PortfolioItem[];
@@ -137,7 +138,7 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {items.length === 0 && !isAdding && (
           <div className="col-span-full py-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
             <Briefcase className="w-12 h-12 text-slate-200 mx-auto mb-3" />
@@ -145,60 +146,16 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
           </div>
         )}
         {items.map((item) => (
-          <div
-            key={item.id}
-            className="group bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 transition-all relative"
-          >
+          <div key={item.id} className="relative group">
+            <PortfolioPreview item={item} />
             {isOwner && (
               <button
                 onClick={() => onRemove(item.id)}
-                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur shadow-xl text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all z-10"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center shrink-0">
-                <Code className="w-6 h-6 text-indigo-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                  <h4 className="font-bold text-slate-900 truncate">{item.title}</h4>
-                  {!isOwner && (
-                    <Link 
-                      href="/messages"
-                      className="text-slate-300 hover:text-indigo-600 transition-colors"
-                      title="Message freelancer about this project"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                    </Link>
-                  )}
-                </div>
-                <p className="text-sm text-slate-500 line-clamp-2 mt-1 leading-relaxed">
-                  {item.description}
-                </p>
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {item.technologies?.map((tech) => (
-                    <span
-                      key={tech}
-                      className="px-2 py-0.5 bg-slate-50 text-slate-600 rounded-md text-[10px] font-bold border border-slate-100"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-                {item.project_url && (
-                  <a
-                    href={item.project_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 mt-4 hover:gap-2 transition-all"
-                  >
-                    View Project <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
-            </div>
           </div>
         ))}
       </div>

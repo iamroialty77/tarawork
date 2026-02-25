@@ -232,6 +232,7 @@ ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 
 -- Policies for CONVERSATIONS
 DROP POLICY IF EXISTS "Users can view their own conversations" ON public.conversations;

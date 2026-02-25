@@ -2,7 +2,7 @@
 
 import { FreelancerProfile, FreelancerCategory, PortfolioItem } from "../types";
 import { useState, useEffect, useRef } from "react";
-import { Camera, Globe, Github, Linkedin, Link as LinkIcon, User, Briefcase, Mail } from "lucide-react";
+import { Camera, Globe, Github, Linkedin, Link as LinkIcon, User, Briefcase, Mail, FileText, Sparkles, Loader2 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 
 interface ProfileFormProps {
@@ -22,7 +22,9 @@ export default function ProfileForm({
 }: ProfileFormProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [skillInput, setSkillInput] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
@@ -97,6 +99,47 @@ export default function ProfileForm({
         setProfile({ ...profile, avatar_url: reader.result as string });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/parse-resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to parse resume');
+      }
+
+      const data = await response.json();
+      
+      const updatedProfile = {
+        ...profile,
+        name: data.name || profile.name,
+        bio: data.bio || profile.bio,
+        skills: Array.from(new Set([...profile.skills, ...(data.skills || [])])),
+        category: data.category || profile.category,
+      };
+      
+      setProfile(updatedProfile);
+      onUpdate(updatedProfile);
+      alert('Resume parsed successfully! AI has updated your profile.');
+    } catch (error: any) {
+      console.error('Error:', error);
+      alert(`Error parsing resume: ${error.message}`);
+    } finally {
+      setIsParsing(false);
+      if (resumeInputRef.current) resumeInputRef.current.value = '';
     }
   };
 
@@ -210,6 +253,47 @@ export default function ProfileForm({
             onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
           />
         </div>
+
+        {profile.role === "jobseeker" && (
+          <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 border-dashed">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">AI Resume Parser</h4>
+                  <p className="text-xs text-indigo-600/70 font-medium">Upload PDF to auto-fill your profile</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isParsing}
+                onClick={() => resumeInputRef.current?.click()}
+                className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 flex items-center gap-2 disabled:opacity-50"
+              >
+                {isParsing ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-3 h-3" />
+                    Upload PDF
+                  </>
+                )}
+              </button>
+            </div>
+            <input
+              type="file"
+              ref={resumeInputRef}
+              className="hidden"
+              accept=".pdf"
+              onChange={handleResumeUpload}
+            />
+          </div>
+        )}
 
         {profile.role === "jobseeker" && (
           <div>
