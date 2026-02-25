@@ -138,6 +138,22 @@ function MessagesContent() {
   useEffect(() => {
     if (currentUser?.id) {
       fetchConversations(currentUser.id);
+
+      // Subscribe to global message changes to update conversation list
+      const channel = supabase
+        .channel('global-messages')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'messages' 
+        }, () => {
+          fetchConversations(currentUser.id);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [currentUser, withUserId]);
 

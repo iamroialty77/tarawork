@@ -117,7 +117,7 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                           <div className="flex items-center gap-2">
                             <p className="text-xs text-slate-500 font-medium">Client: <span className="font-bold text-slate-700 uppercase tracking-tight">{project.client}</span></p>
                             <Link 
-                              href="/messages" 
+                              href={project.clientId ? `/messages?with=${project.clientId}` : "/messages"} 
                               onClick={(e) => e.stopPropagation()}
                               className="text-slate-300 hover:text-indigo-600 transition-colors"
                               title={`Message ${project.client}`}
@@ -179,7 +179,7 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                           </button>
                         )}
                         <Link
-                          href="/messages"
+                          href={project.clientId ? `/messages?with=${project.clientId}` : "/messages"}
                           onClick={(e) => e.stopPropagation()}
                           className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                           title="Message Party"

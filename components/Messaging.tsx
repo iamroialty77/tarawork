@@ -220,7 +220,13 @@ export default function Messaging({
                   <h3 className="font-bold text-slate-900 text-sm leading-tight">
                     {selectedConversation.other_participant?.name}
                   </h3>
-                  <p className="text-[10px] text-green-500 font-bold uppercase tracking-wider">Active Now</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] text-green-500 font-bold uppercase tracking-wider">Active Now</p>
+                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      {selectedConversation.other_participant?.role === 'hirer' ? 'Client' : 'Freelancer'}
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -319,6 +325,27 @@ export default function Messaging({
 
             {/* Input Area */}
             <div className="p-4 bg-white border-t border-slate-100">
+              {/* Quick Reply Suggestions */}
+              {!selectedFile && !messageInput && (
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
+                  {[
+                    "Hello! Available po ba kayo?",
+                    "Kailan po ang deadline nito?",
+                    "Maaari ko po bang makita ang details?",
+                    "Interesado po ako sa project na ito.",
+                    "Salamat po!"
+                  ].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setMessageInput(suggestion)}
+                      className="whitespace-nowrap px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-full text-[10px] font-bold text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 transition-all cursor-pointer"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {selectedFile && (
                 <div className="mb-3 p-2 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-200">
                   <div className="flex items-center gap-2">
@@ -365,7 +392,7 @@ export default function Messaging({
 
                 <input
                   type="text"
-                  placeholder="Aa"
+                  placeholder="Sumulat ng mensahe..."
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && !isUploading && handleSend()}

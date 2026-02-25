@@ -95,6 +95,7 @@ export interface Project {
   id: string;
   title: string;
   client: string;
+  clientId?: string;
   status: ProjectStatus;
   hoursLogged: number;
   budget: string;

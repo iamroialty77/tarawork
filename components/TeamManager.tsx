@@ -108,7 +108,7 @@ export default function TeamManager({ squad }: TeamManagerProps) {
                   <p className="text-[10px] text-slate-400 uppercase font-bold">Amount</p>
                 </div>
                 <Link
-                  href="/messages"
+                  href={`/messages?with=${member.id}`}
                   className="p-1.5 text-slate-300 hover:text-indigo-600 transition-colors"
                   title={`Message ${member.name}`}
                 >

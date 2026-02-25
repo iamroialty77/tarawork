@@ -146,6 +146,10 @@ DROP POLICY IF EXISTS "Users can create conversations" ON public.conversations;
 CREATE POLICY "Users can create conversations" ON public.conversations
     FOR INSERT WITH CHECK (auth.uid() = participant_1 OR auth.uid() = participant_2);
 
+DROP POLICY IF EXISTS "Users can update their own conversations" ON public.conversations;
+CREATE POLICY "Users can update their own conversations" ON public.conversations
+    FOR UPDATE USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
+
 -- Policies for MESSAGES
 DROP POLICY IF EXISTS "Users can view messages in their conversations" ON public.messages;
 CREATE POLICY "Users can view messages in their conversations" ON public.messages
