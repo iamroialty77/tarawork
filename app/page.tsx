@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { UserProfile, Job, PortfolioItem } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Award,
   Shield,
+  ShieldCheck,
   ArrowUpRight,
   Clock,
   LogIn,

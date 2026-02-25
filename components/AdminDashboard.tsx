@@ -35,18 +35,21 @@ import {
   Unlock,
   CreditCard,
   Ban,
-  Scale
+  Scale,
+  Mail
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "escrow" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "escrow" | "disputes" | "reports" | "health";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const [counts, setCounts] = useState({ users: 0, jobs: 0, hirers: 0, seekers: 0, escrows: 0 });
+  const [counts, setCounts] = useState({ users: 0, jobs: 0, hirers: 0, seekers: 0, escrows: 0, disputes: 0 });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [escrows, setEscrows] = useState<any[]>([]);
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [healthStatus, setHealthStatus] = useState({
@@ -54,11 +57,13 @@ export default function AdminDashboard() {
     jobs: { exists: false, loading: true },
     escrows: { exists: false, loading: true },
     messages: { exists: false, loading: true },
-    conversations: { exists: false, loading: true }
+    conversations: { exists: false, loading: true },
+    disputes: { exists: false, loading: true },
+    admin_audit_logs: { exists: false, loading: true }
   });
 
   const checkTableHealth = async () => {
-    const tables = ['profiles', 'jobs', 'escrows', 'messages', 'conversations'];
+    const tables = ['profiles', 'jobs', 'escrows', 'messages', 'conversations', 'disputes', 'admin_audit_logs'];
     const newStatus = { ...healthStatus };
 
     for (const table of tables) {
@@ -88,13 +93,15 @@ export default function AdminDashboard() {
       const { count: seekerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'jobseeker');
       const { count: jobCount } = await supabase.from('jobs').select('*', { count: 'exact', head: true });
       const { count: escrowCount } = await supabase.from('escrows').select('*', { count: 'exact', head: true });
+      const { count: disputeCount } = await supabase.from('disputes').select('*', { count: 'exact', head: true });
 
       setCounts({
         users: userCount || 0,
         hirers: hirerCount || 0,
         seekers: seekerCount || 0,
         jobs: jobCount || 0,
-        escrows: escrowCount || 0
+        escrows: escrowCount || 0,
+        disputes: disputeCount || 0
       });
 
       // Fetch Users
@@ -111,12 +118,27 @@ export default function AdminDashboard() {
         .order('createdAt', { ascending: false });
       if (jobData) setJobs(jobData);
 
-      // Fetch Escrows (Mock if table is new)
+      // Fetch Escrows
       const { data: escrowData } = await supabase
         .from('escrows')
-        .select('*')
+        .select('*, jobs(title)')
         .order('created_at', { ascending: false });
       if (escrowData) setEscrows(escrowData);
+
+      // Fetch Disputes
+      const { data: disputeData } = await supabase
+        .from('disputes')
+        .select('*, escrows(amount, job_id, jobs(title))')
+        .order('created_at', { ascending: false });
+      if (disputeData) setDisputes(disputeData);
+
+      // Fetch Audit Logs
+      const { data: logData } = await supabase
+        .from('admin_audit_logs')
+        .select('*, profiles(name)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (logData) setAuditLogs(logData);
 
     } catch (err) {
       console.error("Dashboard data fetch error:", err);
@@ -209,9 +231,10 @@ export default function AdminDashboard() {
 
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "users", label: "User Moderation", icon: UserCheck },
+    { id: "users", label: "Verification Queue", icon: ShieldCheck },
     { id: "jobs", label: "Marketplace", icon: Briefcase },
-    { id: "escrow", label: "Escrow & Payments", icon: CreditCard },
+    { id: "escrow", label: "Financials", icon: CreditCard },
+    { id: "disputes", label: "Disputes", icon: Scale },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
   ];
@@ -256,9 +279,19 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { label: "Total Platform Users", value: counts.users || 12842, icon: Users, color: "indigo" },
-                { label: "Active Escrows", value: counts.escrows || 14, icon: CreditCard, color: "emerald" },
-                { label: "Total Jobs Posted", value: counts.jobs || 854, icon: Briefcase, color: "blue" },
-                { label: "Platform Revenue", value: "$452,120", icon: DollarSign, color: "amber" },
+                { 
+                  label: "Funds in Escrow", 
+                  value: `₱${escrows.reduce((sum, e) => sum + (e.status === 'funded' ? e.amount : 0), 0).toLocaleString()}`, 
+                  icon: CreditCard, 
+                  color: "emerald" 
+                },
+                { label: "Active Disputes", value: counts.disputes || 14, icon: AlertTriangle, color: "red" },
+                { 
+                  label: "Platform Fees (Total)", 
+                  value: `₱${escrows.reduce((sum, e) => sum + (Number(e.platform_fee) || 0), 0).toLocaleString()}`, 
+                  icon: DollarSign, 
+                  color: "amber" 
+                },
               ].map((stat, i) => (
                 <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                   <div className="flex justify-between items-start">
@@ -275,22 +308,52 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
-                <div className="flex justify-between items-center mb-8">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900">Platform Performance</h3>
-                    <p className="text-sm text-slate-500 font-medium">Monthly growth and interaction trends</p>
+              <div className="lg:col-span-2 space-y-8">
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                  <div className="flex justify-between items-center mb-8">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">Platform Performance</h3>
+                      <p className="text-sm text-slate-500 font-medium">Monthly growth and interaction trends</p>
+                    </div>
+                  </div>
+                  <div className="h-64 flex items-end gap-2 px-2">
+                    {[40, 65, 45, 90, 55, 75, 85, 60, 95, 70, 80, 100].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                        <div 
+                          className={`w-full rounded-t-lg transition-all bg-slate-100 group-hover:bg-slate-900`}
+                          style={{ height: `${h}%` }}
+                        ></div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="h-64 flex items-end gap-2 px-2">
-                  {[40, 65, 45, 90, 55, 75, 85, 60, 95, 70, 80, 100].map((h, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                      <div 
-                        className={`w-full rounded-t-lg transition-all bg-slate-100 group-hover:bg-slate-900`}
-                        style={{ height: `${h}%` }}
-                      ></div>
-                    </div>
-                  ))}
+
+                {/* Audit Trail Section */}
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-900">Recent Admin Audit Logs</h3>
+                    <FileText className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="space-y-4">
+                    {auditLogs.length > 0 ? auditLogs.map((log) => (
+                      <div key={log.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-slate-200">
+                            <UserCheck className="w-5 h-5 text-slate-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{log.action}</p>
+                            <p className="text-xs text-slate-500">
+                              By {log.profiles?.name || 'Admin'} • {new Date(log.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-mono text-slate-400">ID: {log.target_id.slice(0,8)}</span>
+                      </div>
+                    )) : (
+                      <p className="text-center py-8 text-slate-400 text-sm italic">No recent audit logs found.</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -300,17 +363,17 @@ export default function AdminDashboard() {
                   <Scale className="w-5 h-5 text-indigo-400" />
                 </div>
                 <div className="space-y-6 flex-1">
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                    <p className="text-xs font-bold text-indigo-400 uppercase mb-1">New Users</p>
-                    <p className="text-sm font-medium">{users.filter(u => u.status === 'pending').length} users waiting for review</p>
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setActiveTab('users')}>
+                    <p className="text-xs font-bold text-indigo-400 uppercase mb-1">Unverified Users</p>
+                    <p className="text-sm font-medium">{users.filter(u => u.status === 'pending').length} waiting for verification</p>
                   </div>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setActiveTab('jobs')}>
                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Flagged Jobs</p>
                     <p className="text-sm font-medium">{jobs.filter(j => j.status === 'flagged').length} jobs need attention</p>
                   </div>
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                    <p className="text-xs font-bold text-emerald-400 uppercase mb-1">Disputes</p>
-                    <p className="text-sm font-medium">14 active payment disputes</p>
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setActiveTab('disputes')}>
+                    <p className="text-xs font-bold text-red-400 uppercase mb-1">High Urgency Disputes</p>
+                    <p className="text-sm font-medium">{disputes.filter(d => d.urgency_level === 'High' && d.status === 'open').length} urgent cases</p>
                   </div>
                 </div>
               </div>
@@ -329,8 +392,8 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between gap-4 md:items-center">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">User Moderation</h3>
-                  <p className="text-sm text-slate-500 font-medium">Review and judge Job Seekers and Hirers.</p>
+                  <h3 className="text-xl font-bold text-slate-900">Verification Queue</h3>
+                  <p className="text-sm text-slate-500 font-medium">Review IDs and Portfolios to verify users.</p>
                 </div>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -347,7 +410,7 @@ export default function AdminDashboard() {
                   <thead>
                     <tr className="bg-slate-50/50">
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">User</th>
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Role</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Documents</th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
@@ -366,16 +429,27 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <div className="font-bold text-slate-900">{user.name || "Anonymous"}</div>
-                              <div className="text-xs text-slate-500">{user.category || "No Category"}</div>
+                              <div className="text-xs text-slate-500">{user.role} • {user.category || "No Category"}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                          <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${
-                            user.role === 'hirer' ? 'bg-blue-50 text-blue-600' : 'bg-indigo-50 text-indigo-600'
-                          }`}>
-                            {user.role}
-                          </span>
+                          <div className="flex gap-2">
+                            {user.verification_documents && user.verification_documents.length > 0 ? (
+                              user.verification_documents.map((doc: any, idx: number) => (
+                                <a 
+                                  key={idx}
+                                  href={doc.url} 
+                                  target="_blank" 
+                                  className="flex items-center gap-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-md transition-colors"
+                                >
+                                  <FileText className="w-3 h-3" /> {doc.type || 'ID'}
+                                </a>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic">No documents uploaded</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-8 py-6">
                           <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
@@ -390,28 +464,23 @@ export default function AdminDashboard() {
                             {user.status !== 'approved' && (
                               <button 
                                 onClick={() => updateUserStatus(user.id, 'approved')}
-                                className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100" 
+                                className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-all flex items-center gap-1 px-3" 
                                 title="Approve"
                               >
                                 <CheckCircle2 className="w-4 h-4" />
+                                <span className="text-xs font-bold">Approve</span>
                               </button>
                             )}
                             {user.status !== 'suspended' && (
                               <button 
                                 onClick={() => updateUserStatus(user.id, 'suspended')}
-                                className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100" 
-                                title="Suspend"
+                                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all flex items-center gap-1 px-3" 
+                                title="Reject/Suspend"
                               >
-                                <Ban className="w-4 h-4" />
+                                <XCircle className="w-4 h-4" />
+                                <span className="text-xs font-bold">Reject</span>
                               </button>
                             )}
-                            <button 
-                              onClick={() => deleteUser(user.id)}
-                              className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100" 
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -498,15 +567,16 @@ export default function AdminDashboard() {
           >
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-8 border-b border-slate-50">
-                <h3 className="text-xl font-bold text-slate-900">Escrow Management</h3>
-                <p className="text-sm text-slate-500 font-medium">Monitor active funds and resolve payment disputes.</p>
+                <h3 className="text-xl font-bold text-slate-900">Financial Transparency</h3>
+                <p className="text-sm text-slate-500 font-medium">Audit platform fees and funds in escrow.</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ID</th>
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Job</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Total Amount</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Platform Fee</th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
@@ -514,10 +584,17 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-slate-50">
                     {escrows.map((escrow) => (
                       <tr key={escrow.id} className="hover:bg-slate-50/30 transition-colors">
-                        <td className="px-8 py-6 font-mono text-xs">{escrow.id.slice(0, 8)}...</td>
-                        <td className="px-8 py-6 font-bold">₱{escrow.amount.toLocaleString()}</td>
                         <td className="px-8 py-6">
-                          <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg">
+                          <div className="font-bold text-slate-900">{escrow.jobs?.title || 'Unknown Job'}</div>
+                          <div className="text-[10px] font-mono text-slate-400">{escrow.id.slice(0, 8)}...</div>
+                        </td>
+                        <td className="px-8 py-6 font-bold text-slate-700">₱{escrow.amount.toLocaleString()}</td>
+                        <td className="px-8 py-6 font-bold text-indigo-600">₱{(Number(escrow.platform_fee) || 0).toLocaleString()}</td>
+                        <td className="px-8 py-6">
+                          <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                            escrow.status === 'released' ? 'bg-emerald-50 text-emerald-600' : 
+                            escrow.status === 'disputed' ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'
+                          }`}>
                             {escrow.status}
                           </span>
                         </td>
@@ -534,8 +611,81 @@ export default function AdminDashboard() {
                     ))}
                     {escrows.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-8 py-12 text-center text-slate-400">
-                          No active escrows found.
+                        <td colSpan={5} className="px-8 py-12 text-center text-slate-400 italic">
+                          No escrow records found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "disputes" && (
+          <motion.div
+            key="disputes"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-6"
+          >
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-8 border-b border-slate-50">
+                <h3 className="text-xl font-bold text-slate-900">Dispute Resolution Center</h3>
+                <p className="text-sm text-slate-500 font-medium">Review "He said, She said" cases with urgency levels and evidence.</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Urgency</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Job & Amount</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Evidence</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {disputes.map((dispute) => (
+                      <tr key={dispute.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-8 py-6">
+                          <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${
+                            dispute.urgency_level === 'High' ? 'bg-red-100 text-red-600' : 
+                            dispute.urgency_level === 'Medium' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {dispute.urgency_level}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="font-bold text-slate-900">{dispute.escrows?.jobs?.title || 'Unknown Job'}</div>
+                          <div className="text-sm text-indigo-600 font-bold">₱{dispute.escrows?.amount.toLocaleString()}</div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex flex-wrap gap-2">
+                            <button className="flex items-center gap-1 text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md hover:bg-indigo-100">
+                              <Eye className="w-3 h-3" /> Chat Logs
+                            </button>
+                            {dispute.evidence_urls?.map((url: string, i: number) => (
+                              <a key={i} href={url} target="_blank" className="flex items-center gap-1 text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-md hover:bg-slate-200">
+                                <FileText className="w-3 h-3" /> Proof {i+1}
+                              </a>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button className="px-3 py-1 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800">
+                              Resolve
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {disputes.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-8 py-12 text-center text-slate-400 italic">
+                          No active disputes.
                         </td>
                       </tr>
                     )}
@@ -600,8 +750,8 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">System Health & Setup</h3>
-                  <p className="text-sm text-slate-500 font-medium">Verify your Supabase database configuration.</p>
+                  <h3 className="text-xl font-bold text-slate-900">System Health & User Impact</h3>
+                  <p className="text-sm text-slate-500 font-medium">Monitoring risks and platform stability.</p>
                 </div>
                 <button 
                   onClick={checkTableHealth}
@@ -610,6 +760,21 @@ export default function AdminDashboard() {
                   <Activity className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Impact Level Summary */}
+              {!healthStatus.jobs.exists && (
+                <div className="mb-8 p-6 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-4">
+                  <div className="p-3 bg-red-100 text-red-600 rounded-xl">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-red-900">High Revenue Risk!</h4>
+                    <p className="text-sm text-red-700">
+                      Jobs table is offline. Approximately {counts.jobs} jobs are currently hidden from the public.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="p-6 rounded-2xl border border-emerald-100 bg-emerald-50/30">

@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     "aiInsights" JSONB,
     ranking INTEGER,
     status TEXT DEFAULT 'pending', -- pending, approved, suspended
+    "verification_documents" JSONB DEFAULT '[]', -- { type, url, name }
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -124,10 +125,35 @@ CREATE TABLE IF NOT EXISTS public.escrows (
     hirer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     seeker_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     amount NUMERIC NOT NULL,
+    platform_fee NUMERIC DEFAULT 0,
     status TEXT DEFAULT 'pending', -- pending, funded, released, disputed, refunded
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 7. Create DISPUTES table
+CREATE TABLE IF NOT EXISTS public.disputes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    escrow_id UUID REFERENCES public.escrows(id) ON DELETE CASCADE NOT NULL,
+    raised_by UUID REFERENCES public.profiles(id) NOT NULL,
+    reason TEXT NOT NULL,
+    urgency_level TEXT DEFAULT 'Medium', -- High, Medium, Low
+    status TEXT DEFAULT 'open', -- open, resolved, closed
+    evidence_urls JSONB DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 8. Create ADMIN_AUDIT_LOGS table
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID REFERENCES public.profiles(id) NOT NULL,
+    action TEXT NOT NULL,
+    target_type TEXT NOT NULL, -- profile, job, escrow, dispute
+    target_id TEXT NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
 -- 6. Storage bucket for attachments
@@ -152,10 +178,32 @@ ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.escrows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disputes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 8. Policies for ESCROWS
 DROP POLICY IF EXISTS "Admins can view all escrows" ON public.escrows;
 CREATE POLICY "Admins can view all escrows" ON public.escrows
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Policies for DISPUTES
+DROP POLICY IF EXISTS "Admins can view all disputes" ON public.disputes;
+CREATE POLICY "Admins can view all disputes" ON public.disputes
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+-- Policies for ADMIN_AUDIT_LOGS
+DROP POLICY IF EXISTS "Admins can view all audit logs" ON public.admin_audit_logs;
+CREATE POLICY "Admins can view all audit logs" ON public.admin_audit_logs
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM public.profiles 
