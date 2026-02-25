@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Messaging from "../../components/Messaging";
-import { Conversation, Message, UserProfile } from "../../types";
+import { Conversation, Message, UserProfile, Job } from "../../types";
 import { ArrowLeft, LayoutDashboard, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
@@ -16,6 +16,7 @@ function MessagesContent() {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [hirerJobs, setHirerJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 1. Fetch current user session
@@ -31,6 +32,13 @@ function MessagesContent() {
         
         if (profile) {
           setCurrentUser(profile);
+          if (profile.role === 'hirer') {
+            const { data: jobs } = await supabase
+              .from('jobs')
+              .select('*')
+              .eq('hirer_id', session.user.id);
+            if (jobs) setHirerJobs(jobs);
+          }
         }
       }
     }
@@ -178,7 +186,12 @@ function MessagesContent() {
     }
   }, [selectedId, currentUser?.id]);
 
-  const handleSend = async (convId: string, content: string) => {
+  const handleSend = async (
+    convId: string, 
+    content: string, 
+    attachment?: { url: string; name: string; type: string },
+    offer_data?: any
+  ) => {
     if (!currentUser?.id) return;
 
     const newMessage = {
@@ -186,7 +199,11 @@ function MessagesContent() {
       sender_id: currentUser.id,
       content,
       is_read: false,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      attachment_url: attachment?.url,
+      attachment_name: attachment?.name,
+      attachment_type: attachment?.type,
+      offer_data: offer_data
     };
 
     try {
@@ -263,6 +280,7 @@ function MessagesContent() {
           selectedConversationId={selectedId}
           onSelectConversation={setSelectedId}
           onSendMessage={handleSend}
+          hirerJobs={hirerJobs}
         />
       </div>
     </div>

@@ -153,6 +153,10 @@ export interface Message {
   content: string;
   is_read: boolean;
   created_at: string;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_type?: string;
+  offer_data?: any;
 }
 
 export interface FreelancerProfile extends UserProfile {} // Deprecated, use UserProfile

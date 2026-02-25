@@ -95,7 +95,11 @@ CREATE TABLE IF NOT EXISTS public.messages (
     sender_id UUID REFERENCES public.profiles(id) NOT NULL,
     content TEXT NOT NULL,
     is_read BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    attachment_url TEXT,
+    attachment_name TEXT,
+    attachment_type TEXT,
+    offer_data JSONB
 );
 
 -- 5. Create PORTFOLIO_ITEMS table

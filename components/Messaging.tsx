@@ -2,16 +2,42 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Conversation, Message, UserProfile } from "../types";
-import { Send, Search, MoreVertical, Phone, Video, Check, CheckCheck, User as UserIcon, ArrowLeft } from "lucide-react";
+import { 
+  Send, 
+  Search, 
+  MoreVertical, 
+  Phone, 
+  Video, 
+  Check, 
+  CheckCheck, 
+  User as UserIcon, 
+  ArrowLeft,
+  Paperclip,
+  Image as ImageIcon,
+  FileText,
+  X,
+  Briefcase,
+  Download,
+  ExternalLink,
+  Loader2
+} from "lucide-react";
 import { format } from "date-fns";
+import { supabase } from "../lib/supabase";
+import { Job } from "../types";
 
 interface MessagingProps {
   conversations: Conversation[];
   currentUser: UserProfile;
-  onSendMessage: (conversationId: string, content: string) => void;
+  onSendMessage: (
+    conversationId: string, 
+    content: string, 
+    attachment?: { url: string; name: string; type: string },
+    offer_data?: any
+  ) => void;
   onSelectConversation: (id: string) => void;
   selectedConversationId?: string;
   messages: Message[];
+  hirerJobs?: Job[];
 }
 
 export default function Messaging({
@@ -20,10 +46,15 @@ export default function Messaging({
   onSendMessage,
   onSelectConversation,
   selectedConversationId,
-  messages
+  messages,
+  hirerJobs = []
 }: MessagingProps) {
   const [messageInput, setMessageInput] = useState("");
   const [showMobileList, setShowMobileList] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
@@ -34,10 +65,66 @@ export default function Messaging({
     }
   }, [messages, selectedConversationId]);
 
-  const handleSend = () => {
-    if (messageInput.trim() && selectedConversationId) {
-      onSendMessage(selectedConversationId, messageInput.trim());
+  const handleSend = async () => {
+    if ((messageInput.trim() || selectedFile) && selectedConversationId) {
+      let attachment;
+
+      if (selectedFile) {
+        setIsUploading(true);
+        try {
+          const fileExt = selectedFile.name.split('.').pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const filePath = `${currentUser.id}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('attachments')
+            .upload(filePath, selectedFile);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('attachments')
+            .getPublicUrl(filePath);
+
+          attachment = {
+            url: publicUrl,
+            name: selectedFile.name,
+            type: selectedFile.type
+          };
+        } catch (error: any) {
+          alert("Error uploading file: " + error.message);
+          setIsUploading(false);
+          return;
+        }
+      }
+
+      onSendMessage(selectedConversationId, messageInput.trim(), attachment);
       setMessageInput("");
+      setSelectedFile(null);
+      setIsUploading(false);
+    }
+  };
+
+  const handleAttachOffer = (job: Job) => {
+    if (selectedConversationId) {
+      onSendMessage(
+        selectedConversationId, 
+        `I'd like to offer you a project: ${job.title}`, 
+        undefined, 
+        job
+      );
+      setShowOfferModal(false);
+    }
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        alert("File size exceeds 50MB limit.");
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
@@ -159,7 +246,57 @@ export default function Messaging({
                         ? "bg-indigo-600 text-white rounded-br-none" 
                         : "bg-white text-slate-900 rounded-bl-none shadow-sm border border-slate-100"
                     }`}>
-                      <p className="leading-relaxed">{msg.content}</p>
+                      {msg.offer_data && (
+                        <div className={`mb-3 p-3 rounded-xl border ${isMe ? "bg-white/10 border-white/20" : "bg-slate-50 border-slate-200"}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Briefcase className={`w-4 h-4 ${isMe ? "text-indigo-200" : "text-indigo-600"}`} />
+                            <span className="font-bold uppercase tracking-widest text-[10px]">Project Offer</span>
+                          </div>
+                          <h5 className="font-bold mb-1">{msg.offer_data.title}</h5>
+                          <p className={`text-[11px] line-clamp-2 mb-3 ${isMe ? "text-indigo-100" : "text-slate-500"}`}>
+                            {msg.offer_data.description}
+                          </p>
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-xs">{msg.offer_data.rate}</span>
+                            <button className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all ${
+                              isMe ? "bg-white text-indigo-600 hover:bg-indigo-50" : "bg-indigo-600 text-white hover:bg-indigo-700"
+                            }`}>
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {msg.attachment_url && (
+                        <div className={`mb-2 p-2 rounded-xl border ${isMe ? "bg-white/10 border-white/20" : "bg-slate-50 border-slate-200"}`}>
+                          {msg.attachment_type?.startsWith('image/') ? (
+                            <img 
+                              src={msg.attachment_url} 
+                              alt={msg.attachment_name} 
+                              className="max-w-full rounded-lg h-auto max-h-48 object-cover cursor-pointer"
+                              onClick={() => window.open(msg.attachment_url, '_blank')}
+                            />
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${isMe ? "bg-white/20" : "bg-white border border-slate-200"}`}>
+                                <FileText className="w-5 h-5 text-indigo-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-bold truncate">{msg.attachment_name}</p>
+                                <p className="text-[9px] opacity-60">PDF/Document</p>
+                              </div>
+                              <button 
+                                onClick={() => window.open(msg.attachment_url, '_blank')}
+                                className={`p-1.5 rounded-lg transition-all ${isMe ? "hover:bg-white/20" : "hover:bg-slate-100"}`}
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
                         <span className={`text-[9px] ${isMe ? "text-indigo-200" : "text-slate-400"}`}>
                           {format(new Date(msg.created_at), 'h:mm a')}
@@ -176,24 +313,109 @@ export default function Messaging({
 
             {/* Input Area */}
             <div className="p-4 bg-white border-t border-slate-100">
+              {selectedFile && (
+                <div className="mb-3 p-2 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white border border-slate-200 rounded-lg">
+                      {selectedFile.type.startsWith('image/') ? <ImageIcon className="w-4 h-4 text-indigo-500" /> : <FileText className="w-4 h-4 text-indigo-500" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate max-w-[200px]">{selectedFile.name}</p>
+                      <p className="text-[10px] text-slate-400">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedFile(null)}
+                    className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4 text-slate-400" />
+                  </button>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  onChange={onFileChange}
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+                
+                {currentUser.role === 'hirer' && (
+                  <button 
+                    onClick={() => setShowOfferModal(true)}
+                    className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
+                    title="Send Project Offer"
+                  >
+                    <Briefcase className="w-5 h-5" />
+                  </button>
+                )}
+
                 <input
                   type="text"
                   placeholder="Aa"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSend()}
+                  onKeyPress={(e) => e.key === "Enter" && !isUploading && handleSend()}
                   className="flex-1 bg-slate-100 border-none rounded-full px-5 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-900"
                 />
                 <button
                   onClick={handleSend}
-                  disabled={!messageInput.trim()}
-                  className="p-2.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-all"
+                  disabled={(!messageInput.trim() && !selectedFile) || isUploading}
+                  className="p-2.5 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center justify-center min-w-[40px]"
                 >
-                  <Send className="w-5 h-5" />
+                  {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </div>
             </div>
+
+            {/* Offer Modal */}
+            {showOfferModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-xl font-black text-slate-900">Select Job to Offer</h3>
+                    <button onClick={() => setShowOfferModal(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+                      <X className="w-5 h-5 text-slate-400" />
+                    </button>
+                  </div>
+                  <div className="p-4 max-h-[400px] overflow-y-auto space-y-2">
+                    {hirerJobs.length > 0 ? (
+                      hirerJobs.map((job) => (
+                        <button 
+                          key={job.id}
+                          onClick={() => handleAttachOffer(job)}
+                          className="w-full text-left p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-all group"
+                        >
+                          <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{job.title}</h4>
+                          <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <span>{job.category}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                            <span className="text-emerald-600">{job.rate}</span>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-slate-500">Wala ka pang aktibong job postings.</p>
+                        <button 
+                          onClick={() => { window.location.href = '/'; }}
+                          className="mt-4 text-xs font-bold text-indigo-600 hover:underline"
+                        >
+                          Mag-post ng Trabaho
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">

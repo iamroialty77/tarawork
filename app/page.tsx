@@ -48,6 +48,7 @@ export default function Home() {
   const [freelancers, setFreelancers] = useState<UserProfile[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
   const [missingTables, setMissingTables] = useState<string[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -258,6 +259,22 @@ export default function Home() {
     }
   };
 
+  const fetchUnreadCount = async (userId: string) => {
+    try {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .neq('sender_id', userId);
+      
+      if (!error) {
+        setUnreadCount(count || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching unread count:", err);
+    }
+  };
+
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -273,6 +290,19 @@ export default function Home() {
         await fetchJobs();
         await fetchHirerJobs(session.user.id);
         await fetchFreelancers();
+        await fetchUnreadCount(session.user.id);
+        
+        // Subscribe to messages for unread count
+        const channel = supabase
+          .channel('unread-count')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'messages' 
+          }, () => {
+            fetchUnreadCount(session.user.id);
+          })
+          .subscribe();
         
         // Check for first-time social login to show notification
         const isNewSocial = typeof window !== 'undefined' ? sessionStorage.getItem('social_login_pending') : null;
@@ -367,7 +397,11 @@ export default function Home() {
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative"
               >
                 <Mail className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-indigo-600 text-white text-[10px] font-black rounded-full border-2 border-white px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
               <button 
                 onClick={() => alert("Settings module coming soon! You can update your profile below for now.")}
