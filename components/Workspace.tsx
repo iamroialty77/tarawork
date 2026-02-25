@@ -43,44 +43,44 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
       {/* Workspace Header */}
       <div className="bg-slate-900 p-6 text-white">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
-              <Layout className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center border border-white/10">
+              <Layout className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">Collaborative Workspace</h3>
-              <p className="text-slate-400 text-xs">Manage projects, code reviews, and meetings</p>
+              <h3 className="text-lg font-bold tracking-tight">Collaborative Workspace</h3>
+              <p className="text-slate-400 text-[10px] font-medium uppercase tracking-widest mt-0.5">Projects • Reviews • AI Notes</p>
             </div>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={() => alert("Meeting module is initializing... Please wait for other participants.")}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-bold transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 uppercase tracking-wider"
             >
-              <Video className="w-4 h-4" />
+              <Video className="w-3.5 h-3.5" />
               Start Meeting
             </button>
           </div>
         </div>
 
-        <div className="flex gap-1 p-1 bg-slate-800 rounded-xl w-fit">
+        <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-fit border border-white/5">
           {[
             { id: "active", label: "Active Projects", icon: Clock },
-            { id: "reviews", label: "Code & Design Reviews", icon: Code2 },
+            { id: "reviews", label: "Code & Design", icon: Code2 },
             { id: "calls", label: "AI Meeting Notes", icon: MessageSquare },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
                 activeTab === tab.id ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className="w-3.5 h-3.5" />
               {tab.label}
             </button>
           ))}
@@ -100,22 +100,22 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                 projects.map((project) => (
                   <div 
                     key={project.id} 
-                    className="group p-5 border border-slate-100 rounded-2xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all cursor-pointer"
+                    className="group p-5 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all cursor-pointer"
                     onClick={() => setSelectedProject(project)}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center border border-transparent group-hover:border-indigo-100 transition-colors ${
                           project.workspaceType === "Code" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
                         }`}>
                           {project.workspaceType === "Code" ? <Github className="w-6 h-6" /> : <Layout className="w-6 h-6" />}
                         </div>
                         <div>
-                          <h4 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          <h4 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight">
                             {project.title}
                           </h4>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm text-slate-500">Client: <span className="font-semibold text-slate-700">{project.client}</span></p>
+                            <p className="text-xs text-slate-500 font-medium">Client: <span className="font-bold text-slate-700 uppercase tracking-tight">{project.client}</span></p>
                             <Link 
                               href="/messages" 
                               onClick={(e) => e.stopPropagation()}
@@ -128,28 +128,28 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full border border-emerald-200">
+                        <span className="text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-100">
                           {project.status}
                         </span>
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                           <Lock className="w-3 h-3" />
-                          ESCROW ACTIVE
+                          Escrow Active
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100 group-hover:border-indigo-100">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Logged Hours</span>
-                        <span className="text-sm font-bold text-slate-900">{project.hoursLogged}h / 40h this week</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Logged Hours</span>
+                        <span className="text-sm font-bold text-slate-900">{project.hoursLogged}h / 40h</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Next Milestone</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Next Milestone</span>
                         <span className="text-sm font-bold text-slate-900">{project.budget} Due Mar 15</span>
                       </div>
                       <div className="flex items-center justify-end gap-3">
                         {editingLink === project.id ? (
-                          <div className="flex items-center gap-2 bg-white border border-indigo-200 rounded-xl px-2 py-1 shadow-sm">
+                          <div className="flex items-center gap-2 bg-white border border-indigo-200 rounded-lg px-2 py-1 shadow-sm">
                             <input 
                               type="text" 
                               className="text-xs focus:outline-none w-32" 
@@ -176,7 +176,6 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                             title="Edit Project Link"
                           >
                             <LinkIcon className="w-4 h-4" />
-                            <span className="text-[10px] font-bold">Link</span>
                           </button>
                         )}
                         <Link
@@ -185,21 +184,11 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                           className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                           title="Message Party"
                         >
-                          <MessageSquare className="w-5 h-5" />
+                          <MessageSquare className="w-4 h-4" />
                         </Link>
                         <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (project.projectLink) window.open(project.projectLink, '_blank');
-                            else alert("No project link saved yet. Click the 'Link' button to add one.");
-                          }}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        >
-                          <ExternalLink className="w-5 h-5" />
-                        </button>
-                        <button 
                           onClick={(e) => { e.stopPropagation(); alert("Work log submitted for " + project.title); }}
-                          className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                          className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm uppercase tracking-wider"
                         >
                           Log Work
                         </button>

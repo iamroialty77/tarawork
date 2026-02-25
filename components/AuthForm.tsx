@@ -115,14 +115,14 @@ export default function AuthForm() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl shadow-indigo-100 border border-slate-100 overflow-hidden"
+        className="bg-white rounded-xl shadow-2xl shadow-indigo-100/20 border border-slate-200 overflow-hidden"
       >
         <div className="p-8">
           <div className="flex justify-center mb-8">
             <img 
               src="/tarawork-removebg-preview.png" 
               alt="Tara Logo" 
-              className="h-[5cm] w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </div>
 
@@ -154,27 +154,27 @@ export default function AuthForm() {
                         type="button"
                         onClick={() => setRole("jobseeker")}
                         className={cn(
-                          "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2",
+                          "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
                           role === "jobseeker" 
-                            ? "border-indigo-600 bg-indigo-50/50 text-indigo-600" 
+                            ? "border-indigo-600 bg-indigo-50/30 text-indigo-600" 
                             : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
                         )}
                       >
                         <Briefcase className={cn("w-6 h-6", role === "jobseeker" ? "text-indigo-600" : "text-slate-400")} />
-                        <span className="text-xs font-bold">Job Seeker</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">Job Seeker</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setRole("hirer")}
                         className={cn(
-                          "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2",
+                          "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
                           role === "hirer" 
-                            ? "border-indigo-600 bg-indigo-50/50 text-indigo-600" 
+                            ? "border-indigo-600 bg-indigo-50/30 text-indigo-600" 
                             : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
                         )}
                       >
                         <Users className={cn("w-6 h-6", role === "hirer" ? "text-indigo-600" : "text-slate-400")} />
-                        <span className="text-xs font-bold">Hirer</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">Hirer</span>
                       </button>
                     </div>
                   </div>
@@ -187,7 +187,7 @@ export default function AuthForm() {
                         type="text"
                         placeholder="Juan Dela Cruz"
                         required
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all text-slate-900"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                       />
@@ -205,7 +205,7 @@ export default function AuthForm() {
                   type="email"
                   placeholder="juan@example.com"
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -225,7 +225,7 @@ export default function AuthForm() {
                   type="password"
                   placeholder="••••••••"
                   required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -257,7 +257,7 @@ export default function AuthForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70 group"
+              className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg shadow-slate-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70 group"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -283,7 +283,7 @@ export default function AuthForm() {
             <button 
               type="button"
               onClick={() => handleSocialLogin('google')}
-              className="flex items-center justify-center gap-3 w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 py-3 rounded-2xl text-sm font-bold text-slate-700 transition-all"
+              className="flex items-center justify-center gap-3 w-full bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl text-xs font-bold text-slate-600 uppercase tracking-wider transition-all"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -308,7 +308,7 @@ export default function AuthForm() {
             <button 
               type="button"
               onClick={() => handleSocialLogin('github')}
-              className="flex items-center justify-center gap-3 w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 py-3 rounded-2xl text-sm font-bold text-slate-700 transition-all"
+              className="flex items-center justify-center gap-3 w-full bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl text-xs font-bold text-slate-600 uppercase tracking-wider transition-all"
             >
               <Github className="w-5 h-5" />
               GitHub
@@ -316,7 +316,7 @@ export default function AuthForm() {
             <button 
               type="button"
               onClick={() => handleSocialLogin('facebook')}
-              className="flex items-center justify-center gap-3 w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 py-3 rounded-2xl text-sm font-bold text-slate-700 transition-all"
+              className="flex items-center justify-center gap-3 w-full bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl text-xs font-bold text-slate-600 uppercase tracking-wider transition-all"
             >
               <Facebook className="w-5 h-5 text-[#1877F2]" />
               Facebook
@@ -324,7 +324,7 @@ export default function AuthForm() {
             <button 
               type="button"
               onClick={() => handleSocialLogin('linkedin')}
-              className="flex items-center justify-center gap-3 w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 py-3 rounded-2xl text-sm font-bold text-slate-700 transition-all"
+              className="flex items-center justify-center gap-3 w-full bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl text-xs font-bold text-slate-600 uppercase tracking-wider transition-all"
             >
               <Linkedin className="w-5 h-5 text-[#0A66C2]" />
               LinkedIn
