@@ -39,7 +39,11 @@ import {
   ExternalLink,
   DollarSign,
   Lock,
-  Scale
+  Scale,
+  PlusCircle,
+  User,
+  Layout,
+  PieChart
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -88,6 +92,8 @@ export default function Home() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
+  const [clientTab, setClientTab] = useState<"overview" | "post" | "postings" | "talents" | "profile">("overview");
 
   const fetchProfile = async (userId: string, userAuth?: any) => {
     try {
@@ -663,7 +669,40 @@ export default function Home() {
       <main className="max-w-full px-4 sm:px-10 py-8">
         {view === "freelancer" ? (
           <div className="space-y-8">
-            {/* Hero / Welcome Section */}
+            {/* Freelancer Tab Navigation */}
+            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto sticky top-20 z-40">
+              {[
+                { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+                { id: "jobs", label: "Find Jobs", icon: Briefcase },
+                { id: "workspace", label: "Workspace", icon: Zap },
+                { id: "career", label: "Growth", icon: Award },
+                { id: "profile", label: "My Profile", icon: User },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setFreelancerTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                    freelancerTab === tab.id 
+                      ? "bg-slate-900 text-white shadow-lg" 
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              {freelancerTab === "overview" && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-8"
+                >
+                  {/* Hero / Welcome Section */}
             <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 md:p-12 text-white shadow-xl">
               <div className="relative z-10 max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-slate-300 text-[10px] font-bold mb-6 uppercase tracking-wider">
@@ -713,202 +752,266 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Dashboard Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Total Earnings", value: "₱0", icon: DollarSign, color: "text-slate-600", bg: "bg-slate-50" },
-                { label: "Active Projects", value: profile.activeProjects?.length.toString() || "0", icon: Briefcase, color: "text-slate-600", bg: "bg-slate-50" },
-                { label: "Escrow Protected", value: "₱0", icon: ShieldCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-                { label: "Profile Views", value: "0", icon: Users, color: "text-slate-600", bg: "bg-slate-50" },
-              ].map((stat, i) => (
-                <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-indigo-100 transition-colors">
-                  <div className={`w-12 h-12 ${stat.bg} rounded-lg flex items-center justify-center`}>
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{stat.label}</p>
-                    <p className="text-xl font-bold text-slate-900">{stat.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Trust & Safety Section for Seekers */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4">
-                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-emerald-900">Safe-Vault Protection</h4>
-                  <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Ang iyong bayad ay protektado. Ang pondo ay itinatabi sa aming secure vault bago magsimula ang trabaho.</p>
-                </div>
-              </div>
-              <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex gap-4">
-                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
-                  <DollarSign className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-indigo-900">Escrow Milestone</h4>
-                  <p className="text-xs text-indigo-700 mt-1 leading-relaxed">Sinisiguro namin na ang bawat milestone ay may katumbas na pondo na nakareserba para sa iyo.</p>
-                </div>
-              </div>
-              <div className="bg-slate-900 p-6 rounded-2xl flex gap-4 text-white">
-                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
-                  <Zap className="w-6 h-6 text-indigo-400" />
-                </div>
-                <div>
-                  <h4 className="font-bold">24/7 Support</h4>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">May dispute? Ang aming admin team ay handang tumulong sa pag-resolve ng anumang isyu.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Column */}
-              <div className="lg:col-span-4 space-y-6" ref={profileRef}>
-                <div className="sticky top-24 space-y-6">
-                  <ProfileForm 
-                    initialProfile={profile} 
-                    onUpdate={handleProfileSave} 
-                    onAddPortfolio={addPortfolioItem}
-                    onRemovePortfolio={removePortfolioItem}
-                    isSaving={isSaving}
-                  />
-                  
-                  {/* Soft Skills & Badges */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                      <Award className="w-4 h-4 text-indigo-600" />
-                      Career Badges
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.softSkills?.map((skill) => (
-                        <div key={skill.name} className="group relative flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg hover:border-indigo-200 hover:bg-indigo-50 transition-all cursor-help">
-                          <span className="text-lg">{skill.badge}</span>
-                          <span className="text-[10px] font-bold text-slate-600">{skill.name}</span>
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-slate-900 text-white text-[9px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                            {skill.level} Level. Endorsed {skill.count} times.
-                          </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="md:col-span-2 lg:col-span-3 space-y-6">
+                      <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
+                        <div className="relative z-10">
+                          <h3 className="text-2xl font-black mb-2 tracking-tight">Focus on your workspace</h3>
+                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">Mayroon kang {profile.activeProjects?.length || 0} active projects na naghihintay para sa iyong pansin.</p>
+                          <button 
+                            onClick={() => setFreelancerTab("workspace")}
+                            className="bg-white text-indigo-600 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-all flex items-center gap-2"
+                          >
+                            Go to Workspace
+                            <ArrowUpRight className="w-4 h-4" />
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <SkillAssessment 
-                    verifiedSkills={profile.verifiedSkills || []} 
-                    aiInsights={profile.aiInsights}
-                  />
-
-                  {/* Connected Accounts Section */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-indigo-600" />
-                      Connected Accounts
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-100">
-                            <Mail className="w-4 h-4 text-red-500" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-700">Google / Gmail</p>
-                            <p className="text-[10px] text-slate-400">Connected via OAuth</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold border border-emerald-100">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Active
-                        </div>
+                        <Zap className="absolute -right-8 -bottom-8 w-48 h-48 text-white/10 rotate-12" />
                       </div>
 
-                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 opacity-60">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-100">
-                            <Facebook className="w-4 h-4 text-blue-600" />
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
                           <div>
-                            <p className="text-xs font-bold text-slate-700">Facebook</p>
-                            <p className="text-[10px] text-slate-400">Not connected</p>
+                            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
+                              <TrendingUp className="w-5 h-5 text-emerald-600" />
+                            </div>
+                            <h4 className="font-bold text-slate-900">Career Insights</h4>
+                            <p className="text-xs text-slate-500 mt-1">Check how your skills match the market demand.</p>
                           </div>
+                          <button 
+                            onClick={() => setFreelancerTab("career")}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 mt-4 flex items-center gap-1"
+                          >
+                            View Analysis <ChevronRight className="w-3 h-3" />
+                          </button>
                         </div>
-                        <button className="text-[10px] font-bold text-indigo-600 hover:underline">Link Now</button>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 opacity-60">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-100">
-                            <Linkedin className="w-4 h-4 text-blue-700" />
-                          </div>
+                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
                           <div>
-                            <p className="text-xs font-bold text-slate-700">LinkedIn</p>
-                            <p className="text-[10px] text-slate-400">Not connected</p>
+                            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
+                              <Briefcase className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <h4 className="font-bold text-slate-900">Recommended Jobs</h4>
+                            <p className="text-xs text-slate-500 mt-1">We found {jobs.length} new jobs that match your profile.</p>
                           </div>
+                          <button 
+                            onClick={() => setFreelancerTab("jobs")}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 mt-4 flex items-center gap-1"
+                          >
+                            Browse Jobs <ChevronRight className="w-3 h-3" />
+                          </button>
                         </div>
-                        <button className="text-[10px] font-bold text-indigo-600 hover:underline">Link Now</button>
                       </div>
                     </div>
-                    <p className="mt-4 text-[10px] text-slate-400 leading-relaxed italic">
-                      Notifications are automatically sent to your linked social accounts upon every successful secure connection.
-                    </p>
-                  </div>
-                  
-                  <div className="p-6 bg-slate-900 rounded-xl text-white relative overflow-hidden shadow-lg">
-                    <div className="relative z-10">
-                      <h3 className="text-lg font-bold mb-2">Pro Perks Locked</h3>
-                      <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-                        You're in the <span className="text-white font-bold">Top 2%</span>. Early access to high-budget projects is now active.
-                      </p>
-                      <button className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
-                        View Ranking Leaderboard <Zap className="w-3 h-3" />
-                      </button>
+                    
+                    <div className="space-y-6">
+                      <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center overflow-hidden border-2 border-white/10">
+                            {profile.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5" />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Profile Score</p>
+                            <p className="text-lg font-black">{profile.ranking ? `Top ${profile.ranking}%` : "Not Ranked"}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                            <span>Completeness</span>
+                            <span className="text-indigo-400">85%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500 w-[85%] rounded-full shadow-sm" />
+                          </div>
+                          <button 
+                            onClick={() => setFreelancerTab("profile")}
+                            className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
+                          >
+                            Optimize Profile
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-600/10 rounded-full blur-xl"></div>
                   </div>
-                </div>
-              </div>
 
-              {/* Right Column */}
-              <div className="lg:col-span-8 space-y-8">
-                <Workspace 
-                  projects={profile.activeProjects || []} 
-                  onUpdateProject={handleUpdateProject}
-                />
-                
-                <CareerPath profile={profile} allJobs={jobs} />
+                  {/* Trust & Safety Section for Seekers */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-emerald-900">Safe-Vault Protection</h4>
+                        <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Ang iyong bayad ay protektado. Ang pondo ay itinatabi sa aming secure vault bago magsimula ang trabaho.</p>
+                      </div>
+                    </div>
+                    <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex gap-4">
+                      <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                        <DollarSign className="w-6 h-6 text-indigo-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-indigo-900">Escrow Milestone</h4>
+                        <p className="text-xs text-indigo-700 mt-1 leading-relaxed">Sinisiguro namin na ang bawat milestone ay may katumbas na pondo na nakareserba para sa iyo.</p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-900 p-6 rounded-2xl flex gap-4 text-white">
+                      <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
+                        <Zap className="w-6 h-6 text-indigo-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold">24/7 Support</h4>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">May dispute? Ang aming admin team ay handang tumulong sa pag-resolve ng anumang isyu.</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
-                <TeamManager squad={profile.squad} />
-
-                <div className="pt-2" ref={jobsRef}>
+              {freelancerTab === "jobs" && (
+                <motion.div
+                  key="jobs"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-6"
+                >
                   <div className="flex justify-between items-end mb-6">
                     <div>
                       <h2 className="text-2xl font-bold text-slate-900">Available Jobs</h2>
                       <p className="text-slate-500 mt-1">Browse opportunities that match your expertise.</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={fetchJobs}
-                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all cursor-pointer group"
-                      >
-                        <LayoutDashboard className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
-                      </button>
-                    </div>
                   </div>
-                  
                   <JobFeed 
                     jobs={jobs} 
                     profile={profile} 
                     onApply={handleApply}
                     appliedJobIds={appliedJobIds}
                   />
-                </div>
-              </div>
-            </div>
+                </motion.div>
+              )}
+
+              {freelancerTab === "workspace" && (
+                <motion.div
+                  key="workspace"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
+                >
+                  <Workspace 
+                    projects={profile.activeProjects || []} 
+                    onUpdateProject={handleUpdateProject}
+                  />
+                  <TeamManager squad={profile.squad} />
+                </motion.div>
+              )}
+
+              {freelancerTab === "career" && (
+                <motion.div
+                  key="career"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
+                >
+                  <CareerPath profile={profile} allJobs={jobs} />
+                  <div className="max-w-2xl">
+                    <SkillAssessment 
+                      verifiedSkills={profile.verifiedSkills || []} 
+                      aiInsights={profile.aiInsights}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {freelancerTab === "profile" && (
+                <motion.div
+                  key="profile"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+                >
+                  <div className="lg:col-span-8 space-y-6">
+                    <ProfileForm 
+                      initialProfile={profile} 
+                      onUpdate={handleProfileSave} 
+                      onAddPortfolio={addPortfolioItem}
+                      onRemovePortfolio={removePortfolioItem}
+                      isSaving={isSaving}
+                    />
+                  </div>
+                  <div className="lg:col-span-4 space-y-6">
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <Award className="w-4 h-4 text-indigo-600" />
+                        Career Badges
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.softSkills?.map((skill) => (
+                          <div key={skill.name} className="group relative flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg hover:border-indigo-200 hover:bg-indigo-50 transition-all cursor-help">
+                            <span className="text-lg">{skill.badge}</span>
+                            <span className="text-[10px] font-bold text-slate-600">{skill.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-indigo-600" />
+                        Connected Accounts
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <Mail className="w-4 h-4 text-red-500" />
+                            <span className="text-xs font-bold text-slate-700">Google / Gmail</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-600">Active</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ) : view === "client" ? (
           <div className="space-y-8">
-            <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 md:p-12 text-white shadow-xl">
+            {/* Client Tab Navigation */}
+            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto sticky top-20 z-40">
+              {[
+                { id: "overview", label: "Overview", icon: LayoutDashboard },
+                { id: "post", label: "Post a Job", icon: PlusCircle },
+                { id: "postings", label: "My Postings", icon: FileText },
+                { id: "talents", label: "Find Talents", icon: Users },
+                { id: "profile", label: "Company Profile", icon: User },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setClientTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                    clientTab === tab.id 
+                      ? "bg-slate-900 text-white shadow-lg" 
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              {clientTab === "overview" && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-8"
+                >
+                  <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 md:p-12 text-white shadow-xl">
               <div className="relative z-10 max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-slate-300 text-[10px] font-bold mb-6 uppercase tracking-wider">
                   <Shield className="w-3.5 h-3.5" />
@@ -935,53 +1038,51 @@ export default function Home() {
               <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px]"></div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              <div className="lg:col-span-4 space-y-6">
-                <ProfileForm 
-                  initialProfile={profile} 
-                  onUpdate={handleProfileSave} 
-                  isSaving={isSaving}
-                />
-                
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-indigo-600" />
-                    Hirer Stats
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Active Postings</span>
-                      <span className="text-sm font-bold text-slate-900">{hirerJobs.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Spent</span>
-                      <span className="text-sm font-bold text-emerald-600">₱0</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Hired Freelancers</span>
-                      <span className="text-sm font-bold text-slate-900">0</span>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-indigo-600" />
+                      Hirer Stats
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Active Postings</span>
+                        <span className="text-sm font-bold text-slate-900">{hirerJobs.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Spent</span>
+                        <span className="text-sm font-bold text-emerald-600">₱0</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-slate-900 p-6 rounded-xl text-white shadow-lg overflow-hidden relative">
-                  <div className="relative z-10">
-                    <h3 className="text-lg font-bold mb-2">Team Management</h3>
-                    <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-                      Invite teammates to review applications and manage projects together.
-                    </p>
-                    <button 
-                      onClick={() => alert("Squad management for Hirers coming soon!")}
-                      className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
-                    >
-                      Configure Team <ArrowUpRight className="w-3 h-3" />
-                    </button>
+                  <div className="lg:col-span-2 bg-slate-900 p-6 rounded-3xl text-white shadow-lg overflow-hidden relative">
+                    <div className="relative z-10">
+                      <h3 className="text-lg font-bold mb-2">Team Management</h3>
+                      <p className="text-sm text-slate-400 mb-4 leading-relaxed">
+                        Invite teammates to review applications and manage projects together.
+                      </p>
+                      <button 
+                        onClick={() => alert("Squad management for Hirers coming soon!")}
+                        className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                      >
+                        Configure Team <ArrowUpRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-600/10 rounded-full blur-xl"></div>
                   </div>
-                  <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-600/10 rounded-full blur-xl"></div>
                 </div>
-              </div>
+              </motion.div>
+            )}
 
-              <div className="lg:col-span-8 space-y-8">
+            {clientTab === "post" && (
+              <motion.div
+                key="post"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="max-w-5xl"
+              >
                 <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/20 p-8">
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -993,185 +1094,148 @@ export default function Home() {
                         <p className="text-slate-500 font-medium">Find the perfect talent for your project.</p>
                       </div>
                     </div>
-                    <div 
-                      onClick={() => setShowEscrowModal(true)}
-                      className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black border border-indigo-100 uppercase tracking-tighter cursor-pointer hover:bg-indigo-100 transition-all"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      Escrow Protected
-                    </div>
                   </div>
-                  <JobPostingForm onPublish={() => fetchHirerJobs(user.id)} />
+                  <JobPostingForm onPublish={() => { fetchHirerJobs(user.id); setClientTab("postings"); }} />
+                </div>
+              </motion.div>
+            )}
+
+            {clientTab === "postings" && (
+              <motion.div
+                key="postings"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="flex justify-between items-end">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Your Job Postings</h2>
+                    <p className="text-slate-500 mt-1">Manage and track your active opportunities.</p>
+                  </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Top Rated Freelancers</h2>
-                      <p className="text-slate-500 mt-1">Discover world-class talent to scale your project.</p>
-                    </div>
-                    <div className="flex gap-2 w-full md:w-auto">
-                      <div className="relative flex-1 md:w-64">
-                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                          type="text" 
-                          placeholder="Search skills (e.g. React)..." 
-                          className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                          value={freelancerSearchTerm}
-                          onChange={(e) => setFreelancerSearchTerm(e.target.value)}
-                        />
-                      </div>
-                      <button 
-                        onClick={fetchFreelancers}
-                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all cursor-pointer group"
-                      >
-                        <Zap className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredFreelancers.length > 0 ? (
-                      filteredFreelancers.map((freelancer) => (
-                        <div key={freelancer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all group">
-                          <div className="flex items-center gap-4 mb-4">
-                            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
-                              {freelancer.avatar_url ? (
-                                <img src={freelancer.avatar_url} alt={freelancer.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <Users className="w-6 h-6 text-indigo-400" />
-                              )}
+                {hirerJobs.length > 0 ? (
+                  <div className="grid gap-4">
+                    {hirerJobs.map((job) => (
+                      <div key={job.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <h3 className="text-lg font-bold text-slate-900">{job.title}</h3>
+                              <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">{job.category}</span>
                             </div>
-                            <div>
-                              <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
-                                {freelancer.ranking && (
-                                  <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
-                                    <Award className="w-3 h-3" />
-                                    Top {freelancer.ranking}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+                            <p className="text-xs text-slate-500 font-medium">Posted on {new Date(job.createdAt).toLocaleDateString()}</p>
                           </div>
-                          
-                          <p className="text-xs text-slate-500 line-clamp-2 mb-4 h-8">
-                            {freelancer.bio || "No bio provided yet."}
-                          </p>
-
-                          <div className="flex flex-wrap gap-1.5 mb-4">
-                            {freelancer.skills.slice(0, 3).map(skill => (
-                              <span key={skill} className="text-[9px] font-bold bg-slate-50 text-slate-500 border border-slate-100 px-2 py-0.5 rounded uppercase">{skill}</span>
-                            ))}
-                          </div>
-
-                            <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                            <div className="flex gap-2">
-                              <span className="text-sm font-bold text-slate-900">{freelancer.hourlyRate || "₱0"}/hr</span>
-                            </div>
-                            <div className="flex gap-2">
-                              <button 
-                                onClick={() => {
-                                  setSelectedFreelancer(freelancer);
-                                  setShowFreelancerModal(true);
-                                }}
-                                className="px-4 py-2 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-lg hover:bg-slate-50 transition-all uppercase tracking-widest"
-                              >
-                                View Profile
-                              </button>
-                              <Link 
-                                href={`/messages?with=${freelancer.id}`}
-                                className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
-                              >
-                                <Mail className="w-3.5 h-3.5" />
-                                Message
-                              </Link>
-                            </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-slate-900">{job.rate || (job.budget ? `₱${job.budget}` : "Not specified")}</p>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="col-span-full text-center py-12 bg-white rounded-xl border-2 border-dashed border-slate-100">
-                        <p className="text-slate-500 text-sm">No freelancers found.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Your Job Postings</h2>
-                      <p className="text-slate-500 mt-1">Manage and track your active opportunities.</p>
-                    </div>
-                    <button 
-                      onClick={() => fetchHirerJobs(user.id)}
-                      className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all cursor-pointer group"
-                    >
-                      <LayoutDashboard className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
-                    </button>
-                  </div>
-
-                  {hirerJobs.length > 0 ? (
-                    <div className="grid gap-4">
-                      {hirerJobs.map((job, idx) => (
-                        <div key={job.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <div className="flex items-center gap-3 mb-1">
-                                <h3 className="text-lg font-bold text-slate-900">{job.title}</h3>
-                                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">{job.category}</span>
-                                <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-widest">{job.jobType}</span>
-                              </div>
-                              <p className="text-xs text-slate-500 font-medium">Posted on {new Date(job.createdAt).toLocaleDateString()}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-slate-900">{job.rate || (job.budget ? `₱${job.budget}` : "Not specified")}</p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{job.paymentMethod}</p>
+                        
+                        <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                          <div className="flex gap-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-slate-900">{(job as any).applicantCount || 0}</span>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Proposals</span>
                             </div>
                           </div>
-                          
-                          <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                            <div className="flex gap-4">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-900">{(job as any).applicantCount || 0}</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Proposals</span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-900">0</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Interviews</span>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <button 
-                                onClick={() => fetchApplicants(job.id, job.title)}
-                                className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
-                              >
-                                View Applicants
-                              </button>
-                              <button className="px-4 py-2 text-[10px] font-bold text-white bg-slate-900 rounded-lg hover:bg-black transition-all uppercase tracking-wider">
-                                Edit Post
-                              </button>
-                            </div>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => fetchApplicants(job.id, job.title)}
+                              className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
+                            >
+                              View Applicants
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-slate-100">
-                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Briefcase className="w-8 h-8 text-slate-300" />
                       </div>
-                      <h3 className="text-slate-900 font-bold">No jobs posted yet</h3>
-                      <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">Start by posting your first job to find world-class freelancers.</p>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-slate-100">
+                    <p className="text-slate-500 text-sm">No jobs posted yet.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {clientTab === "talents" && (
+              <motion.div
+                key="talents"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Top Rated Freelancers</h2>
+                    <p className="text-slate-500 mt-1">Discover world-class talent to scale your project.</p>
+                  </div>
+                  <div className="relative w-full md:w-64">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search skills..." 
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      value={freelancerSearchTerm}
+                      onChange={(e) => setFreelancerSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        ) : (
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredFreelancers.map((freelancer) => (
+                    <div key={freelancer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all group">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
+                          {freelancer.avatar_url ? (
+                            <img src={freelancer.avatar_url} alt={freelancer.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Users className="w-6 h-6 text-indigo-400" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
+                          <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                        <span className="text-sm font-bold text-slate-900">{freelancer.hourlyRate}/hr</span>
+                        <button 
+                          onClick={() => {
+                            setSelectedFreelancer(freelancer);
+                            setShowFreelancerModal(true);
+                          }}
+                          className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
+                        >
+                          View Profile
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {clientTab === "profile" && (
+              <motion.div
+                key="profile"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="max-w-4xl"
+              >
+                <ProfileForm 
+                  initialProfile={profile} 
+                  onUpdate={handleProfileSave} 
+                  isSaving={isSaving}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ) : (
           <AdminDashboard />
         )}
       </main>
