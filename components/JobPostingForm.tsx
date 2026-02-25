@@ -6,7 +6,11 @@ import { supabase } from "../lib/supabase";
 import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export default function JobPostingForm() {
+interface JobPostingFormProps {
+  onPublish?: () => void;
+}
+
+export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
   const [step, setStep] = useState(1);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -105,6 +109,7 @@ export default function JobPostingForm() {
         ...formData,
         id: Math.random().toString(36).substr(2, 9),
         company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Hirer",
+        hirer_id: user.id,
         createdAt: new Date().toISOString(),
       };
 
@@ -120,6 +125,7 @@ export default function JobPostingForm() {
       }
 
       setPublishStatus({ type: 'success', msg: "Job published successfully! It's now live on the marketplace." });
+      if (onPublish) onPublish();
       setStep(1);
       setFormData({
         title: "",

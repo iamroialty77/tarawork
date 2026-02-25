@@ -128,7 +128,8 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     budget NUMERIC,
     milestones JSONB DEFAULT '[]',
     deadline TEXT,
-    "customQuestions" JSONB DEFAULT '[]'
+    "customQuestions" JSONB DEFAULT '[]',
+    hirer_id UUID REFERENCES public.profiles(id)
 );
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Jobs are viewable by everyone." ON public.jobs;
