@@ -149,10 +149,21 @@ export default function JobFeed({ jobs, profile }: JobFeedProps) {
       <div className="grid gap-6">
         {filteredJobs.length > 0 ? (
           filteredJobs.map((job, index) => {
+            const matchedSkills = job.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
+            const missingSkills = job.skills.filter(s => !profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
             const matchScore = profile.skills.length > 0 
-              ? Math.round((job.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase())).length / Math.max(job.skills.length, 1)) * 100)
+              ? Math.round((matchedSkills.length / Math.max(job.skills.length, 1)) * 100)
               : 0;
-            return <JobCard key={job.id} job={job} index={index} matchScore={matchScore} />;
+            return (
+              <JobCard 
+                key={job.id} 
+                job={job} 
+                index={index} 
+                matchScore={matchScore} 
+                matchedSkills={matchedSkills}
+                missingSkills={missingSkills}
+              />
+            );
           })
         ) : (
           <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-100">

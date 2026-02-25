@@ -41,27 +41,38 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
   const [tempLink, setTempLink] = useState("");
   const [showWarRoom, setShowWarRoom] = useState(false);
   const [activeCall, setActiveCall] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Sync selected project when projects prop changes
+  // Sync selected project when projects prop changes from DB
   useEffect(() => {
     if (selectedProject) {
       const updated = projects.find(p => p.id === selectedProject.id);
-      if (updated) setSelectedProject(updated);
+      if (updated) {
+        // Source of truth (DB) takes precedence if there's a desync
+        // but we only update if it's actually different to avoid unnecessary re-renders
+        const isDifferent = JSON.stringify(updated.milestones) !== JSON.stringify(selectedProject.milestones);
+        if (isDifferent) {
+          setSelectedProject(updated);
+        }
+      }
     } else if (projects.length > 0) {
       setSelectedProject(projects[0]);
     }
   }, [projects]);
 
-  const handleSaveLink = (project: Project) => {
+  const handleSaveLink = async (project: Project) => {
     if (onUpdateProject) {
-      onUpdateProject({ ...project, projectLink: tempLink });
+      setIsSyncing(true);
+      await onUpdateProject({ ...project, projectLink: tempLink });
       setEditingLink(null);
+      setIsSyncing(false);
     }
   };
 
-  const handleUpdateMilestone = (projectId: string, milestoneId: string, status: Milestone["status"]) => {
+  const handleUpdateMilestone = async (projectId: string, milestoneId: string, status: Milestone["status"]) => {
     if (!onUpdateProject || !selectedProject) return;
 
+    setIsSyncing(true);
     // Optimistic Update
     const updatedMilestones = (selectedProject.milestones || []).map(m => 
       m.id === milestoneId ? { ...m, status } : m
@@ -71,8 +82,12 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
     // Update local state immediately
     setSelectedProject(updatedProject);
     
-    // Call parent update
-    onUpdateProject(updatedProject);
+    // Call parent update and wait for DB
+    try {
+      await onUpdateProject(updatedProject);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -244,7 +259,16 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 uppercase tracking-widest">Live War Room</span>
-                      <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">Optimistic UI Enabled</p>
+                      <div className="flex items-center justify-end gap-2 mt-2">
+                        {isSyncing ? (
+                          <>
+                            <Loader2 className="w-2.5 h-2.5 animate-spin text-indigo-600" />
+                            <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest">Syncing to DB...</p>
+                          </>
+                        ) : (
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Optimistic UI Enabled</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -290,12 +314,16 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                         <div 
                           key={milestone.id} 
                           className={cn(
-                            "p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4",
+                            "p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden",
                             milestone.status === 'Released' ? "bg-white border-emerald-100" :
                             milestone.status === 'Completed' ? "bg-white border-indigo-100" :
-                            "bg-white border-slate-100 hover:border-indigo-100"
+                            "bg-white border-slate-100 hover:border-indigo-100",
+                            isSyncing && "opacity-70"
                           )}
                         >
+                          {isSyncing && (
+                            <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none" />
+                          )}
                           <div className="flex items-center gap-4">
                             <div className={cn(
                               "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
@@ -338,8 +366,9 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                             </div>
                             <select 
                               value={milestone.status}
+                              disabled={isSyncing}
                               onChange={(e) => handleUpdateMilestone(selectedProject.id, milestone.id, e.target.value as any)}
-                              className="text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white rounded-xl px-4 py-2 hover:bg-black transition-all cursor-pointer outline-none border-none"
+                              className="text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white rounded-xl px-4 py-2 hover:bg-black transition-all cursor-pointer outline-none border-none disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <option value="Pending">Pending</option>
                               <option value="In-Progress">In-Progress</option>

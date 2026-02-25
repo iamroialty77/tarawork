@@ -107,7 +107,7 @@ export default function CareerPath({ profile, allJobs }: CareerPathProps) {
              <div className="relative z-10">
                 <TrendingUp className="w-8 h-8 text-emerald-400 mb-4" />
                 <h4 className="font-black text-lg mb-1 uppercase tracking-tight">Market Insight</h4>
-                <p className="text-xs text-slate-400 font-medium mb-4">Base sa 12,842 users data, ang <span className="text-white font-bold">{sortedDemand[0]?.[0]}</span> ay tumaas ng 24% sa demand ngayong buwan.</p>
+                <p className="text-xs text-slate-400 font-medium mb-4">Base sa active <span className="text-white font-bold">{allJobs.length.toLocaleString()} jobs</span> sa ecosystem, ang <span className="text-white font-bold">{sortedDemand[0]?.[0]}</span> ay ang pinaka-in-demand na skill ngayong buwan.</p>
                 <div className="flex items-center gap-2 text-emerald-400 font-black text-xs uppercase tracking-widest">
                     <Zap className="w-3 h-3 fill-current" />
                     High Growth Sector

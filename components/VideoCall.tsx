@@ -14,7 +14,17 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
+
+  const handleSummarizeRequest = () => {
+    setShowConsent(true);
+  };
+
+  const confirmConsent = () => {
+    setShowConsent(false);
+    handleSummarize();
+  };
 
   const handleSummarize = async () => {
     setIsSummarizing(true);
@@ -107,7 +117,7 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
           </button>
           <div className="w-px h-8 bg-white/10 mx-2" />
           <button 
-            onClick={handleSummarize}
+            onClick={handleSummarizeRequest}
             disabled={isSummarizing || summary !== null}
             className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
           >
@@ -132,6 +142,49 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
         </div>
       </div>
       
+      {/* Consent Modal */}
+      <AnimatePresence>
+        {showConsent && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowConsent(false)}
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100"
+            >
+              <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">AI Transcription Consent</h3>
+              <p className="text-slate-600 font-medium leading-relaxed mb-6">
+                To provide a summary, our AI needs to transcribe this meeting. By clicking "I Consent", you and all participants agree to the <span className="text-indigo-600 font-bold">AI Data Privacy Policy</span>. Summaries are stored securely in audit logs for dispute resolution.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={confirmConsent}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100"
+                >
+                  I Consent, Start AI
+                </button>
+                <button 
+                  onClick={() => setShowConsent(false)}
+                  className="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <p className="mt-6 text-slate-500 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
         <Shield className="w-3 h-3" />
         Encrypted P2P Connection • Powered by Daily.co

@@ -194,17 +194,32 @@ export default function Home() {
   };
 
   const handleUpdateProject = async (updatedProject: any) => {
-    if (!profile.activeProjects) return;
+    if (!profile.activeProjects || !user) return;
     
     const updatedProjects = profile.activeProjects.map(p => 
       p.id === updatedProject.id ? updatedProject : p
     );
     
-    const updatedProfile = { ...profile, activeProjects: updatedProjects };
-    setProfile(updatedProfile);
+    // Update local state immediately (Optimistic)
+    setProfile(prev => ({ ...prev, activeProjects: updatedProjects }));
     
-    // Save to DB
-    await handleProfileSave(updatedProfile);
+    // Save ONLY the activeProjects column to DB to prevent race conditions with other profile fields
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          activeProjects: updatedProjects,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+    } catch (err: any) {
+      console.error("Error updating project:", err);
+      setToastMsg("Failed to sync project update to database.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
   };
 
   const fetchJobs = async () => {

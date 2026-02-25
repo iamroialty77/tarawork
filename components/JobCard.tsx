@@ -23,10 +23,19 @@ export interface JobCardProps {
   job: Job;
   index?: number;
   matchScore?: number;
+  matchedSkills?: string[];
+  missingSkills?: string[];
 }
 
-export default function JobCard({ job, index = 0, matchScore }: JobCardProps) {
+export default function JobCard({ 
+  job, 
+  index = 0, 
+  matchScore,
+  matchedSkills = [],
+  missingSkills = []
+}: JobCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+  const [showMatchDetails, setShowMatchDetails] = useState(false);
 
   return (
     <motion.div
@@ -67,15 +76,69 @@ export default function JobCard({ job, index = 0, matchScore }: JobCardProps) {
                   </Link>
                 </div>
                 {matchScore !== undefined && matchScore > 0 && (
-                  <span className={cn(
-                    "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest",
-                    matchScore >= 80 ? "bg-indigo-50 text-indigo-700 border-indigo-100 shadow-sm shadow-indigo-100" :
-                    matchScore >= 50 ? "bg-amber-50 text-amber-700 border-amber-100" :
-                    "bg-slate-50 text-slate-700 border-slate-100"
-                  )}>
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    {matchScore}% Match
-                  </span>
+                  <div className="relative">
+                    <button 
+                      onMouseEnter={() => setShowMatchDetails(true)}
+                      onMouseLeave={() => setShowMatchDetails(false)}
+                      onClick={() => setShowMatchDetails(!showMatchDetails)}
+                      className={cn(
+                        "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest transition-all",
+                        matchScore >= 80 ? "bg-indigo-50 text-indigo-700 border-indigo-100 shadow-sm shadow-indigo-100" :
+                        matchScore >= 50 ? "bg-amber-50 text-amber-700 border-amber-100" :
+                        "bg-slate-50 text-slate-700 border-slate-100"
+                      )}
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      {matchScore}% Match
+                    </button>
+
+                    {showMatchDetails && (
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl border border-slate-200 shadow-xl z-20 p-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Match Insights</h4>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{matchScore}%</span>
+                          </div>
+                          
+                          {matchedSkills.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1.5 flex items-center">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
+                                Matched Skills
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {matchedSkills.map(skill => (
+                                  <span key={skill} className="text-[9px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-100">
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {missingSkills.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-1.5" />
+                                Missing Skills
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {missingSkills.map(skill => (
+                                  <span key={skill} className="text-[9px] font-medium bg-slate-50 text-slate-500 px-2 py-0.5 rounded-md border border-slate-100">
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="text-[9px] text-slate-400 font-medium pt-2 border-t border-slate-100 italic">
+                            Tip: Upskill in missing areas to improve your match score.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {job.budget && job.budget > 4000 && (
                   <span className="flex items-center text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg border border-emerald-100 uppercase tracking-widest">
