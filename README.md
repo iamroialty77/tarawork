@@ -20,7 +20,23 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+## Database Setup (Supabase)
+
+To get started with TaraWork, you need to run the following SQL commands in your Supabase SQL Editor. This will set up all necessary tables, policies, and real-time replication.
+
+### 1. Execute Schema SQL
+Copy the content of `supabase_schema.sql` and run it in your Supabase SQL Editor.
+
+### 2. Required Indexes for Performance
+Run these commands to speed up queries:
+```sql
+CREATE INDEX IF NOT EXISTS idx_applications_job_id ON public.applications(job_id);
+CREATE INDEX IF NOT EXISTS idx_applications_seeker_id ON public.applications(seeker_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_hirer_id ON public.jobs(hirer_id);
+```
+
+### 3. Verify Real-time
+Ensure that Real-time is enabled for the `applications`, `jobs`, and `messages` tables under the `supabase_realtime` publication.
 
 To learn more about Next.js, take a look at the following resources:
 

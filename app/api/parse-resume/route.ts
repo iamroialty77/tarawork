@@ -104,7 +104,10 @@ export async function POST(req: NextRequest) {
         verbosity: 0 // Iwasan ang masyadong maraming logs mula sa pdfjs
       });
       
-      const data = await parser.getText();
+      const data = await parser.getText({
+        lineEnforce: true,
+        lineThreshold: 4.0 // Mas sensitibo para sa multi-column layouts tulad ng sa Canva
+      });
       text = data.text;
     } catch (parseError: any) {
       console.error('AI Resume Parser: PDF Parse Error:', parseError);
@@ -145,7 +148,14 @@ export async function POST(req: NextRequest) {
         })).optional(),
         category: z.enum(['Developer', 'Designer', 'Writer', 'Virtual Assistant', 'Marketing Specialist']).optional(),
       }),
-      prompt: `Extract professional information from the following resume text:\n\n${text}\n\nPlease provide a concise bio, a list of technical and soft skills, and a summary of work experience. Also categorize the person into one of the following: Developer, Designer, Writer, Virtual Assistant, Marketing Specialist.`,
+      prompt: `Extract professional information from the following resume text. 
+Note: The text might have been extracted from a multi-column or complex layout (like Canva). 
+Use your natural language understanding to reassemble sections correctly if they seem fragmented.
+
+Resume Text:
+\n\n${text}\n\n
+Please provide a concise bio, a list of technical and soft skills, and a summary of work experience. 
+Also categorize the person into one of the following: Developer, Designer, Writer, Virtual Assistant, Marketing Specialist.`,
     });
 
     console.log('AI Resume Parser: Successfully parsed');
