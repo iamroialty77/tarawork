@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
-import pdf from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const data = await pdf(buffer);
+    const data = await new PDFParse({ data: buffer }).getText();
     const text = data.text;
 
     if (!text || text.trim().length === 0) {
