@@ -50,15 +50,49 @@ export async function POST(req: NextRequest) {
     let text = '';
     try {
       // Polyfill necessary for pdfjs-dist in Node.js environment
-      try {
-        const canvas = await import('@napi-rs/canvas');
-        console.log('AI Resume Parser: Injecting polyfills...');
-        (globalThis as any).DOMMatrix = canvas.DOMMatrix;
-        (globalThis as any).Path2D = canvas.Path2D;
-        (globalThis as any).DOMPoint = canvas.DOMPoint;
-        (globalThis as any).DOMRect = canvas.DOMRect;
-      } catch (e) {
-        console.warn('AI Resume Parser: Failed to load canvas polyfills:', e);
+      // We use lightweight shims instead of @napi-rs/canvas to avoid native binding build errors in Turbopack
+      console.log('AI Resume Parser: Injecting lightweight polyfills...');
+      if (!(globalThis as any).DOMMatrix) {
+        (globalThis as any).DOMMatrix = class DOMMatrix {
+          matrix: any;
+          constructor(init: any) { this.matrix = init; }
+          static fromFloat32Array(array: any) { return new DOMMatrix(array); }
+          static fromFloat64Array(array: any) { return new DOMMatrix(array); }
+        };
+      }
+      if (!(globalThis as any).Path2D) {
+        (globalThis as any).Path2D = class Path2D {
+          addPath() {}
+          closePath() {}
+          moveTo() {}
+          lineTo() {}
+          bezierCurveTo() {}
+          quadraticCurveTo() {}
+          arc() {}
+          arcTo() {}
+          ellipse() {}
+          rect() {}
+        };
+      }
+      if (!(globalThis as any).DOMPoint) {
+        (globalThis as any).DOMPoint = class DOMPoint {
+          x: number; y: number; z: number; w: number;
+          constructor(x = 0, y = 0, z = 0, w = 1) {
+            this.x = x; this.y = y; this.z = z; this.w = w;
+          }
+          static fromPoint(other: any) { return new DOMPoint(other.x, other.y, other.z, other.w); }
+        };
+      }
+      if (!(globalThis as any).DOMRect) {
+        (globalThis as any).DOMRect = class DOMRect {
+          x: number; y: number; width: number; height: number;
+          top: number; right: number; bottom: number; left: number;
+          constructor(x = 0, y = 0, width = 0, height = 0) {
+            this.x = x; this.y = y; this.width = width; this.height = height;
+            this.top = y; this.left = x; this.right = x + width; this.bottom = y + height;
+          }
+          static fromRect(other: any) { return new DOMRect(other.x, other.y, other.width, other.height); }
+        };
       }
 
       // Dynamic import para maiwasan ang top-level initialization errors sa ilang environments
