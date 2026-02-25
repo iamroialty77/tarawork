@@ -95,7 +95,17 @@ export default function AuthForm() {
         if (error) {
           // Explicitly check for 500 or SMTP errors in the error object
           console.error("Signup error details:", error);
-          throw error;
+          
+          let message = error.message || "An error occurred during signup.";
+          
+          if (message.includes("Database error saving new user") || error.status === 500) {
+            message = "Authentication Error (500): Ang iyong Supabase project ay may problema sa email sending o database configuration. Pakisuri ang Supabase Dashboard > Authentication > Logs.";
+          } else if (message.includes("Email rate limit exceeded")) {
+            message = "Limitasyon sa Email: Masyadong maraming signup attempt. Subukan muli pagkaraan ng isang oras (Limit: 3 per hour para sa free tier).";
+          }
+          
+          setError(message);
+          return;
         }
         
         if (data?.user && data.user.identities?.length === 0) {

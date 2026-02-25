@@ -370,7 +370,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
             <div className="space-y-1">
               <p className="text-[10px] font-bold text-slate-700">2. Review Auth Logs</p>
               <p className="text-[10px] text-slate-500">
-                Pumunta sa <b>Authentication &gt; Logs</b> sa Supabase para makita ang eksaktong error message.
+                Pumunta sa <b>Authentication > Logs</b> sa Supabase. Hanapin ang "signup" request na may status 500 para makita ang Error Message (hal. "error sending confirmation mail").
+              </p>
+            </div>
+            <div className="space-y-1 col-span-1 sm:col-span-2 border-t border-amber-100 pt-2 mt-1">
+              <p className="text-[10px] font-bold text-slate-700">3. Disable "Confirm Email" (Temporary Fix)</p>
+              <p className="text-[10px] text-slate-500">
+                Kung ayaw gumana ng email, pumunta sa <b>Authentication > Providers > Email</b> at i-disable ang <b>"Confirm email"</b>. Makakapag-signup na ang mga users nang walang email verification.
               </p>
             </div>
           </div>
