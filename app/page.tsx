@@ -69,6 +69,17 @@ export default function Home() {
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [selectedJobIdParaSaApply, setSelectedJobIdParaSaApply] = useState<string | null>(null);
+  const [applyData, setApplyData] = useState({
+    resumeUrl: "",
+    portfolioUrl: "",
+    interviewUrl: "",
+    coverLetter: ""
+  });
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [userEscrows, setUserEscrows] = useState<any[]>([]);
   const [selectedJobApplicants, setSelectedJobApplicants] = useState<any[]>([]);
   const [selectedJobTitle, setSelectedJobTitle] = useState("");
   const jobsRef = useRef<HTMLDivElement>(null);
@@ -338,20 +349,38 @@ export default function Home() {
     }
   };
 
-  const handleApply = async (jobId: string) => {
+  const handleApply = (jobId: string) => {
     if (!user) {
       setToastMsg("Please login to apply for jobs.");
       setShowToast(true);
       return;
     }
+    
+    setSelectedJobIdParaSaApply(jobId);
+    setShowApplyModal(true);
+  };
+
+  const submitApplication = async () => {
+    if (!user || !selectedJobIdParaSaApply) return;
+    
+    if (!applyData.resumeUrl || !applyData.portfolioUrl) {
+      setToastMsg("Please provide both Resume and Portfolio links to proceed.");
+      setShowToast(true);
+      return;
+    }
 
     try {
+      setIsSaving(true);
       const { error } = await supabase
         .from('applications')
         .insert([{ 
-          job_id: jobId, 
+          job_id: selectedJobIdParaSaApply, 
           seeker_id: user.id,
-          status: 'pending' 
+          status: 'pending',
+          resume_url: applyData.resumeUrl,
+          portfolio_url: applyData.portfolioUrl,
+          interview_url: applyData.interviewUrl,
+          cover_letter: applyData.coverLetter
         }]);
 
       if (error) {
@@ -361,18 +390,74 @@ export default function Home() {
           throw error;
         }
       } else {
-        setAppliedJobIds(prev => [...prev, jobId]);
-        setToastMsg("Application sent successfully to the hirer!");
-        
-        // Refresh hirer jobs if the user is also a hirer (rare but possible in dev)
-        if (profile.role === 'hirer') fetchHirerJobs(user.id);
+        setAppliedJobIds(prev => [...prev, selectedJobIdParaSaApply]);
+        setToastMsg("Application submitted! Hirer will review your credentials.");
+        setShowApplyModal(false);
+        setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
       }
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
       console.error("Error applying for job:", err);
-      setToastMsg(`Error: ${err.message || "Failed to send application"}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const approveApplication = async (applicationId: string, seekerId: string, jobId: string, jobTitle: string, budget: number) => {
+    if (!user) return;
+    try {
+      setIsSaving(true);
+      
+      // 1. Update application status
+      const { error: appError } = await supabase
+        .from('applications')
+        .update({ status: 'hired' })
+        .eq('id', applicationId);
+      
+      if (appError) throw appError;
+
+      // 2. Create Escrow entry
+      const { error: escrowError } = await supabase
+        .from('escrows')
+        .insert([{
+          job_id: jobId,
+          hirer_id: user.id,
+          seeker_id: seekerId,
+          amount: budget,
+          status: 'funded',
+          description: `Budget for ${jobTitle}`
+        }]);
+      
+      if (escrowError) throw escrowError;
+
+      // 3. Send Notification to Jobseeker
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: seekerId,
+          title: 'Project Approved!',
+          message: `Congratulations! You have been approved for the project: ${jobTitle}. Budget is now in escrow.`,
+          type: 'success',
+          link: '/dashboard'
+        }]);
+      
+      if (notifError) throw notifError;
+
+      setToastMsg("Jobseeker approved and budget funded in escrow!");
       setShowToast(true);
+      
+      // Refresh applicants list locally
+      setSelectedJobApplicants(prev => prev.map(app => 
+        app.id === applicationId ? { ...app, status: 'hired' } : app
+      ));
+
+    } catch (err: any) {
+      console.error("Error approving application:", err);
+      setToastMsg(`Error: ${err.message || "Failed to approve application"}`);
+      setShowToast(true);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -402,6 +487,52 @@ export default function Home() {
       }
     } catch (err) {
       console.error("Unexpected error fetching freelancers:", err);
+    }
+  };
+
+  const fetchNotifications = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+    }
+  };
+
+  const markNotificationRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+      
+      if (!error) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      }
+    } catch (err) {
+      console.error("Error marking notification read:", err);
+    }
+  };
+
+  const fetchUserEscrows = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('escrows')
+        .select('*, jobs(*)')
+        .eq('seeker_id', userId);
+      
+      if (!error && data) {
+        setUserEscrows(data);
+      }
+    } catch (err) {
+      console.error("Error fetching user escrows:", err);
     }
   };
 
@@ -453,6 +584,33 @@ export default function Home() {
         await fetchHirerJobs(session.user.id);
         await fetchFreelancers();
         await fetchUnreadCount(session.user.id);
+        await fetchNotifications(session.user.id);
+        await fetchUserEscrows(session.user.id);
+        
+        // Subscribe to notifications
+        const notifChannel = supabase
+          .channel('notifications-changes')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'notifications',
+            filter: `user_id=eq.${session.user.id}`
+          }, () => {
+            fetchNotifications(session.user.id);
+          })
+          .subscribe();
+
+        // Subscribe to escrows
+        const escrowChannel = supabase
+          .channel('escrow-changes')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'escrows' 
+          }, () => {
+            fetchUserEscrows(session.user.id);
+          })
+          .subscribe();
         
         // Subscribe to messages for unread count
         const channel = supabase
@@ -644,13 +802,82 @@ export default function Home() {
               >
                 Logout
               </button>
-              <button 
-                onClick={() => alert("You have 3 new notifications:\n1. Project 'E-commerce API' Milestone released.\n2. New match: Senior React Developer.\n3. Profile audit complete.")}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative"
-              >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative"
+                >
+                  <Bell className="w-5 h-5" />
+                  {notifications.filter(n => !n.is_read).length > 0 && (
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                  )}
+                </button>
+                
+                <AnimatePresence>
+                  {showNotifications && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-[60]"
+                    >
+                      <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50 backdrop-blur-sm">
+                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                          <Bell className="w-3 h-3 text-indigo-600" />
+                          Notifications
+                        </h4>
+                        <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+                          {notifications.filter(n => !n.is_read).length} Unread
+                        </span>
+                      </div>
+                      <div className="max-h-[400px] overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.map((n) => (
+                            <div 
+                              key={n.id} 
+                              onClick={() => {
+                                markNotificationRead(n.id);
+                                setShowNotifications(false);
+                                if (n.link) setFreelancerTab('overview');
+                              }}
+                              className={`p-5 border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer transition-all ${!n.is_read ? 'bg-indigo-50/20' : ''} group`}
+                            >
+                              <div className="flex gap-3">
+                                <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${
+                                  n.type === 'success' ? 'bg-emerald-50 text-emerald-500' :
+                                  n.type === 'warning' ? 'bg-amber-50 text-amber-500' :
+                                  'bg-indigo-50 text-indigo-500'
+                                }`}>
+                                  {n.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <h5 className="text-[11px] font-black text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">{n.title}</h5>
+                                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium line-clamp-2">{n.message}</p>
+                                  <span className="text-[9px] text-slate-400 mt-2 block font-black uppercase tracking-widest">
+                                    {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-10 text-center">
+                            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                              <Bell className="w-6 h-6 text-slate-200" />
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">No notifications yet.</p>
+                          </div>
+                        )}
+                      </div>
+                      {notifications.length > 0 && (
+                        <div className="p-4 bg-slate-50/30 text-center border-t border-slate-50">
+                          <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">Clear All Notifications</button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <Link
                 href="/messages"
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative"
@@ -772,17 +999,65 @@ export default function Home() {
                       <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
                         <div className="relative z-10">
                           <h3 className="text-2xl font-black mb-2 tracking-tight">Focus on your workspace</h3>
-                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">Mayroon kang {profile.activeProjects?.length || 0} active projects na naghihintay para sa iyong pansin.</p>
-                          <button 
-                            onClick={() => setFreelancerTab("workspace")}
-                            className="bg-white text-indigo-600 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-all flex items-center gap-2"
-                          >
-                            Go to Workspace
-                            <ArrowUpRight className="w-4 h-4" />
-                          </button>
+                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">Mayroon kang {userEscrows.length} approved projects na may pondo sa escrow.</p>
+                          <div className="flex flex-wrap gap-3">
+                            <button 
+                              onClick={() => setFreelancerTab("workspace")}
+                              className="bg-white text-indigo-600 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-all flex items-center gap-2"
+                            >
+                              Go to Workspace
+                              <ArrowUpRight className="w-4 h-4" />
+                            </button>
+                            {userEscrows.length > 0 && (
+                              <div className="bg-indigo-500/30 px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2">
+                                <DollarSign className="w-4 h-4 text-emerald-400" />
+                                <span className="text-xs font-bold text-white">
+                                  ${userEscrows.reduce((sum, e) => sum + Number(e.amount), 0).toLocaleString()} Total Escrow
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <Zap className="absolute -right-8 -bottom-8 w-48 h-48 text-white/10 rotate-12" />
                       </div>
+
+                      {userEscrows.length > 0 && (
+                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                          <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                              <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                              Approved Projects & Escrow
+                            </h3>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Budget Visibility</span>
+                          </div>
+                          <div className="space-y-4">
+                            {userEscrows.map((escrow) => (
+                              <div key={escrow.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-wrap justify-between items-center gap-4 hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-slate-100 shadow-sm">
+                                    <Briefcase className="w-6 h-6 text-indigo-500" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-slate-900">{escrow.jobs?.title || "Project Title"}</h4>
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1 mt-1">
+                                      <Lock className="w-3 h-3" />
+                                      Pondo sa Escrow: ${Number(escrow.amount).toLocaleString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Status: {escrow.status}
+                                  </span>
+                                  <button className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-black transition-all">
+                                    Submit Work
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
@@ -1412,54 +1687,98 @@ export default function Home() {
 
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {selectedJobApplicants.length > 0 ? (
-                  selectedJobApplicants.map((app) => (
-                    <div key={app.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 transition-all group">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
+                  selectedJobApplicants.map((app: any) => (
+                    <div key={app.id} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group">
+                      <div className="flex flex-col md:flex-row items-start gap-6">
+                        <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
                           {app.profiles?.avatar_url ? (
                             <img src={app.profiles.avatar_url} className="w-full h-full object-cover" alt="" />
                           ) : (
-                            <Users className="w-6 h-6 text-indigo-400" />
+                            <Users className="w-8 h-8 text-indigo-400" />
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1 min-w-0 space-y-4">
+                          <div className="flex flex-wrap justify-between items-start gap-4">
                             <div>
-                              <h4 className="font-bold text-slate-900 text-lg">{app.profiles?.name || "Unknown Freelancer"}</h4>
-                              <span className="text-[10px] font-bold bg-white text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">{app.profiles?.category}</span>
+                              <h4 className="font-black text-slate-900 text-xl tracking-tight">{app.profiles?.name || "Unknown Freelancer"}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] font-bold bg-white text-indigo-600 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-widest">{app.profiles?.category}</span>
+                                <span className={cn(
+                                  "text-[10px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-widest",
+                                  app.status === 'hired' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                  app.status === 'rejected' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                                  "bg-amber-50 text-amber-600 border-amber-100"
+                                )}>
+                                  {app.status}
+                                </span>
+                              </div>
                             </div>
                             <div className="text-right">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Applied</span>
-                              <p className="text-xs font-bold text-slate-600">{new Date(app.created_at).toLocaleDateString()}</p>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Applied Date</span>
+                              <p className="text-xs font-black text-slate-900">{new Date(app.created_at).toLocaleDateString()}</p>
                             </div>
                           </div>
                           
-                          <div className="bg-white/50 p-4 rounded-xl border border-slate-100 mb-4">
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                              <FileText className="w-3.5 h-3.5 text-slate-400" />
-                              Cover Letter
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {app.resume_url && (
+                              <a href={app.resume_url} target="_blank" className="flex items-center gap-3 p-3.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg transition-all">
+                                <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-rose-500" />
+                                </div>
+                                Professional Resume
+                                <ExternalLink className="w-3 h-3 ml-auto opacity-40" />
+                              </a>
+                            )}
+                            {app.portfolio_url && (
+                              <a href={app.portfolio_url} target="_blank" className="flex items-center gap-3 p-3.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-lg transition-all">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                  <Code className="w-4 h-4 text-indigo-500" />
+                                </div>
+                                Project Portfolio
+                                <ExternalLink className="w-3 h-3 ml-auto opacity-40" />
+                              </a>
+                            )}
+                          </div>
+
+                          <div className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-100 shadow-sm">
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2.5 flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                              Jobseeker's Message
                             </p>
-                            <p className="text-sm text-slate-600 leading-relaxed italic">
-                              {app.cover_letter || "No cover letter provided."}
+                            <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
+                              "{app.cover_letter || "No cover letter provided."}"
                             </p>
                           </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-3 pt-2">
+                            {app.status === 'pending' && (
+                              <button 
+                                onClick={() => {
+                                  const job = hirerJobs.find(j => j.title === selectedJobTitle);
+                                  approveApplication(app.id, app.seeker_id, app.job_id, selectedJobTitle, job?.budget || 0);
+                                }}
+                                disabled={isSaving}
+                                className="px-6 py-3 bg-indigo-600 text-white text-[10px] font-bold rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-500/20 active:scale-95"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Approve & Fund Budget
+                              </button>
+                            )}
                             <button 
                               onClick={() => {
                                 setSelectedFreelancer(app.profiles);
                                 setShowFreelancerModal(true);
                               }}
-                              className="px-4 py-2 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-lg hover:bg-slate-50 transition-all uppercase tracking-widest"
+                              className="px-5 py-3 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
                             >
-                              View Profile
+                              Profile Details
                             </button>
                             <Link 
                               href={`/messages?with=${app.seeker_id}`}
-                              className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
+                              className="px-5 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
                             >
-                              <Mail className="w-3.5 h-3.5" />
-                              Interview Seeker
+                              <Mail className="w-4 h-4 text-indigo-400" />
+                              Interview Chat
                             </Link>
                           </div>
                         </div>
@@ -1474,6 +1793,107 @@ export default function Home() {
                     <p className="text-slate-500 font-medium">No applications for this job yet.</p>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Apply for Job Modal */}
+      <AnimatePresence>
+        {showApplyModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowApplyModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-100"
+            >
+              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight">Prove Your Legitimacy</h3>
+                  <p className="text-sm font-medium text-slate-500">Provide your credentials to the hirer.</p>
+                </div>
+                <button 
+                  onClick={() => setShowApplyModal(false)}
+                  className="p-2 hover:bg-slate-50 rounded-xl transition-all"
+                >
+                  <XCircle className="w-6 h-6 text-slate-300 hover:text-slate-500" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh]">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5" />
+                    Resume URL (PDF/Drive)
+                  </label>
+                  <input 
+                    type="url"
+                    placeholder="https://drive.google.com/your-resume"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    value={applyData.resumeUrl}
+                    onChange={(e) => setApplyData({...applyData, resumeUrl: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Code className="w-3.5 h-3.5" />
+                    Portfolio URL (GitHub/Behance)
+                  </label>
+                  <input 
+                    type="url"
+                    placeholder="https://github.com/your-portfolio"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    value={applyData.portfolioUrl}
+                    onChange={(e) => setApplyData({...applyData, portfolioUrl: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Interview Video/Link (Optional)
+                  </label>
+                  <input 
+                    type="url"
+                    placeholder="https://loom.com/your-intro"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    value={applyData.interviewUrl}
+                    onChange={(e) => setApplyData({...applyData, interviewUrl: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Short Message to Hirer
+                  </label>
+                  <textarea 
+                    rows={4}
+                    placeholder="Tell the hirer why you're a good fit..."
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
+                    value={applyData.coverLetter}
+                    onChange={(e) => setApplyData({...applyData, coverLetter: e.target.value})}
+                  />
+                </div>
+
+                <button 
+                  onClick={submitApplication}
+                  disabled={isSaving}
+                  className="w-full bg-slate-900 text-white py-4 rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-xl shadow-slate-900/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSaving ? "Submitting..." : "Submit My Application"}
+                  {!isSaving && <ArrowUpRight className="w-4 h-4" />}
+                </button>
               </div>
             </motion.div>
           </div>

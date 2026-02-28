@@ -241,6 +241,9 @@ CREATE TABLE IF NOT EXISTS public.applications (
     seeker_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     status TEXT DEFAULT 'pending', -- pending, interviewing, hired, rejected
     cover_letter TEXT,
+    resume_url TEXT,
+    portfolio_url TEXT,
+    interview_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     UNIQUE(job_id, seeker_id)
 );
@@ -272,6 +275,33 @@ CREATE POLICY "Users can insert their own applications" ON public.applications
 
 -- Add to Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE public.applications;
+
+-- 11. Create NOTIFICATIONS table
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT DEFAULT 'info', -- info, success, warning, error
+    is_read BOOLEAN DEFAULT false,
+    link TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- Policies for NOTIFICATIONS
+DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
+CREATE POLICY "Users can view their own notifications" ON public.notifications
+    FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
+CREATE POLICY "Users can update their own notifications" ON public.notifications
+    FOR UPDATE USING (auth.uid() = user_id);
+
+-- Add to Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 
 -- Policies for CONVERSATIONS
 DROP POLICY IF EXISTS "Users can view their own conversations" ON public.conversations;
