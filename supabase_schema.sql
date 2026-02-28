@@ -4,7 +4,7 @@
 -- 1. Create PROFILES table
 -- This table stores user profile information for both Jobseekers and Hirers.
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID REFERENCES auth.users NOT NULL PRIMARY KEY,
+    id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
     name TEXT,
     role TEXT DEFAULT 'jobseeker',
     category TEXT DEFAULT 'Developer',
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     milestones JSONB DEFAULT '[]',
     deadline TEXT,
     "customQuestions" JSONB DEFAULT '[]',
-    hirer_id UUID REFERENCES public.profiles(id),
+    hirer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     status TEXT DEFAULT 'live' -- live, closed, flagged, pending
 );
 
@@ -84,8 +84,8 @@ CREATE POLICY "Authenticated users can post jobs." ON public.jobs
 -- 3. Create CONVERSATIONS table
 CREATE TABLE IF NOT EXISTS public.conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    participant_1 UUID REFERENCES public.profiles(id) NOT NULL,
-    participant_2 UUID REFERENCES public.profiles(id) NOT NULL,
+    participant_1 UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    participant_2 UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     UNIQUE(participant_1, participant_2)
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS public.conversations (
 CREATE TABLE IF NOT EXISTS public.messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
-    sender_id UUID REFERENCES public.profiles(id) NOT NULL,
+    sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     content TEXT NOT NULL,
     is_read BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
@@ -122,8 +122,8 @@ CREATE TABLE IF NOT EXISTS public.portfolio_items (
 CREATE TABLE IF NOT EXISTS public.escrows (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id TEXT REFERENCES public.jobs(id) ON DELETE SET NULL,
-    hirer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    seeker_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    hirer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    seeker_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     amount NUMERIC NOT NULL,
     platform_fee NUMERIC DEFAULT 0,
     status TEXT DEFAULT 'pending', -- pending, funded, released, disputed, refunded
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS public.escrows (
 CREATE TABLE IF NOT EXISTS public.disputes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     escrow_id UUID REFERENCES public.escrows(id) ON DELETE CASCADE NOT NULL,
-    raised_by UUID REFERENCES public.profiles(id) NOT NULL,
+    raised_by UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     reason TEXT NOT NULL,
     urgency_level TEXT DEFAULT 'Medium', -- High, Medium, Low
     status TEXT DEFAULT 'open', -- open, resolved, closed
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS public.disputes (
 -- 8. Create ADMIN_AUDIT_LOGS table
 CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id UUID REFERENCES public.profiles(id) NOT NULL,
+    admin_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     action TEXT NOT NULL,
     target_type TEXT NOT NULL, -- profile, job, escrow, dispute
     target_id TEXT NOT NULL,

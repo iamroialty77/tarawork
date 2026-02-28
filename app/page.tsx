@@ -92,6 +92,20 @@ export default function Home() {
     activeProjects: [],
   });
 
+  useEffect(() => {
+    // Handle email confirmation success message
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('confirmed') === 'true') {
+      setToastMsg("Email verified successfully! Welcome to TaraWork.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+      
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+
   const [isSaving, setIsSaving] = useState(false);
   const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
   const [clientTab, setClientTab] = useState<"overview" | "post" | "postings" | "talents" | "profile">("overview");

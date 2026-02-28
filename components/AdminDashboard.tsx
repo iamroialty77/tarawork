@@ -172,17 +172,31 @@ export default function AdminDashboard() {
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm("Sigurado ka bang gusto mong tanggalin ang user na ito? Hindi ito maibabalik.")) return;
+    if (!confirm("Sigurado ka bang gusto mong tanggalin ang user na ito? LAHAT ng data (messages, jobs, profiles) ay mabubura nang tuluyan. Hindi ito maibabalik.")) return;
     
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
-    
-    if (error) notify("Error deleting user: " + error.message);
-    else {
-      notify("User deleted successfully");
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete user');
+      }
+
+      notify("User and all associated data deleted successfully");
       fetchData();
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      notify("Error deleting user: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -509,6 +523,13 @@ export default function AdminDashboard() {
                                 <span className="text-xs font-bold">Reject</span>
                               </button>
                             )}
+                            <button 
+                              onClick={() => deleteUser(user.id)}
+                              className="p-2 bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white rounded-lg transition-all" 
+                              title="Delete Account Permanently"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>

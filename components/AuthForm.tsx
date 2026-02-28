@@ -20,12 +20,8 @@ import {
   Users
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { useSearchParams } from "next/navigation";
 
 export default function AuthForm() {
-  const searchParams = useSearchParams();
-  const confirmed = searchParams.get('confirmed');
-  
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -35,13 +31,6 @@ export default function AuthForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSMTPHelp, setShowSMTPHelp] = useState(false);
-
-  useEffect(() => {
-    if (confirmed === 'true') {
-      setSuccess("Email confirmed successfully! You can now log in.");
-      setMode("login");
-    }
-  }, [confirmed]);
 
   const handleSocialLogin = async (provider: 'google' | 'facebook' | 'linkedin' | 'github') => {
     setLoading(true);
