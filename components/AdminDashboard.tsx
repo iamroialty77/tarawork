@@ -614,10 +614,63 @@ export default function AdminDashboard() {
             animate={{ opacity: 1, scale: 1 }}
             className="space-y-6"
           >
+            {/* Financial Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Total Inflow (Funded)</p>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900">
+                  ₱{escrows.reduce((sum, e) => sum + (e.status === 'funded' || e.status === 'released' ? e.amount : 0), 0).toLocaleString()}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-medium mt-1">Gross volume currently managed by platform</p>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <ArrowUpRight className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Total Outflow (Released)</p>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900">
+                  ₱{escrows.reduce((sum, e) => sum + (e.status === 'released' ? e.amount : 0), 0).toLocaleString()}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-medium mt-1">Total payments successfully completed to freelancers</p>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Currently Held in Escrow</p>
+                </div>
+                <h3 className="text-2xl font-black text-amber-600">
+                  ₱{escrows.reduce((sum, e) => sum + (e.status === 'funded' || e.status === 'disputed' ? e.amount : 0), 0).toLocaleString()}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-medium mt-1">Funds waiting for milestone approval or dispute resolution</p>
+              </div>
+            </div>
+
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-8 border-b border-slate-50">
-                <h3 className="text-xl font-bold text-slate-900">Financial Transparency</h3>
-                <p className="text-sm text-slate-500 font-medium">Audit platform fees and funds in escrow.</p>
+              <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Financial Transparency</h3>
+                  <p className="text-sm text-slate-500 font-medium">Detailed audit of all escrow transactions and platform fees.</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-2xl flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenue (Platform Fees)</p>
+                    <p className="text-lg font-black text-indigo-600">₱{escrows.reduce((sum, e) => sum + (Number(e.platform_fee) || 0), 0).toLocaleString()}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
+                    <DollarSign className="w-6 h-6" />
+                  </div>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">

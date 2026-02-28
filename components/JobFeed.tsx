@@ -10,10 +10,10 @@ interface JobFeedProps {
   jobs: Job[];
   profile: FreelancerProfile;
   onApply?: (jobId: string) => void;
-  appliedJobIds?: string[];
+  appliedJobs?: Record<string, string>;
 }
 
-export default function JobFeed({ jobs, profile, onApply, appliedJobIds = [] }: JobFeedProps) {
+export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: JobFeedProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
@@ -165,7 +165,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobIds = [] }: 
                 matchedSkills={matchedSkills}
                 missingSkills={missingSkills}
                 onApply={onApply}
-                isApplied={appliedJobIds.includes(job.id)}
+                applicationStatus={appliedJobs[job.id]}
               />
             );
           })

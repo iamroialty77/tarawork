@@ -58,7 +58,7 @@ export default function Home() {
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [hirerJobs, setHirerJobs] = useState<Job[]>([]);
-  const [appliedJobIds, setAppliedJobIds] = useState<string[]>([]);
+  const [appliedJobs, setAppliedJobs] = useState<Record<string, string>>({});
   const [freelancers, setFreelancers] = useState<UserProfile[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
   const [missingTables, setMissingTables] = useState<string[]>([]);
@@ -338,11 +338,15 @@ export default function Home() {
     try {
       const { data, error } = await supabase
         .from('applications')
-        .select('job_id')
+        .select('job_id, status')
         .eq('seeker_id', userId);
       
       if (!error && data) {
-        setAppliedJobIds(data.map((app: any) => app.job_id));
+        const apps = data.reduce((acc: any, app: any) => {
+          acc[app.job_id] = app.status;
+          return acc;
+        }, {});
+        setAppliedJobs(apps);
       }
     } catch (err) {
       console.error("Error fetching applied jobs:", err);
@@ -390,7 +394,7 @@ export default function Home() {
           throw error;
         }
       } else {
-        setAppliedJobIds(prev => [...prev, selectedJobIdParaSaApply]);
+        setAppliedJobs(prev => ({ ...prev, [selectedJobIdParaSaApply]: 'pending' }));
         setToastMsg("Application submitted! Hirer will review your credentials.");
         setShowApplyModal(false);
         setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
@@ -1174,7 +1178,7 @@ export default function Home() {
                     jobs={jobs} 
                     profile={profile} 
                     onApply={handleApply}
-                    appliedJobIds={appliedJobIds}
+                    appliedJobs={appliedJobs}
                   />
                 </motion.div>
               )}

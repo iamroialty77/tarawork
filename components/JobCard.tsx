@@ -26,7 +26,7 @@ export interface JobCardProps {
   matchedSkills?: string[];
   missingSkills?: string[];
   onApply?: (jobId: string) => void;
-  isApplied?: boolean;
+  applicationStatus?: string;
 }
 
 export default function JobCard({ 
@@ -36,8 +36,9 @@ export default function JobCard({
   matchedSkills = [],
   missingSkills = [],
   onApply,
-  isApplied = false
+  applicationStatus
 }: JobCardProps) {
+  const isApplied = !!applicationStatus;
   const [isSaved, setIsSaved] = useState(false);
   const [showMatchDetails, setShowMatchDetails] = useState(false);
   const [isApplyingLocal, setIsApplyingLocal] = useState(false);
@@ -259,7 +260,7 @@ export default function JobCard({
                   Applying...
                 </span>
               ) : isApplied ? (
-                "Applied ✓"
+                applicationStatus === 'hired' ? "Hired ✓" : "Pending Approval..."
               ) : (
                 <>
                   Apply Now

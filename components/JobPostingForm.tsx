@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Job, JobType, JobDuration, PaymentMethod, Milestone, ProposalQuestion } from "../types";
 import { supabase } from "../lib/supabase";
-import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Sparkles, Lock } from "lucide-react";
 import { cn } from "../lib/utils";
 
 interface JobPostingFormProps {
@@ -395,16 +395,31 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2">Total Budget (PHP)</label>
+        <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2">Total Project Budget (PHP)</label>
         <div className="relative">
           <span className="absolute left-5 top-1/2 -translate-y-1/2 text-lg font-black text-gray-400">₱</span>
           <input
             type="number"
             className="block w-full rounded-2xl border-2 border-gray-100 bg-gray-50/50 pl-10 pr-5 py-4 text-2xl font-black text-indigo-600 transition-all focus:border-indigo-600 focus:bg-white focus:outline-none focus:ring-0"
-            placeholder="0.00"
+            placeholder="e.g. 50000"
             value={formData.budget || ""}
             onChange={(e) => setFormData({ ...formData, budget: parseFloat(e.target.value) })}
           />
+        </div>
+        <p className="mt-3 text-xs text-gray-400 leading-relaxed">
+          <strong>Pro-tip:</strong> Projects with a clear budget attract higher quality talent. Your funds will be securely held in <strong>Tara Escrow</strong> and only released when you approve milestones.
+        </p>
+      </div>
+
+      <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 flex gap-4">
+        <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100 shrink-0">
+          <Lock className="w-6 h-6" />
+        </div>
+        <div>
+          <h4 className="font-bold text-indigo-900 text-sm">Escrow Protection Enabled</h4>
+          <p className="text-xs text-indigo-700/80 mt-1 leading-relaxed">
+            All payments on Tara are protected. Once you hire a jobseeker, the budget is moved to a secure escrow account. This proves to the jobseeker that you have the budget, and protects your money until the work is delivered.
+          </p>
         </div>
       </div>
 
