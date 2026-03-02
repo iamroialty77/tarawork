@@ -68,7 +68,7 @@ export default function Workspace({
   const [isSyncing, setIsSyncing] = useState(false);
   const [showFocusMode, setShowFocusMode] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const [newProject, setNewProject] = useState({ title: "", client: "", workspaceType: "Code" as "Code" | "Design" });
+  const [newProject, setNewProject] = useState({ title: "", client: "", workspaceType: "General" as WorkspaceType });
   const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false);
   const [newWorkflow, setNewWorkflow] = useState({ trigger: "", action: "", name: "", icon: "Zap" });
   const [showAIClauseAudit, setShowAIClauseAudit] = useState(false);
@@ -143,7 +143,7 @@ export default function Workspace({
     }
     
     setIsCreatingProject(false);
-    setNewProject({ title: "", client: "", workspaceType: "Code" });
+    setNewProject({ title: "", client: "", workspaceType: "General" });
   };
 
   const handleCreateWorkflow = () => {
@@ -739,6 +739,22 @@ export default function Workspace({
                         placeholder="e.g. Acme Corp"
                       />
                     </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Workspace Type</label>
+                      <select 
+                        value={newProject.workspaceType}
+                        onChange={(e) => setNewProject({...newProject, workspaceType: e.target.value as WorkspaceType})}
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
+                      >
+                        <option value="General">General</option>
+                        <option value="Code">Software Development</option>
+                        <option value="Design">Graphic & UI/UX Design</option>
+                        <option value="Marketing">Marketing & Social Media</option>
+                        <option value="Admin/VA">Administrative / VA</option>
+                        <option value="Writing">Writing & Content</option>
+                        <option value="Data & Automation">Data & Automation</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="flex justify-end gap-3">
                     <button 
@@ -770,9 +786,21 @@ export default function Workspace({
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex gap-4">
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center border border-transparent group-hover:border-indigo-100 transition-colors ${
-                          project.workspaceType === "Code" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"
+                          project.workspaceType === "Code" ? "bg-blue-50 text-blue-600" : 
+                          project.workspaceType === "Design" ? "bg-purple-50 text-purple-600" :
+                          project.workspaceType === "Marketing" ? "bg-orange-50 text-orange-600" :
+                          project.workspaceType === "Admin/VA" ? "bg-emerald-50 text-emerald-600" :
+                          project.workspaceType === "Writing" ? "bg-amber-50 text-amber-600" :
+                          project.workspaceType === "Data & Automation" ? "bg-cyan-50 text-cyan-600" :
+                          "bg-slate-50 text-slate-600"
                         }`}>
-                          {project.workspaceType === "Code" ? <Github className="w-6 h-6" /> : <Layout className="w-6 h-6" />}
+                          {project.workspaceType === "Code" && <Github className="w-6 h-6" />}
+                          {project.workspaceType === "Design" && <Layout className="w-6 h-6" />}
+                          {project.workspaceType === "Marketing" && <BarChart3 className="w-6 h-6" />}
+                          {project.workspaceType === "Admin/VA" && <Trello className="w-6 h-6" />}
+                          {project.workspaceType === "Writing" && <FileText className="w-6 h-6" />}
+                          {project.workspaceType === "Data & Automation" && <Zap className="w-6 h-6" />}
+                          {project.workspaceType === "General" && <LayoutDashboard className="w-6 h-6" />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -1177,49 +1205,189 @@ export default function Workspace({
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
-              {projects.length > 0 ? (
+              {selectedProject ? (
                 <>
-                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-bold flex items-center gap-2">
-                        <Github className="w-5 h-5 text-slate-900" />
-                        GitHub Sync & Auto-Escrow
-                      </h4>
-                      <span className="text-[10px] font-black bg-indigo-600 text-white px-2 py-1 rounded">PRO FEATURE</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mb-6">
-                      Milestones are automatically marked as "In-Review" when you merge code to the <code className="bg-slate-200 px-1 rounded">main</code> branch.
-                    </p>
-                    <div className="space-y-3">
-                      {[
-                        { title: "Frontend Implementation", status: "Merged", branch: "main", amount: "₱15,000", color: "bg-emerald-500" },
-                        { title: "API Integration", status: "Pending Merge", branch: "dev", amount: "₱10,000", color: "bg-amber-500" },
-                      ].map((m, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${m.color}`}></div>
-                            <div>
-                              <p className="text-sm font-bold text-slate-900">{m.title}</p>
-                              <p className="text-[10px] text-slate-400 font-mono">{m.branch}</p>
+                  {/* Dedicated Workspace Content based on Type */}
+                  {selectedProject.workspaceType === "Code" && (
+                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold flex items-center gap-2">
+                          <Github className="w-5 h-5 text-slate-900" />
+                          GitHub Sync & Auto-Escrow
+                        </h4>
+                        <span className="text-[10px] font-black bg-indigo-600 text-white px-2 py-1 rounded">DEV MODE</span>
+                      </div>
+                      <p className="text-sm text-slate-600 mb-6">
+                        Milestones are automatically marked as "In-Review" nang i-merge ang code sa <code className="bg-slate-200 px-1 rounded">main</code> branch.
+                      </p>
+                      <div className="space-y-3">
+                        {[
+                          { title: "Frontend Implementation", status: "Merged", branch: "main", amount: "₱15,000", color: "bg-emerald-500" },
+                          { title: "API Integration", status: "Pending Merge", branch: "dev", amount: "₱10,000", color: "bg-amber-500" },
+                        ].map((m, i) => (
+                          <div key={i} className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-2 h-2 rounded-full ${m.color}`}></div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">{m.title}</p>
+                                <p className="text-[10px] text-slate-400 font-mono">{m.branch}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-slate-900">{m.amount}</p>
+                              <p className={`text-[10px] font-bold ${m.status === 'Merged' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {m.status === 'Merged' ? '✓ ESCROW RELEASED' : 'PENDING AUTO-RELEASE'}
+                              </p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-slate-900">{m.amount}</p>
-                            <p className={`text-[10px] font-bold ${m.status === 'Merged' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              {m.status === 'Merged' ? '✓ ESCROW RELEASED' : 'PENDING AUTO-RELEASE'}
-                            </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProject.workspaceType === "Design" && (
+                    <div className="p-6 bg-purple-50 rounded-2xl border border-purple-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold flex items-center gap-2 text-purple-900">
+                          <Layout className="w-5 h-5" />
+                          Design Asset Hub
+                        </h4>
+                        <span className="text-[10px] font-black bg-purple-600 text-white px-2 py-1 rounded">DESIGN MODE</span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {['Logo_Final.svg', 'Brand_Guide.pdf', 'Mobile_UI.fig', 'Banner_Ads.zip'].map((file, i) => (
+                          <div key={i} className="bg-white p-4 rounded-xl border border-purple-100 flex flex-col items-center text-center group cursor-pointer hover:shadow-md transition-all">
+                            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                              <FileText className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-700 truncate w-full">{file}</span>
+                            <span className="text-[8px] text-slate-400 mt-1 uppercase tracking-tighter">Ready for Review</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProject.workspaceType === "Marketing" && (
+                    <div className="p-6 bg-orange-50 rounded-2xl border border-orange-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold flex items-center gap-2 text-orange-900">
+                          <BarChart3 className="w-5 h-5" />
+                          Campaign Performance Board
+                        </h4>
+                        <span className="text-[10px] font-black bg-orange-600 text-white px-2 py-1 rounded">MARKETING MODE</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {[
+                          { label: 'Avg. CTR', value: '4.2%', color: 'text-orange-600' },
+                          { label: 'Total Reach', value: '12.5k', color: 'text-orange-600' },
+                          { label: 'Conversions', value: '342', color: 'text-orange-600' },
+                        ].map((stat, i) => (
+                          <div key={i} className="bg-white p-4 rounded-xl border border-orange-100 text-center">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                            <p className={cn("text-2xl font-black mt-1", stat.color)}>{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProject.workspaceType === "Writing" && (
+                    <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold flex items-center gap-2 text-amber-900">
+                          <FileText className="w-5 h-5" />
+                          Content Editor & SEO Audit
+                        </h4>
+                        <span className="text-[10px] font-black bg-amber-600 text-white px-2 py-1 rounded">WRITING MODE</span>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl border border-amber-100">
+                        <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                          <span className="text-xs font-bold text-slate-600">Draft: blog-post-v1.docx</span>
+                          <div className="flex gap-2">
+                            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">SEO: 92/100</span>
+                            <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Readability: Easy</span>
                           </div>
                         </div>
-                      ))}
+                        <p className="text-sm text-slate-400 italic">"The future of remote work is not just about tools, but about sustainable energy management..."</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
+                  {selectedProject.workspaceType === "Admin/VA" && (
+                    <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold flex items-center gap-2 text-emerald-900">
+                          <Trello className="w-5 h-5" />
+                          Administrative Operations Hub
+                        </h4>
+                        <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-1 rounded">ADMIN MODE</span>
+                      </div>
+                      <div className="space-y-2">
+                        {[
+                          { task: 'Schedule Board Meeting', due: 'Today', priority: 'High' },
+                          { task: 'Process Monthly Invoices', due: 'Tomorrow', priority: 'Medium' },
+                          { task: 'Email Management (Inbox Zero)', due: 'Ongoing', priority: 'Low' },
+                        ].map((t, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-100">
+                            <div className="flex items-center gap-3">
+                              <input type="checkbox" className="rounded text-emerald-600 focus:ring-emerald-500" />
+                              <span className="text-xs font-medium text-slate-700">{t.task}</span>
+                            </div>
+                            <span className={cn(
+                              "text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter",
+                              t.priority === 'High' ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400'
+                            )}>{t.due}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProject.workspaceType === "Data & Automation" && (
+                    <div className="p-6 bg-cyan-50 rounded-2xl border border-cyan-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold flex items-center gap-2 text-cyan-900">
+                          <Zap className="w-5 h-5" />
+                          Automation Pipelines
+                        </h4>
+                        <span className="text-[10px] font-black bg-cyan-600 text-white px-2 py-1 rounded">AUTO MODE</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[
+                          { name: 'Lead Gen Flow', status: 'Running', success: '99.2%' },
+                          { name: 'Auto-Reporting', status: 'Scheduled', success: '100%' },
+                        ].map((p, i) => (
+                          <div key={i} className="p-4 bg-white rounded-xl border border-cyan-100">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs font-bold text-slate-700">{p.name}</span>
+                              <span className="text-[8px] font-black text-cyan-600 uppercase">{p.status}</span>
+                            </div>
+                            <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                              <div className="bg-cyan-500 h-full w-[95%]"></div>
+                            </div>
+                            <p className="text-[9px] text-slate-400 mt-2 font-bold">Uptime: {p.success}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedProject.workspaceType === "General" && (
+                    <div className="p-12 text-center bg-slate-50 rounded-3xl border border-slate-200">
+                      <LayoutDashboard className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                      <h4 className="text-slate-900 font-bold tracking-tight">Standard Workspace</h4>
+                      <p className="text-slate-500 text-sm max-w-xs mx-auto mt-2">Ito ay ang general-purpose workspace. Maaari kang gumamit ng War Room at Pulse tabs para sa advanced project management.</p>
+                    </div>
+                  )}
+
+                  {/* General tools for all types */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-6 bg-indigo-900 rounded-3xl text-white relative overflow-hidden group">
                       <div className="relative z-10">
                         <Code2 className="w-8 h-8 mb-4 text-indigo-300" />
-                        <h5 className="font-bold mb-1">Mini-IDE Review</h5>
-                        <p className="text-xs text-indigo-200 mb-4 opacity-80">Review snippets with the client directly in the chat.</p>
+                        <h5 className="font-bold mb-1">Collaborative Sandbox</h5>
+                        <p className="text-xs text-indigo-200 mb-4 opacity-80">Share snippets and live previews with the client.</p>
                         <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-xs font-bold transition-all">
                           Open Sandbox
                         </button>
@@ -1228,11 +1396,11 @@ export default function Workspace({
                     </div>
                     <div className="p-6 bg-slate-900 rounded-3xl text-white relative overflow-hidden group">
                       <div className="relative z-10">
-                        <Layout className="w-8 h-8 mb-4 text-purple-300" />
-                        <h5 className="font-bold mb-1">Design Markup</h5>
-                        <p className="text-xs text-slate-400 mb-4 opacity-80">Connected to Figma. Get instant feedback on your design components.</p>
+                        <Activity className="w-8 h-8 mb-4 text-purple-300" />
+                        <h5 className="font-bold mb-1">AI Project Audit</h5>
+                        <p className="text-xs text-slate-400 mb-4 opacity-80">Get real-time feedback from AI on your current project progress.</p>
                         <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-700">
-                          View Figma Files
+                          Run Audit
                         </button>
                       </div>
                       <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
@@ -1242,10 +1410,10 @@ export default function Workspace({
               ) : (
                 <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Github className="w-8 h-8 text-slate-300" />
+                    <Layout className="w-8 h-8 text-slate-300" />
                   </div>
-                  <h4 className="text-slate-900 font-bold">No Active Reviews</h4>
-                  <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">Reviewing code and designs requires an active project connection.</p>
+                  <h4 className="text-slate-900 font-bold">No Active Workspace</h4>
+                  <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">Mangyaring pumili ng proyekto sa dashboard para makita ang workspace tools.</p>
                 </div>
               )}
             </motion.div>
