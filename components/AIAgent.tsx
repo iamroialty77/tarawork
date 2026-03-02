@@ -184,6 +184,53 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
       const profile = (targetData as any) || {};
       const category = profile.category || "Professional";
       
+      const getModulesForCategory = (cat: string) => {
+        switch(cat) {
+          case "Developer":
+            return [
+              { id: 1, title: "Advanced Distributed Systems", description: "Mastering microservices architecture and event-driven design patterns.", duration: "4 weeks", level: "Expert" },
+              { id: 2, title: "AI Model Integration", description: "Deep dive into LLM orchestration, RAG patterns, and vector database optimization.", duration: "3 weeks", level: "Advanced" },
+              { id: 3, title: "Web3 & Smart Contract Security", description: "Analyzing vulnerability patterns in Solidity and implementing robust security audits.", duration: "4 weeks", level: "Specialist" },
+              { id: 4, title: "Cloud Native Scalability", description: "Advanced Kubernetes orchestration and multi-region deployment strategies.", duration: "3 weeks", level: "Expert" }
+            ];
+          case "Designer":
+            return [
+              { id: 1, title: "Design Systems Governance", description: "Building and scaling cross-platform design systems for enterprise-grade applications.", duration: "4 weeks", level: "Expert" },
+              { id: 2, title: "Behavioral UX Research", description: "Using cognitive psychology and data analytics to drive product design decisions.", duration: "3 weeks", level: "Advanced" },
+              { id: 3, title: "Immersive 3D Design", description: "Mastering Three.js and Spline for high-performance interactive 3D web experiences.", duration: "5 weeks", level: "Specialist" },
+              { id: 4, title: "Motion Engineering", description: "Advanced principles of interface choreography and high-fidelity prototyping.", duration: "3 weeks", level: "Expert" }
+            ];
+          case "Marketing Specialist":
+            return [
+              { id: 1, title: "Algorithmic Growth Hacking", description: "Leveraging AI for predictive customer acquisition and churn reduction.", duration: "4 weeks", level: "Expert" },
+              { id: 2, title: "Omni-channel Data Attribution", description: "Building complex tracking systems for multi-touch conversion analysis.", duration: "3 weeks", level: "Advanced" },
+              { id: 3, title: "Global Brand Narrative", description: "Strategic communication for cross-cultural market penetration and scaling.", duration: "4 weeks", level: "Specialist" },
+              { id: 4, title: "Performance Marketing Audit", description: "Advanced financial modeling for ROAS optimization at $1M+ monthly spend.", duration: "3 weeks", level: "Expert" }
+            ];
+          case "Virtual Assistant":
+            return [
+              { id: 1, title: "Operations Architecture", description: "Building automated workflows using Zapier, Make, and custom AI agents.", duration: "4 weeks", level: "Expert" },
+              { id: 2, title: "Executive Strategic Support", description: "High-level project management and stakeholder communication frameworks.", duration: "3 weeks", level: "Advanced" },
+              { id: 3, title: "Data Governance & CRM Mastery", description: "Architecting complex database structures for business intelligence.", duration: "4 weeks", level: "Specialist" },
+              { id: 4, title: "Cross-functional Team Lead", description: "Mastering remote leadership and organizational scaling strategies.", duration: "3 weeks", level: "Expert" }
+            ];
+          case "Writer":
+            return [
+              { id: 1, title: "Semantic SEO Strategy", description: "Advanced topic clustering and NLP-driven content optimization for search engines.", duration: "4 weeks", level: "Expert" },
+              { id: 2, title: "Brand Voice Engineering", description: "Developing comprehensive style guides and AI-assisted content pipelines.", duration: "3 weeks", level: "Advanced" },
+              { id: 3, title: "Technical Whitepaper Mastery", description: "Distilling complex technical concepts into high-authority industry reports.", duration: "5 weeks", level: "Specialist" },
+              { id: 4, title: "Ghostwriting for Executives", description: "Strategic thought-leadership development for C-suite professionals.", duration: "3 weeks", level: "Expert" }
+            ];
+          default:
+            return [
+              { id: 1, title: "Strategic Leadership", description: "Mastering organizational behavior and high-stakes decision making.", duration: "4 weeks", level: "Expert" },
+              { id: 2, title: "Operational Excellence", description: "Optimizing business processes for maximum efficiency and scale.", duration: "3 weeks", level: "Advanced" },
+              { id: 3, title: "High-Value Consulting", description: "Developing high-authority advisory skills for premium enterprise clients.", duration: "4 weeks", level: "Specialist" },
+              { id: 4, title: "Industry Node Mastery", description: "Deep specialization in a specific industry vertical for maximum market leverage.", duration: "3 weeks", level: "Expert" }
+            ];
+        }
+      };
+
       setFinalScore(94);
       setInsights([
         `Strategic Transition: Your current ${category} foundation is 85% ready for 'Architect' level responsibilities.`,
@@ -198,7 +245,8 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
         onComplete({
           roadmapId: "RD-" + Math.random().toString(36).substr(2, 5).toUpperCase(),
           status: "Unlocked",
-          nextMilestone: "Advanced System Design Certification"
+          nextMilestone: getModulesForCategory(category)[0].title,
+          modules: getModulesForCategory(category)
         });
       }
 

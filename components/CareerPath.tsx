@@ -252,11 +252,119 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                                 <p className="text-xs text-slate-400">Based sa iyong current profile, mayroon kaming inihandang customized mastery roadmap para sa iyo.</p>
                             </div>
                         </div>
-                        <button className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-sm hover:bg-indigo-50 transition-all flex items-center gap-2 whitespace-nowrap active:scale-95 shadow-xl">
-                            Unlock Your Path
-                            <Lock className="w-4 h-4" />
+                        <button 
+                            onClick={() => {
+                                const el = document.getElementById('professional-roadmap-steps');
+                                el?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-sm hover:bg-indigo-50 transition-all flex items-center gap-2 whitespace-nowrap active:scale-95 shadow-xl"
+                        >
+                            View Your Modules
+                            <ArrowRight className="w-4 h-4" />
                         </button>
                     </div>
+
+                    {/* New Professional Roadmap Steps Section */}
+                    {roadmapData?.modules && (
+                        <div id="professional-roadmap-steps" className="mt-20 space-y-12">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Professional Mastery Curriculum</h3>
+                                    <p className="text-slate-400 text-sm font-medium">Step-by-step professional path engineered for your category.</p>
+                                </div>
+                                <div className="hidden md:flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Available</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Upcoming</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-6">
+                                {roadmapData.modules.map((module: any, index: number) => (
+                                    <motion.div 
+                                        key={module.id}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        viewport={{ once: true }}
+                                        className="relative group"
+                                    >
+                                        {/* Connector Line */}
+                                        {index !== roadmapData.modules.length - 1 && (
+                                            <div className="absolute left-[2.25rem] top-16 bottom-[-1.5rem] w-0.5 bg-gradient-to-b from-indigo-500/50 to-transparent z-0"></div>
+                                        )}
+
+                                        <div className="relative z-10 flex gap-6">
+                                            <div className="flex-shrink-0">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-lg transition-all group-hover:scale-110 ${
+                                                    index === 0 
+                                                    ? "bg-indigo-500 text-white shadow-indigo-500/20" 
+                                                    : "bg-slate-800 text-slate-400 border border-white/5"
+                                                }`}>
+                                                    {index + 1}
+                                                </div>
+                                            </div>
+
+                                            <div className={`flex-1 p-6 rounded-[2rem] border transition-all ${
+                                                index === 0
+                                                ? "bg-white/10 border-indigo-500/30 backdrop-blur-md"
+                                                : "bg-white/5 border-white/5 hover:bg-white/10"
+                                            }`}>
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                                                    <div>
+                                                        <div className="flex items-center gap-3 mb-1">
+                                                            <h4 className="text-xl font-bold text-white tracking-tight">{module.title}</h4>
+                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${
+                                                                module.level === "Expert" ? "bg-purple-500/20 text-purple-400" :
+                                                                module.level === "Advanced" ? "bg-blue-500/20 text-blue-400" :
+                                                                "bg-emerald-500/20 text-emerald-400"
+                                                            }`}>
+                                                                {module.level}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-4 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <BookOpen className="w-3.5 h-3.5" />
+                                                                {module.duration}
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Zap className="w-3.5 h-3.5" />
+                                                                Interactive Lab Included
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                                                        index === 0
+                                                        ? "bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-500/20"
+                                                        : "bg-white/10 text-slate-300 hover:bg-white/20 border border-white/10"
+                                                    }`}>
+                                                        {index === 0 ? "Start Module" : "Locked"}
+                                                    </button>
+                                                </div>
+                                                <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
+                                                    {module.description}
+                                                </p>
+                                                
+                                                {/* Skill Tags */}
+                                                <div className="mt-6 flex flex-wrap gap-2">
+                                                    {["Certification", "Assessment", "Practical Project"].map((tag) => (
+                                                        <span key={tag} className="text-[9px] font-bold text-slate-500 border border-white/5 bg-white/5 px-2 py-1 rounded-lg">
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
           </motion.div>
