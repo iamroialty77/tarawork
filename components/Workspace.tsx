@@ -1,6 +1,6 @@
 "use client";
 
-import { Project, Milestone } from "../types";
+import { Project, Milestone, WorkspaceType } from "../types";
 import { 
   Code2, 
   BarChart3,
