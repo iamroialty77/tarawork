@@ -116,6 +116,8 @@ export default function Workspace({
       client: newProject.client,
       workspaceType: newProject.workspaceType,
       status: "In Progress",
+      hoursLogged: 0,
+      budget: "$0",
       milestones: [],
       progress: 0,
       clientId: "mock-client-id"

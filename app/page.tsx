@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { UserProfile, Job, PortfolioItem, Squad } from "../types";
+import { UserProfile, Job, PortfolioItem, Squad, Project } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
@@ -242,7 +242,7 @@ export default function Home() {
     }
   };
 
-  const handleUpdateProject = async (updatedProject: any) => {
+  const handleUpdateProject = async (updatedProject: Project) => {
     if (!profile.activeProjects || !user) return;
     
     const updatedProjects = profile.activeProjects.map(p => 
@@ -271,7 +271,7 @@ export default function Home() {
     }
   };
 
-  const handleCreateProject = async (newProject: any) => {
+  const handleCreateProject = async (newProject: Project) => {
     if (!profile || !user) return;
     
     const updatedProjects = [...(profile.activeProjects || []), newProject];

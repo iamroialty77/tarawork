@@ -4,7 +4,7 @@ export type FreelancerCategory = "Developer" | "Virtual Assistant" | "Designer" 
 export type PaymentMethod = "Hourly" | "Flat-Rate";
 export type JobType = "Full-time" | "Part-time" | "Contract" | "One-time Project";
 export type JobDuration = "1-2 weeks" | "1-3 months" | "Ongoing";
-export type ProjectStatus = "Active" | "Completed" | "Pending" | "In-Review";
+export type ProjectStatus = "Active" | "Completed" | "Pending" | "In-Review" | "In Progress";
 export type WorkspaceType = "Code" | "Design" | "General";
 
 export type RolePermission = "manage-budget" | "add-members" | "view-only" | "edit-tasks";
@@ -114,6 +114,7 @@ export interface Project {
   status: ProjectStatus;
   hoursLogged: number;
   budget: string;
+  progress: number;
   workspaceType: WorkspaceType;
   meetingMinutes?: string[];
   githubRepo?: string;
