@@ -91,23 +91,121 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
     setStatus("completed");
     
     if (mode === "vetting") {
-      setFinalScore(Math.floor(Math.random() * (98 - 85 + 1) + 85)); // High score for demo
-      setInsights([
-        "Strong alignment with technical stack (React/Next.js).",
-        "Portfolio demonstrates high-energy execution in past projects.",
-        "Wellness profile indicates high availability and low burnout risk.",
-        "Soft skills detected: Clear communication, proactive attitude."
+      // Data-driven vetting analysis
+      const application = targetData || {};
+      const profile = application.profiles || {};
+      const coverLetter = application.cover_letter || "";
+      const skills = profile.skills || [];
+      const isVerified = profile.verified || false;
+      
+      let score = 75; // Base score
+      const dynamicInsights = [];
+      
+      // 1. Cover Letter Analysis
+      if (coverLetter.length > 200) {
+        score += 10;
+        dynamicInsights.push("Excellent communication: Cover letter is detailed and professional.");
+      } else if (coverLetter.length > 50) {
+        score += 5;
+        dynamicInsights.push("Clear intent: Cover letter provides sufficient context for the application.");
+      } else {
+        score -= 5;
+        dynamicInsights.push("Brief communication: Recommendation to provide more context in cover letter.");
+      }
+      
+      // 2. Skill Alignment
+      if (skills.length > 3) {
+        score += 8;
+        dynamicInsights.push(`Strong skill density: Verified expertise in ${skills.slice(0, 3).join(", ")}.`);
+      } else if (skills.length > 0) {
+        score += 3;
+        dynamicInsights.push(`Found relevant skills: ${skills.join(", ")}.`);
+      } else {
+        score -= 5;
+        dynamicInsights.push("Skill gap detected: Profile needs more listed technical skills.");
+      }
+      
+      // 3. Verification & Trust
+      if (isVerified) {
+        score += 7;
+        dynamicInsights.push("High trust factor: Candidate has a Verified Badge on TARA.");
+      }
+      
+      // 4. Wellness Check (Simulated from actual energy rating if available)
+      const energy = profile.energyRating || "Balanced";
+      if (energy === "High") {
+        score += 2;
+        dynamicInsights.push("Capacity alert: Candidate is currently in a High Energy state.");
+      } else if (energy === "Low") {
+        score -= 5;
+        dynamicInsights.push("Burnout risk: Candidate energy level is currently set to Low.");
+      }
+
+      setFinalScore(Math.min(99, score));
+      setInsights(dynamicInsights.length > 0 ? dynamicInsights : [
+        "Analysis complete with standard alignment.",
+        "Candidate meets minimum technical requirements.",
+        "Portfolio shows consistent past performance.",
+        "Recommend proceeding to initial interview."
       ]);
-      setSummary("Recommended candidate. High probability of long-term success and cultural fit.");
+      
+      setSummary(score > 85 
+        ? "Highly Recommended: This candidate shows exceptional alignment with the job requirements and platform standards." 
+        : score > 70 
+        ? "Good Match: Strong potential for success, though some areas could benefit from further screening."
+        : "Moderate Match: Some gaps identified in profile completeness or skill alignment.");
+
     } else {
-      setFinalScore(Math.floor(Math.random() * (95 - 75 + 1) + 75));
-      setInsights([
-        "Profile is 85% complete. Missing specific case study metrics.",
+      // Data-driven audit analysis
+      let data: any = {};
+      if (Array.isArray(targetData)) {
+        data = { portfolio: targetData };
+      } else {
+        data = targetData || {};
+      }
+      
+      const verifiedSkills = data.verifiedSkills || [];
+      const profile = data.profile || {}; // Fallback if profile is passed
+      const portfolio = data.portfolio || profile.portfolio || [];
+      
+      let score = 65; // Base profile score
+      const dynamicInsights = [];
+      
+      // 1. Skill Audit
+      if (verifiedSkills.length > 5) {
+        score += 20;
+        dynamicInsights.push("Elite skill set: You have a high number of verified technical competencies.");
+      } else if (verifiedSkills.length > 0) {
+        score += 10;
+        dynamicInsights.push(`Growth detected: ${verifiedSkills.length} skills successfully verified via AI vetting.`);
+      } else {
+        dynamicInsights.push("Optimization needed: Start with AI vetting to verify your primary skills.");
+      }
+      
+      // 2. Profile Quality (Mocking based on data presence)
+      if (profile.bio && profile.bio.length > 100) {
+        score += 10;
+        dynamicInsights.push("Compelling bio: Your professional narrative is strong and SEO-friendly.");
+      }
+      
+      if (portfolio.length > 0) {
+        score += 10;
+        dynamicInsights.push(`Active portfolio: Displaying ${portfolio.length} high-impact projects.`);
+      }
+
+      setFinalScore(Math.min(100, score));
+      setInsights(dynamicInsights.length > 0 ? dynamicInsights : [
+        "Your profile is 85% complete. Missing specific case study metrics.",
         "Skills are highly relevant but need better SEO optimization.",
         "Portfolio presentation is professional but lacks video demos.",
         "Competitive ranking is in the top 15% for the current category."
       ]);
-      setSummary("Your profile is strong but needs more quantified results in your portfolio items to reach 'Elite' status.");
+      
+      setSummary(score > 85 
+        ? "Elite Status Achieved: Your profile is optimized for high-value clients and premium job listings." 
+        : score > 70 
+        ? "Professional Standard: Your profile is competitive but has room for strategic keyword optimization."
+        : "Action Required: Follow the suggested insights to improve your profile visibility and trust score.");
     }
   };
 
@@ -261,7 +359,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
                     <span className="text-indigo-400 font-bold text-xl mb-2">%</span>
                   </div>
                   <p className="text-indigo-200/60 text-xs font-medium mt-2 leading-relaxed italic">
-                    "{summary}"
+                    {`"${summary}"`}
                   </p>
                   <Sparkles className="absolute top-6 right-6 w-12 h-12 text-indigo-500/20 rotate-12" />
                 </div>
