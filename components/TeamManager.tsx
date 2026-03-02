@@ -11,7 +11,13 @@ import {
   Settings,
   MoreVertical,
   Lock,
-  MessageSquare
+  MessageSquare,
+  Scale,
+  CheckCircle2,
+  AlertCircle,
+  BarChart3,
+  Info,
+  Zap
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -23,10 +29,17 @@ interface TeamManagerProps {
 
 export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) {
   const [isManaging, setIsManaging] = useState(false);
+  const [showEquityBoard, setShowEquityBoard] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newSquadName, setNewSquadName] = useState("");
-  const [totalBudget, setTotalBudget] = useState("50000");
+  const [totalBudget, setTotalBudget] = useState("100000"); // Standardizing to user's example
   const currentUserId = "1"; // Simulating logged in user
+
+  const [consensuses, setConsensuses] = useState<Record<string, boolean>>({
+    "1": true,
+    "2": false,
+    "3": true,
+  });
 
   const defaultSquad: Squad | null = squad || null;
 
@@ -171,13 +184,34 @@ export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) 
               </div>
               
               <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900">{member.share}%</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">Share</p>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-slate-900">{member.share}%</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">Equity Share</p>
+                  </div>
+                  {consensuses[member.id] ? (
+                    <div className="w-4 h-4 text-emerald-500" title="Agreed to Budget Split">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 text-amber-500 animate-pulse" title="Pending Agreement">
+                        <AlertCircle className="w-4 h-4" />
+                      </div>
+                      {member.id === currentUserId && (
+                        <button 
+                          onClick={() => setConsensuses(prev => ({ ...prev, [member.id]: true }))}
+                          className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-black uppercase tracking-tight hover:bg-emerald-200"
+                        >
+                          Agree
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-bold text-emerald-600">₱{(defaultSquad.totalBudget * (member.share / 100)).toLocaleString()}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">Amount</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">Payout</p>
                 </div>
                 <Link
                   href={`/messages?with=${member.id}`}
@@ -210,17 +244,117 @@ export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) 
         </div>
       </div>
 
+      {showEquityBoard && (
+        <div className="px-6 py-6 bg-slate-50 border-t border-slate-100 animate-in slide-in-from-top duration-300">
+          <div className="bg-indigo-900 rounded-2xl p-6 text-white mb-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <Scale className="w-32 h-32" />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">AI Equity Intelligence</span>
+              </div>
+              <h4 className="text-xl font-bold mb-4">Fair-Share & Equity Audit</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart3 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold uppercase tracking-tight">Contribution Matrix</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] opacity-70">EXECUTION (Energy Cost)</span>
+                      <span className="text-[10px] font-bold">72% Weight</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-1.5">
+                      <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: '72%' }}></div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] opacity-70">MANAGEMENT & RISK</span>
+                      <span className="text-[10px] font-bold">28% Weight</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-1.5">
+                      <div className="bg-indigo-400 h-1.5 rounded-full" style={{ width: '28%' }}></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                    <p className="text-[11px] leading-relaxed italic opacity-90">
+                      "AI Analysis suggests the ₱{defaultSquad.totalBudget.toLocaleString()} budget distribution is **FAIR**. Lead's higher share is justified by **35% Management Overhead** and **Risk Liability**, while members' shares are aligned with **High-Energy Task Execution**."
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-300">
+                    <Info className="w-3.5 h-3.5" />
+                    <span>Based on actual task complexity (Energy Cost) and role risk.</span>
+                  </div>
+                  <div className="pt-2">
+                    <button 
+                      onClick={() => alert("Initiating AI Mediation Protocol. All members will be notified.")}
+                      className="w-full py-2 bg-indigo-500/20 hover:bg-indigo-500/40 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                      Request AI Dispute Resolution
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Squad Consensus</p>
+              <div className="flex items-center gap-2">
+                <div className="text-2xl font-black text-slate-900">2/3</div>
+                <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg">Pending Agreement</span>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Transparency Score</p>
+              <div className="flex items-center gap-2">
+                <div className="text-2xl font-black text-slate-900">98%</div>
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">High Trust</span>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Escrow Status</p>
+              <div className="flex items-center gap-2">
+                <div className="text-2xl font-black text-slate-900">Secured</div>
+                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">Automatic</span>
+              </div>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => setShowEquityBoard(false)}
+            className="w-full py-2 text-xs font-black text-slate-400 uppercase hover:text-slate-600 tracking-widest transition-all"
+          >
+            Hide Equity Insights
+          </button>
+        </div>
+      )}
+
       <div className="px-6 py-4 bg-emerald-50 border-t border-emerald-100 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span className="text-[10px] font-bold text-emerald-700 uppercase">Automatic Budget Distribution Enabled</span>
+          <span className="text-[10px] font-bold text-emerald-700 uppercase">Equity Protection & Fair-Share Enabled</span>
         </div>
-        <button 
-          onClick={() => alert("Redirecting to Smart Contracts manager...")}
-          className="text-[10px] font-black text-emerald-600 hover:underline"
-        >
-          MANAGE CONTRACTS
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => setShowEquityBoard(!showEquityBoard)}
+            className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 hover:text-indigo-700 transition-all uppercase tracking-tight"
+          >
+            <Scale className="w-3.5 h-3.5" />
+            Equity Audit
+          </button>
+          <button 
+            onClick={() => alert("Redirecting to Smart Contracts manager...")}
+            className="text-[10px] font-black text-emerald-600 hover:underline uppercase tracking-tight"
+          >
+            MANAGE CONTRACTS
+          </button>
+        </div>
       </div>
     </div>
   );
