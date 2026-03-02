@@ -57,11 +57,12 @@ export default function Workspace({
   workflows = [],
   onUpdateWorkflows
 }: WorkspaceProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "active" | "warroom" | "pulse" | "reviews" | "calls" | "wellness">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "active" | "warroom" | "pulse" | "reviews" | "calls" | "wellness" | "contract">("dashboard");
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
   const [editingLink, setEditingLink] = useState<string | null>(null);
   const [tempLink, setTempLink] = useState("");
   const [showWarRoom, setShowWarRoom] = useState(false);
+  const [showContractManager, setShowContractManager] = useState(false);
   const [activeCall, setActiveCall] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showFocusMode, setShowFocusMode] = useState(false);
@@ -238,6 +239,7 @@ export default function Workspace({
             { id: "pulse", label: "AI Pulse Board", icon: Activity },
             { id: "warroom", label: "Project War Room", icon: Shield },
             { id: "wellness", label: "Sustainable Performance", icon: Zap },
+            { id: "contract", label: "Manage Contract", icon: FileText },
             { id: "reviews", label: "Code & Design", icon: Code2 },
             { id: "calls", label: "AI Meeting Notes", icon: MessageSquare },
           ].map((tab) => (
@@ -407,6 +409,7 @@ export default function Workspace({
                     <div className="space-y-3">
                       {[
                         { label: "Launch War Room", icon: Shield, tab: "warroom" },
+                        { label: "Manage Contract", icon: FileText, tab: "contract" },
                         { label: "New Project", icon: Plus, action: () => setIsCreatingProject(true) },
                         { label: "Check AI Pulse", icon: Activity, tab: "pulse" },
                         { label: "Open Focus Mode", icon: Brain, action: () => setShowFocusMode(true) },
@@ -1001,6 +1004,164 @@ export default function Workspace({
               )}
             </motion.div>
           )}
+          {activeTab === "contract" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8"
+            >
+              {selectedProject ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Contract Header */}
+                    <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden">
+                      <div className="flex justify-between items-start mb-8 relative z-10">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-2 py-1 rounded uppercase tracking-widest">Active Agreement</span>
+                            <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase tracking-widest">ID: CON-{(selectedProject.id || "001").slice(0, 8)}</span>
+                          </div>
+                          <h3 className="text-2xl font-black text-slate-900 tracking-tight">Professional Services Agreement</h3>
+                          <p className="text-sm text-slate-500 mt-1">Between <span className="font-bold text-slate-900">You</span> and <span className="font-bold text-slate-900">{selectedProject.client}</span></p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Contract Value</p>
+                          <h4 className="text-2xl font-black text-emerald-600 tracking-tighter">{selectedProject.budget}</h4>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 relative z-10">
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Effective Date</p>
+                          <p className="text-sm font-bold text-slate-900">Jan 12, 2024</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Type</p>
+                          <p className="text-sm font-bold text-slate-900">Milestone-based</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Jurisdiction</p>
+                          <p className="text-sm font-bold text-slate-900">Republic of the Philippines</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl relative z-10">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+                            <ShieldCheck className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-indigo-900 uppercase tracking-tight">AI Clause Audit</h4>
+                            <p className="text-[10px] text-indigo-700 font-medium">Last audited: Today at 2:45 PM</p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {[
+                            { title: "Intellectual Property", status: "Protected", desc: "All work product is owned by Client upon payment.", color: "text-emerald-600" },
+                            { title: "Termination Notice", status: "Fair (14 Days)", desc: "Mutual 14-day notice required for contract exit.", color: "text-indigo-600" },
+                            { title: "Liability Cap", status: "Secured", desc: "Liability limited to 100% of the total contract fee.", color: "text-emerald-600" },
+                          ].map((clause, i) => (
+                            <div key={i} className="flex items-start justify-between p-3 bg-white/60 rounded-xl border border-indigo-200/50 hover:bg-white transition-all">
+                              <div>
+                                <h5 className="text-xs font-bold text-slate-900">{clause.title}</h5>
+                                <p className="text-[10px] text-slate-500 mt-0.5">{clause.desc}</p>
+                              </div>
+                              <span className={cn("text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-indigo-50", clause.color)}>{clause.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <FileText className="absolute -right-8 -bottom-8 w-40 h-40 text-slate-50 rotate-12" />
+                    </div>
+
+                    {/* Milestones & Payout Schedule */}
+                    <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm">
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">Payment Schedule</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400">Total Milestones:</span>
+                          <span className="text-sm font-black text-slate-900">{(selectedProject.milestones || []).length}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        {(selectedProject.milestones || []).map((milestone, idx) => (
+                          <div key={milestone.id || idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-white rounded-xl border border-slate-200 flex items-center justify-center font-black text-slate-400">
+                                0{idx + 1}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">{milestone.title}</p>
+                                <p className="text-[10px] text-slate-400 font-medium">Due: {milestone.dueDate}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-6">
+                              <div className="text-right">
+                                <p className="text-sm font-black text-slate-900">₱{milestone.amount.toLocaleString()}</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{milestone.status}</p>
+                              </div>
+                              <div className={cn(
+                                "w-2.5 h-2.5 rounded-full",
+                                milestone.status === 'Released' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 
+                                milestone.status === 'Completed' ? 'bg-indigo-500' : 'bg-slate-300'
+                              )} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sidebar Actions */}
+                  <div className="space-y-6">
+                    <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-xl">
+                      <h4 className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-6">Contract Governance</h4>
+                      <div className="space-y-3">
+                        <button className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20">
+                          Request Amendment
+                        </button>
+                        <button className="w-full py-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest transition-all">
+                          Download PDF
+                        </button>
+                        <button className="w-full py-4 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-2xl text-xs font-black uppercase tracking-widest transition-all">
+                          Termination Notice
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-[2.5rem] p-8">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
+                          <DollarSign className="w-5 h-5 text-white" />
+                        </div>
+                        <h4 className="text-sm font-black text-emerald-900 uppercase tracking-tight">Payout Security</h4>
+                      </div>
+                      <p className="text-xs text-emerald-800 leading-relaxed mb-6">
+                        Funds for the current milestone are <span className="font-black">Secured in TARA Escrow</span>. Payment will be released automatically upon milestone approval.
+                      </p>
+                      <div className="p-4 bg-white/60 rounded-2xl border border-emerald-200">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] font-bold text-emerald-700 uppercase">Escrow Status</span>
+                          <span className="text-[10px] font-black text-emerald-600">100% FUNDED</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-emerald-200 rounded-full overflow-hidden">
+                          <div className="w-full h-full bg-emerald-500" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                  <FileText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                  <h4 className="text-xl font-black text-slate-900 tracking-tight">No Contract Selected</h4>
+                  <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">Please select a project from the dashboard to view and manage its legal agreement.</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {activeTab === "reviews" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}

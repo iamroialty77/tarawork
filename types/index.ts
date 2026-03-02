@@ -106,6 +106,27 @@ export interface ProjectTask {
   dueDate?: string;
 }
 
+export interface Contract {
+  id: string;
+  projectId: string;
+  status: "Active" | "Pending" | "Draft" | "Terminated";
+  signedDate?: string;
+  expiryDate?: string;
+  terms: string;
+  clauses: {
+    id: string;
+    title: string;
+    description: string;
+    aiAnalysis?: string; // AI explanation of the clause
+    isAgreed: boolean;
+  }[];
+  paymentSchedule: "Milestone-based" | "Lump-sum" | "Monthly";
+  budget: number;
+  currency: string;
+  legalJurisdiction?: string;
+  lastAuditAt?: string; // AI Audit timestamp
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -122,6 +143,7 @@ export interface Project {
   projectLink?: string;
   milestones?: Milestone[];
   tasks?: ProjectTask[];
+  contractId?: string; // Link to Contract
 }
 
 export interface UserProfile {

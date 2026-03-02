@@ -25,12 +25,16 @@ import { useState } from "react";
 interface TeamManagerProps {
   squad?: Squad;
   onCreateSquad?: (squad: Squad) => void;
+  onUpdateSquad?: (squad: Squad) => void;
 }
 
-export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) {
+export default function TeamManager({ squad, onCreateSquad, onUpdateSquad }: TeamManagerProps) {
   const [isManaging, setIsManaging] = useState(false);
   const [showEquityBoard, setShowEquityBoard] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("Contributor");
   const [newSquadName, setNewSquadName] = useState("");
   const [totalBudget, setTotalBudget] = useState("100000"); // Standardizing to user's example
   const currentUserId = "1"; // Simulating logged in user
@@ -42,6 +46,28 @@ export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) 
   });
 
   const defaultSquad: Squad | null = squad || null;
+
+  const handleAddMember = () => {
+    if (!newMemberName || !onUpdateSquad || !defaultSquad) return;
+
+    const newMember: SquadMember = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newMemberName,
+      role: newMemberRole,
+      avatar: "",
+      share: 0, // Initially 0, requires adjustment in Equity Board
+      permissions: ["view-only", "edit-tasks"]
+    };
+
+    const updatedSquad = {
+      ...defaultSquad,
+      members: [...defaultSquad.members, newMember]
+    };
+
+    onUpdateSquad(updatedSquad);
+    setIsAddingMember(false);
+    setNewMemberName("");
+  };
 
   const handleCreateSquad = () => {
     if (!newSquadName || !onCreateSquad) return;
@@ -228,13 +254,22 @@ export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) 
           ))}
 
           {isLead ? (
-            <button 
-              onClick={() => alert("Invite link copied to clipboard! Share it with your teammates.")}
-              className="w-full py-4 border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 hover:text-emerald-600 hover:border-emerald-100 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 font-bold text-sm"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Squad Member
-            </button>
+            <div className="pt-2 flex gap-3">
+              <button 
+                onClick={() => setIsAddingMember(true)}
+                className="flex-1 py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 font-bold text-sm"
+              >
+                <UserPlus className="w-5 h-5" />
+                Add Member
+              </button>
+              <button 
+                onClick={() => setShowEquityBoard(!showEquityBoard)}
+                className="px-6 py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+              >
+                <Scale className="w-5 h-5" />
+                Review Equity
+              </button>
+            </div>
           ) : (
             <div className="w-full py-4 border-2 border-dashed border-slate-50 rounded-2xl text-slate-300 flex items-center justify-center gap-2 font-bold text-xs grayscale">
               <Lock className="w-3.5 h-3.5" />
@@ -243,6 +278,74 @@ export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) 
           )}
         </div>
       </div>
+
+      {/* Add Member Modal */}
+      {isAddingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
+            <div className="p-8">
+              <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6">
+                <UserPlus className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-2">Grow Your Squad</h3>
+              <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+                Add a new professional to your squad. They will receive an invitation to join the current project workflow.
+              </p>
+              
+              <div className="space-y-5">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Member Name</label>
+                  <input 
+                    type="text" 
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    placeholder="Full name or username"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Designated Role</label>
+                  <select 
+                    value={newMemberRole}
+                    onChange={(e) => setNewMemberRole(e.target.value)}
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none appearance-none transition-all"
+                  >
+                    <option>Contributor</option>
+                    <option>Technical Lead</option>
+                    <option>Quality Assurance</option>
+                    <option>Designer</option>
+                    <option>Reviewer</option>
+                  </select>
+                </div>
+
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3">
+                  <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-blue-700 leading-normal">
+                    <span className="font-bold">Pro Tip:</span> New members start with 0% equity. You can adjust the budget distribution in the <span className="font-bold">Equity Board</span> once they join.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-8">
+                <button 
+                  onClick={() => setIsAddingMember(false)}
+                  className="flex-1 py-4 text-xs font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleAddMember}
+                  disabled={!newMemberName}
+                  className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 disabled:opacity-50 disabled:shadow-none uppercase tracking-widest"
+                >
+                  Add Member
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showEquityBoard && (
         <div className="px-6 py-6 bg-slate-50 border-t border-slate-100 animate-in slide-in-from-top duration-300">

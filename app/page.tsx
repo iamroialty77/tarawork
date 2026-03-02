@@ -325,6 +325,32 @@ export default function Home() {
     }
   };
 
+  const handleUpdateSquad = async (updatedSquad: Squad) => {
+    if (!profile || !user) return;
+
+    setProfile(prev => ({ ...prev, squad: updatedSquad }));
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          squad: updatedSquad,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      setToastMsg("Squad updated successfully!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err: any) {
+      console.error("Error updating squad:", err);
+      setToastMsg("Failed to update squad in database.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
   const handleUpdateWorkflows = async (updatedWorkflows: any[]) => {
     if (!profile || !user) return;
     
@@ -1290,6 +1316,7 @@ export default function Home() {
                   <TeamManager 
                     squad={profile.squad} 
                     onCreateSquad={handleCreateSquad}
+                    onUpdateSquad={handleUpdateSquad}
                   />
                 </motion.div>
               )}
