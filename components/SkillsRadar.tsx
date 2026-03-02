@@ -14,9 +14,10 @@ interface RadarData {
 
 interface SkillsRadarProps {
   profile: UserProfile;
+  onGenerateRoadmap?: () => void;
 }
 
-export default function SkillsRadar({ profile }: SkillsRadarProps) {
+export default function SkillsRadar({ profile, onGenerateRoadmap }: SkillsRadarProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(true);
   const [data, setData] = useState<RadarData[]>([]);
 
@@ -137,7 +138,10 @@ export default function SkillsRadar({ profile }: SkillsRadarProps) {
         </div>
       </div>
 
-      <button className="w-full mt-6 py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl flex items-center justify-center gap-2 group/btn transition-all active:scale-[0.98]">
+      <button 
+        onClick={onGenerateRoadmap}
+        className="w-full mt-6 py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl flex items-center justify-center gap-2 group/btn transition-all active:scale-[0.98]"
+      >
         <Sparkles className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:rotate-12 transition-transform" />
         <span className="text-[11px] font-bold text-indigo-200">Generate Full AI Career Roadmap</span>
       </button>

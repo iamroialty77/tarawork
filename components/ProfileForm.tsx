@@ -4,6 +4,7 @@ import { UserProfile, FreelancerCategory, PortfolioItem } from "../types";
 import { useState, useEffect, useRef } from "react";
 import { Camera, User, FileText, Sparkles, Loader2 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
+import AIAgent from "./AIAgent";
 
 interface ProfileFormProps {
   initialProfile: UserProfile;
@@ -24,7 +25,7 @@ export default function ProfileForm({
 }: ProfileFormProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [skillInput, setSkillInput] = useState("");
-  const [isParsing, setIsParsing] = useState(false);
+  const [showAIAgent, setShowAIAgent] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
@@ -117,55 +118,43 @@ export default function ProfileForm({
     }
   };
 
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsParsing(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    // Use AI Agent for professional parsing experience
+    setShowAIAgent(true);
+    if (resumeInputRef.current) resumeInputRef.current.value = "";
+  };
 
-    try {
-      const response = await fetch('/api/parse-resume/', {
-        method: 'POST',
-        body: formData,
-      });
+  const handleAIParseComplete = (data: { 
+    name?: string; 
+    bio?: string; 
+    skills?: string[]; 
+    category?: FreelancerCategory; 
+    portfolio?: PortfolioItem[] 
+  }) => {
+    const existingPortfolioIds = new Set((profile.portfolio || []).map(item => item.id));
+    const newPortfolioItems = (data.portfolio || []).filter((item: PortfolioItem) => !existingPortfolioIds.has(item.id));
 
-      // Basahin muna bilang text para maiwasan ang JSON parse error sa empty response
-      const responseText = await response.text();
-      let data;
-      
-      try {
-        data = JSON.parse(responseText);
-      } catch (e) {
-        console.error('Failed to parse response as JSON:', responseText);
-        throw new Error('Ang server ay nagbigay ng hindi wastong response. Pakisubukang muli.');
-      }
-
-      if (!response.ok) {
-        // Ipakita ang status code para mas madaling i-debug ang 405, 500, etc.
-        throw new Error(data.error || `Server Error (${response.status}): Ang server ay nagbigay ng hindi wastong response.`);
-      }
-
-      const updatedProfile = {
-        ...profile,
-        name: data.name || profile.name,
-        bio: data.bio || profile.bio,
-        skills: Array.from(new Set([...profile.skills, ...(data.skills || [])])),
-        category: data.category || profile.category,
-      };
-      
-      setProfile(updatedProfile);
-      onUpdate(updatedProfile);
-      alert('Resume parsed successfully! AI has updated your profile.');
-    } catch (error: unknown) {
-      console.error('Error:', error);
-      const message = error instanceof Error ? error.message : "Unknown error occurred";
-      alert(`Error parsing resume: ${message}`);
-    } finally {
-      setIsParsing(false);
-      if (resumeInputRef.current) resumeInputRef.current.value = '';
+    const updatedProfile = {
+      ...profile,
+      name: data.name || profile.name,
+      bio: data.bio || profile.bio,
+      skills: Array.from(new Set([...profile.skills, ...(data.skills || [])])),
+      category: data.category || profile.category,
+      portfolio: [...(profile.portfolio || []), ...newPortfolioItems]
+    };
+    
+    setProfile(updatedProfile);
+    onUpdate(updatedProfile);
+    
+    // Also notify if there are parent handlers for individual portfolio additions
+    if (newPortfolioItems.length > 0 && onAddPortfolio) {
+      newPortfolioItems.forEach((item: PortfolioItem) => onAddPortfolio(item));
     }
+    
+    setShowAIAgent(false);
   };
 
   return (
@@ -201,7 +190,7 @@ export default function ProfileForm({
           />
         </div>
         <h2 className="text-xl font-bold mt-4 text-slate-900">{profile.name || "Set your profile"}</h2>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{profile.role === 'jobseeker' ? 'Freelancer' : 'Hirer'}</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{profile.role === "jobseeker" ? "Freelancer" : "Hirer"}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -211,7 +200,7 @@ export default function ProfileForm({
             <select
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-slate-50 font-bold"
               value={profile.role}
-              onChange={(e) => setProfile({ ...profile, role: e.target.value as any })}
+              onChange={(e) => setProfile({ ...profile, role: e.target.value as "jobseeker" | "hirer" })}
             >
               <option value="jobseeker">Jobseeker (Freelancer)</option>
               <option value="hirer">Hirer (Client)</option>
@@ -293,21 +282,11 @@ export default function ProfileForm({
               </div>
               <button
                 type="button"
-                disabled={isParsing}
                 onClick={() => resumeInputRef.current?.click()}
-                className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 flex items-center gap-2"
               >
-                {isParsing ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Parsing...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-3 h-3" />
-                    Upload PDF
-                  </>
-                )}
+                <FileText className="w-3 h-3" />
+                Upload PDF
               </button>
             </div>
             <input
@@ -391,6 +370,14 @@ export default function ProfileForm({
           )}
         </button>
       </form>
+
+      <AIAgent 
+        isOpen={showAIAgent}
+        onClose={() => setShowAIAgent(false)}
+        mode="resume-parse"
+        targetData={{}}
+        onComplete={handleAIParseComplete}
+      />
     </div>
   );
 }

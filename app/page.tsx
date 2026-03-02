@@ -55,7 +55,6 @@ import {
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
-import SkillsRadar from "../components/SkillsRadar";
 
 export default function Home() {
   const router = useRouter();
@@ -1398,8 +1397,6 @@ export default function Home() {
                     />
                   </div>
                   <div className="lg:col-span-4 space-y-6">
-                    <SkillsRadar profile={profile} />
-                    
                     <div className="bg-slate-900 p-6 rounded-2xl border border-white/10 shadow-xl overflow-hidden relative group">
                       {/* Background decorative elements */}
                       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-all duration-500"></div>
