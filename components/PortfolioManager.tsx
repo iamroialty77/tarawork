@@ -2,21 +2,22 @@
 
 import { useState } from "react";
 import { PortfolioItem } from "../types";
-import { Plus, Trash2, ExternalLink, Code, Image as ImageIcon, Briefcase, MessageSquare, Github, Layout, Sparkles, Brain, Search } from "lucide-react";
-import Link from "next/link";
+import { Plus, Trash2, Briefcase, Sparkles, Brain } from "lucide-react";
 import PortfolioPreview from "./PortfolioPreview";
 import AIAgent from "./AIAgent";
 
 interface PortfolioManagerProps {
   items: PortfolioItem[];
   onAdd: (item: Partial<PortfolioItem>) => void;
+  onUpdate?: (item: PortfolioItem) => void;
   onRemove: (id: string) => void;
   isOwner: boolean;
 }
 
-export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: PortfolioManagerProps) {
+export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isOwner }: PortfolioManagerProps) {
   const [isAuditing, setIsAuditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
   const [newItem, setNewItem] = useState<Partial<PortfolioItem>>({
     title: "",
     description: "",
@@ -26,11 +27,27 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
   const [techInput, setTechInput] = useState("");
 
   const handleAdd = () => {
-    if (newItem.title) {
+    if (editingItem && onUpdate) {
+      onUpdate({ ...editingItem, ...newItem } as PortfolioItem);
+      setEditingItem(null);
+      setNewItem({ title: "", description: "", project_url: "", technologies: [] });
+      setIsAdding(false);
+    } else if (newItem.title) {
       onAdd(newItem);
       setNewItem({ title: "", description: "", project_url: "", technologies: [] });
       setIsAdding(false);
     }
+  };
+
+  const startEdit = (item: PortfolioItem) => {
+    setEditingItem(item);
+    setNewItem({
+      title: item.title,
+      description: item.description,
+      project_url: item.project_url,
+      technologies: item.technologies,
+    });
+    setIsAdding(true);
   };
 
   const addTech = () => {
@@ -142,7 +159,11 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button
-              onClick={() => setIsAdding(false)}
+              onClick={() => {
+                setIsAdding(false);
+                setEditingItem(null);
+                setNewItem({ title: "", description: "", project_url: "", technologies: [] });
+              }}
               className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700"
             >
               Cancel
@@ -152,7 +173,7 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
               disabled={!newItem.title}
               className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all"
             >
-              I-save Proyekto
+              {editingItem ? "I-update Proyekto" : "I-save Proyekto"}
             </button>
           </div>
         </div>
@@ -169,12 +190,20 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
           <div key={item.id} className="relative group">
             <PortfolioPreview item={item} />
             {isOwner && (
-              <button
-                onClick={() => onRemove(item.id)}
-                className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur shadow-xl text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all z-10"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
+                <button
+                  onClick={() => startEdit(item)}
+                  className="p-2 bg-white/90 backdrop-blur shadow-xl text-indigo-600 rounded-xl hover:bg-white transition-all"
+                >
+                  <Sparkles className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onRemove(item.id)}
+                  className="p-2 bg-white/90 backdrop-blur shadow-xl text-red-500 rounded-xl hover:bg-white transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             )}
           </div>
         ))}

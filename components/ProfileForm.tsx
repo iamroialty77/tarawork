@@ -1,14 +1,15 @@
 "use client";
 
-import { FreelancerProfile, FreelancerCategory, PortfolioItem } from "../types";
+import { UserProfile, FreelancerCategory, PortfolioItem } from "../types";
 import { useState, useEffect, useRef } from "react";
-import { Camera, Globe, Github, Linkedin, Link as LinkIcon, User, Briefcase, Mail, FileText, Sparkles, Loader2 } from "lucide-react";
+import { Camera, User, FileText, Sparkles, Loader2 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 
 interface ProfileFormProps {
-  initialProfile: FreelancerProfile;
-  onUpdate: (profile: FreelancerProfile) => void;
+  initialProfile: UserProfile;
+  onUpdate: (profile: UserProfile) => void;
   onAddPortfolio?: (item: Partial<PortfolioItem>) => void;
+  onUpdatePortfolio?: (item: PortfolioItem) => void;
   onRemovePortfolio?: (id: string) => void;
   isSaving?: boolean;
 }
@@ -17,6 +18,7 @@ export default function ProfileForm({
   initialProfile, 
   onUpdate, 
   onAddPortfolio,
+  onUpdatePortfolio,
   onRemovePortfolio,
   isSaving = false 
 }: ProfileFormProps) {
@@ -71,6 +73,19 @@ export default function ProfileForm({
     const newProfile = {
       ...profile,
       portfolio: [...(profile.portfolio || []), newItem],
+    };
+    setProfile(newProfile);
+    onUpdate(newProfile);
+  };
+
+  const updatePortfolioItem = (item: PortfolioItem) => {
+    if (onUpdatePortfolio) {
+      onUpdatePortfolio(item);
+      return;
+    }
+    const newProfile = {
+      ...profile,
+      portfolio: (profile.portfolio || []).map((i) => (i.id === item.id ? item : i)),
     };
     setProfile(newProfile);
     onUpdate(newProfile);
@@ -143,9 +158,10 @@ export default function ProfileForm({
       setProfile(updatedProfile);
       onUpdate(updatedProfile);
       alert('Resume parsed successfully! AI has updated your profile.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error:', error);
-      alert(`Error parsing resume: ${error.message}`);
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
+      alert(`Error parsing resume: ${message}`);
     } finally {
       setIsParsing(false);
       if (resumeInputRef.current) resumeInputRef.current.value = '';
@@ -349,6 +365,7 @@ export default function ProfileForm({
             <PortfolioManager
               items={profile.portfolio || []}
               onAdd={addPortfolioItem}
+              onUpdate={updatePortfolioItem}
               onRemove={removePortfolioItem}
               isOwner={true}
             />

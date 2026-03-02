@@ -55,6 +55,7 @@ import {
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
+import SkillsRadar from "../components/SkillsRadar";
 
 export default function Home() {
   const router = useRouter();
@@ -843,6 +844,34 @@ export default function Home() {
     }
   };
 
+  const updatePortfolioItem = async (item: PortfolioItem) => {
+    try {
+      const { error } = await supabase
+        .from('portfolio_items')
+        .update({
+          title: item.title,
+          description: item.description,
+          project_url: item.project_url,
+          technologies: item.technologies,
+        })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      setProfile(prev => ({
+        ...prev,
+        portfolio: (prev.portfolio || []).map(i => i.id === item.id ? item : i)
+      }));
+      setToastMsg("Portfolio item updated!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err: any) {
+      console.error("Error updating portfolio item:", err);
+      setToastMsg(`Error: ${err.message}`);
+      setShowToast(true);
+    }
+  };
+
   const removePortfolioItem = async (id: string) => {
     try {
       const { error } = await supabase
@@ -1363,11 +1392,14 @@ export default function Home() {
                       initialProfile={profile} 
                       onUpdate={handleProfileSave} 
                       onAddPortfolio={addPortfolioItem}
+                      onUpdatePortfolio={updatePortfolioItem}
                       onRemovePortfolio={removePortfolioItem}
                       isSaving={isSaving}
                     />
                   </div>
                   <div className="lg:col-span-4 space-y-6">
+                    <SkillsRadar profile={profile} />
+                    
                     <div className="bg-slate-900 p-6 rounded-2xl border border-white/10 shadow-xl overflow-hidden relative group">
                       {/* Background decorative elements */}
                       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-all duration-500"></div>
