@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { UserProfile, Job, PortfolioItem } from "../types";
+import { UserProfile, Job, PortfolioItem, Squad } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
@@ -299,7 +299,7 @@ export default function Home() {
     }
   };
 
-  const handleCreateSquad = async (newSquad: any) => {
+  const handleCreateSquad = async (newSquad: Squad) => {
     if (!profile || !user) return;
     
     setProfile(prev => ({ ...prev, squad: newSquad }));

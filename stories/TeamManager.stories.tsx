@@ -3,7 +3,9 @@
  * This demonstrates how we handle RBAC (Lead vs Member views).
  */
 
-const TeamManagerStory = ({ squad }: { squad: any }) => {
+import { Squad } from "../types";
+
+const TeamManagerStory = ({ squad }: { squad: Squad }) => {
   return null; // Placeholder for Storybook interface
 };
 

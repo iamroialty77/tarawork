@@ -24,6 +24,7 @@ export interface Squad {
   leadId: string;
   members: SquadMember[];
   totalBudget: number;
+  status?: string;
 }
 
 export interface AIAnalysis {

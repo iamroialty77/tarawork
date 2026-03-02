@@ -43,7 +43,8 @@ export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) 
           name: "You", // In real app, get from profile
           role: "Squad Lead",
           share: 100,
-          avatar: ""
+          avatar: "",
+          permissions: ["manage-budget", "add-members", "edit-tasks"]
         }
       ],
       totalBudget: parseInt(totalBudget),
@@ -161,7 +162,7 @@ export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) 
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-slate-900">{member.name}</p>
-                    {member.id === "1" && (
+                    {member.id === defaultSquad.leadId && (
                       <span className="text-[9px] font-black bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase">Lead</span>
                     )}
                   </div>
