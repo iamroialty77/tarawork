@@ -47,7 +47,10 @@ import {
   PieChart, 
   ChevronRight,
   Sparkles,
-  Brain
+  Brain,
+  Medal,
+  Verified,
+  Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -95,13 +98,17 @@ export default function Home() {
     category: "Developer",
     skills: [],
     verifiedSkills: [],
-    softSkills: [],
+    softSkills: [
+      { name: "Strategic Thinker", badge: "🧠", level: "Expert", count: 12 },
+      { name: "Resilient Leader", badge: "🛡️", level: "Master", count: 8 },
+      { name: "Empathetic Speaker", badge: "📢", level: "Beginner", count: 4 },
+    ],
     aiInsights: {
       gapAnalysis: [],
       compatibilityScore: 0,
       cultureMatch: []
     },
-    ranking: 0,
+    ranking: 15,
     hourlyRate: "$0",
     bio: "",
     activeProjects: [],
@@ -1361,18 +1368,76 @@ export default function Home() {
                     />
                   </div>
                   <div className="lg:col-span-4 space-y-6">
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <Award className="w-4 h-4 text-indigo-600" />
-                        Career Badges
+                    <div className="bg-slate-900 p-6 rounded-2xl border border-white/10 shadow-xl overflow-hidden relative group">
+                      {/* Background decorative elements */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-all duration-500"></div>
+                      
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                        <Award className="w-4 h-4 text-indigo-400" />
+                        Career Credentials
                       </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {profile.softSkills?.map((skill) => (
-                          <div key={skill.name} className="group relative flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg hover:border-indigo-200 hover:bg-indigo-50 transition-all cursor-help">
-                            <span className="text-lg">{skill.badge}</span>
-                            <span className="text-[10px] font-bold text-slate-600">{skill.name}</span>
+
+                      <div className="space-y-6">
+                        {/* Verified Technical Badges */}
+                        {profile.verifiedSkills && profile.verifiedSkills.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Technical Mastery</span>
+                            <div className="flex flex-wrap gap-2">
+                              {profile.verifiedSkills.map((skill) => (
+                                <div key={skill.name} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg shadow-inner">
+                                  <Verified className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span className="text-[10px] font-bold text-emerald-100 tracking-tight">{skill.name}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
+                        )}
+
+                        {/* Soft Skill Badges */}
+                        <div className="space-y-2">
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Behavioral Excellence</span>
+                          <div className="grid grid-cols-1 gap-2.5">
+                            {profile.softSkills?.map((skill) => (
+                              <motion.div 
+                                key={skill.name} 
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                className="group relative flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-default"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 flex items-center justify-center bg-slate-800/80 rounded-lg border border-white/5 text-lg shadow-sm">
+                                    {skill.badge}
+                                  </div>
+                                  <div>
+                                    <h4 className="text-[11px] font-bold text-slate-200">{skill.name}</h4>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <Medal className={cn("w-3 h-3", 
+                                        skill.level === "Master" ? "text-amber-400" : 
+                                        skill.level === "Expert" ? "text-slate-300" : "text-orange-400"
+                                      )} />
+                                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter group-hover:text-slate-400 transition-colors">{skill.level}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-[9px] font-black text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded border border-white/5 group-hover:text-indigo-400 transition-colors">
+                                  {skill.count}x
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Achievement Status */}
+                        {profile.ranking ? (
+                          <div className="mt-4 pt-4 border-t border-white/5">
+                            <div className="flex items-center justify-between px-3 py-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                              <div className="flex items-center gap-2">
+                                <Trophy className="w-3.5 h-3.5 text-indigo-400" />
+                                <span className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest">Elite Tier • Top {profile.ranking}%</span>
+                              </div>
+                              <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(129,140,248,0.8)]"></div>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
