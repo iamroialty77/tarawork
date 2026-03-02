@@ -271,6 +271,83 @@ export default function Home() {
     }
   };
 
+  const handleCreateProject = async (newProject: any) => {
+    if (!profile || !user) return;
+    
+    const updatedProjects = [...(profile.activeProjects || []), newProject];
+    
+    setProfile(prev => ({ ...prev, activeProjects: updatedProjects }));
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          activeProjects: updatedProjects,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      setToastMsg("Project initialized successfully!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err: any) {
+      console.error("Error creating project:", err);
+      setToastMsg("Failed to sync new project to database.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
+  const handleCreateSquad = async (newSquad: any) => {
+    if (!profile || !user) return;
+    
+    setProfile(prev => ({ ...prev, squad: newSquad }));
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          squad: newSquad,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      setToastMsg("Squad formed successfully!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err: any) {
+      console.error("Error creating squad:", err);
+      setToastMsg("Failed to sync squad to database.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
+  const handleUpdateWorkflows = async (updatedWorkflows: any[]) => {
+    if (!profile || !user) return;
+    
+    setProfile(prev => ({ ...prev, workflows: updatedWorkflows }));
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          workflows: updatedWorkflows,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+    } catch (err: any) {
+      console.error("Error updating workflows:", err);
+      setToastMsg("Failed to sync workflows to database.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
   const fetchJobs = async () => {
     try {
       const { data, error } = await supabase
@@ -1206,8 +1283,14 @@ export default function Home() {
                   <Workspace 
                     projects={profile.activeProjects || []} 
                     onUpdateProject={handleUpdateProject}
+                    onCreateProject={handleCreateProject}
+                    workflows={profile.workflows || []}
+                    onUpdateWorkflows={handleUpdateWorkflows}
                   />
-                  <TeamManager squad={profile.squad} />
+                  <TeamManager 
+                    squad={profile.squad} 
+                    onCreateSquad={handleCreateSquad}
+                  />
                 </motion.div>
               )}
 

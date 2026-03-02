@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     "softSkills" JSONB DEFAULT '[]',
     "activeProjects" JSONB DEFAULT '[]',
     squad JSONB,
+    workflows JSONB DEFAULT '[]',
     "aiInsights" JSONB,
     ranking INTEGER,
     status TEXT DEFAULT 'pending', -- pending, approved, suspended

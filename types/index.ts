@@ -136,6 +136,7 @@ export interface UserProfile {
   companyName?: string;
   activeProjects?: Project[];
   squad?: Squad;
+  workflows?: any[];
   aiInsights?: AIAnalysis;
   ranking?: number; // Leaderboard position
   portfolio?: PortfolioItem[];

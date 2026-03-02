@@ -27,6 +27,7 @@ import {
   Zap,
   DollarSign,
   Loader2,
+  Plus,
   Brain
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -41,9 +42,18 @@ import { UserWellness } from "../types/wellness";
 interface WorkspaceProps {
   projects: Project[];
   onUpdateProject?: (project: Project) => void;
+  onCreateProject?: (project: Project) => void;
+  workflows?: any[];
+  onUpdateWorkflows?: (workflows: any[]) => void;
 }
 
-export default function Workspace({ projects, onUpdateProject }: WorkspaceProps) {
+export default function Workspace({ 
+  projects, 
+  onUpdateProject, 
+  onCreateProject,
+  workflows = [],
+  onUpdateWorkflows
+}: WorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"active" | "warroom" | "pulse" | "reviews" | "calls" | "wellness">("active");
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
   const [editingLink, setEditingLink] = useState<string | null>(null);
@@ -52,6 +62,10 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
   const [activeCall, setActiveCall] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showFocusMode, setShowFocusMode] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [newProject, setNewProject] = useState({ title: "", client: "", workspaceType: "Code" as "Code" | "Design" });
+  const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false);
+  const [newWorkflow, setNewWorkflow] = useState({ trigger: "", action: "", name: "", icon: "Zap" });
 
   // Mock wellness data - in a real app this would come from the user profile/wellness service
   const wellnessData: UserWellness = {
@@ -91,6 +105,55 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
       setEditingLink(null);
       setIsSyncing(false);
     }
+  };
+
+  const handleCreateProject = () => {
+    if (!newProject.title || !newProject.client || !onUpdateProject) return;
+    
+    const project: Project = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: newProject.title,
+      client: newProject.client,
+      workspaceType: newProject.workspaceType,
+      status: "In Progress",
+      milestones: [],
+      progress: 0,
+      clientId: "mock-client-id"
+    };
+
+    // We use onUpdateProject by passing the new list but it's cleaner if parent supports creation
+    // For now, we'll assume we can push it if we had access to the full list, 
+    // but since we only have onUpdateProject(oneProject), we might need a new prop.
+    // Let's assume onUpdateProject can take a new project if the id doesn't exist? 
+    // No, handleUpdateProject in page.tsx only replaces existing.
+    
+    // I'll add onCreateProject prop to Workspace.
+    if (onCreateProject) {
+      onCreateProject(project);
+    }
+    
+    setIsCreatingProject(false);
+    setNewProject({ title: "", client: "", workspaceType: "Code" });
+  };
+
+  const handleCreateWorkflow = () => {
+    if (!newWorkflow.name || !newWorkflow.trigger || !newWorkflow.action) return;
+    
+    const workflow = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newWorkflow.name,
+      trigger: newWorkflow.trigger,
+      action: newWorkflow.action,
+      icon: "Zap",
+      color: "bg-purple-500",
+      active: true
+    };
+
+    if (onUpdateWorkflows) {
+      onUpdateWorkflows([...workflows, workflow]);
+    }
+    setIsCreatingWorkflow(false);
+    setNewWorkflow({ trigger: "", action: "", name: "", icon: "Zap" });
   };
 
   const handleUpdateMilestone = async (projectId: string, milestoneId: string, status: Milestone["status"]) => {
@@ -325,37 +388,88 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                         <Zap className="w-4 h-4 text-indigo-600" />
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">TARA Smart Workflows</h4>
                       </div>
-                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">2 Active Automations</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{workflows.length} Active Automations</span>
+                        <button 
+                          onClick={() => setIsCreatingWorkflow(true)}
+                          className="flex items-center gap-1 text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-widest"
+                        >
+                          <Plus className="w-3 h-3" /> Add Workflow
+                        </button>
+                      </div>
                     </div>
+
+                    {isCreatingWorkflow && (
+                      <div className="p-5 bg-white border-2 border-indigo-100 rounded-3xl mb-4 shadow-xl">
+                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-4">Build New Automation</h4>
+                        <div className="space-y-4 mb-4">
+                          <div>
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Workflow Name</label>
+                            <input 
+                              type="text" 
+                              value={newWorkflow.name}
+                              onChange={(e) => setNewWorkflow({...newWorkflow, name: e.target.value})}
+                              className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+                              placeholder="e.g. Weekly Status Update"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Trigger (IF...)</label>
+                              <input 
+                                type="text" 
+                                value={newWorkflow.trigger}
+                                onChange={(e) => setNewWorkflow({...newWorkflow, trigger: e.target.value})}
+                                className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="IF task is done"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Action (THEN...)</label>
+                              <input 
+                                type="text" 
+                                value={newWorkflow.action}
+                                onChange={(e) => setNewWorkflow({...newWorkflow, action: e.target.value})}
+                                className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="THEN notify client"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => setIsCreatingWorkflow(false)}
+                            className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={handleCreateWorkflow}
+                            className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700"
+                          >
+                            ACTIVATE WORKFLOW
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-indigo-100 transition-all cursor-pointer shadow-sm hover:shadow-md">
-                        <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
-                          <Zap className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-900 uppercase tracking-tight">Auto-Escrow Release</p>
-                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">IF task status is <span className="text-indigo-600 font-bold">Done</span> THEN release <span className="text-emerald-600 font-bold">10% budget</span> from escrow.</p>
-                        </div>
-                        <div className="ml-auto">
-                          <div className="w-8 h-4 bg-emerald-500 rounded-full p-1 flex justify-end shadow-inner">
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                      {workflows.map((wf) => (
+                        <div key={wf.id} className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-indigo-100 transition-all cursor-pointer shadow-sm hover:shadow-md">
+                          <div className={`w-10 h-10 ${wf.color} text-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                            {wf.icon === 'Zap' ? <Zap className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{wf.name}</p>
+                            <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">{wf.trigger} THEN <span className="text-indigo-600 font-bold">{wf.action}</span>.</p>
+                          </div>
+                          <div className="ml-auto">
+                            <div className={`w-8 h-4 ${wf.active ? 'bg-emerald-500' : 'bg-slate-300'} rounded-full p-1 flex ${wf.active ? 'justify-end' : 'justify-start'} shadow-inner`}>
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-indigo-100 transition-all cursor-pointer shadow-sm hover:shadow-md">
-                        <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-amber-100 group-hover:scale-110 transition-transform">
-                          <Activity className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-900 uppercase tracking-tight">Wellness Protection</p>
-                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">IF Energy is <span className="text-rose-600 font-bold">Low</span> THEN auto-decline <span className="text-slate-900 font-bold">urgent meeting requests</span>.</p>
-                        </div>
-                        <div className="ml-auto">
-                          <div className="w-8 h-4 bg-emerald-500 rounded-full p-1 flex justify-end shadow-inner">
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                          </div>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -376,6 +490,59 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">My Active Workspaces</h3>
+                <button 
+                  onClick={() => setIsCreatingProject(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                >
+                  <Plus className="w-4 h-4" />
+                  NEW WORKSPACE
+                </button>
+              </div>
+
+              {isCreatingProject && (
+                <div className="p-6 border-2 border-indigo-500 bg-indigo-50/30 rounded-2xl mb-6">
+                  <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-4">Initialize New Workspace</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Project Name</label>
+                      <input 
+                        type="text" 
+                        value={newProject.title}
+                        onChange={(e) => setNewProject({...newProject, title: e.target.value})}
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                        placeholder="e.g. Next.js SaaS Platform"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Client Name</label>
+                      <input 
+                        type="text" 
+                        value={newProject.client}
+                        onChange={(e) => setNewProject({...newProject, client: e.target.value})}
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                        placeholder="e.g. Acme Corp"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <button 
+                      onClick={() => setIsCreatingProject(false)}
+                      className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-wider"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleCreateProject}
+                      className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg"
+                    >
+                      CREATE WORKSPACE
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {projects.length > 0 ? (
                 projects.map((project) => (
                   <div 

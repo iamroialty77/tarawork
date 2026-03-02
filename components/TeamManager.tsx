@@ -18,13 +18,42 @@ import { useState } from "react";
 
 interface TeamManagerProps {
   squad?: Squad;
+  onCreateSquad?: (squad: Squad) => void;
 }
 
-export default function TeamManager({ squad }: TeamManagerProps) {
+export default function TeamManager({ squad, onCreateSquad }: TeamManagerProps) {
   const [isManaging, setIsManaging] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newSquadName, setNewSquadName] = useState("");
+  const [totalBudget, setTotalBudget] = useState("50000");
   const currentUserId = "1"; // Simulating logged in user
 
   const defaultSquad: Squad | null = squad || null;
+
+  const handleCreateSquad = () => {
+    if (!newSquadName || !onCreateSquad) return;
+
+    const newSquad: Squad = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newSquadName,
+      leadId: currentUserId,
+      members: [
+        {
+          id: currentUserId,
+          name: "You", // In real app, get from profile
+          role: "Squad Lead",
+          share: 100,
+          avatar: ""
+        }
+      ],
+      totalBudget: parseInt(totalBudget),
+      status: "Active"
+    };
+
+    onCreateSquad(newSquad);
+    setIsCreating(false);
+    setNewSquadName("");
+  };
 
   if (!defaultSquad) {
     return (
@@ -36,12 +65,54 @@ export default function TeamManager({ squad }: TeamManagerProps) {
         <p className="text-slate-500 max-w-xs mx-auto text-sm">
           You haven't joined or created a squad yet. Squads allow you to apply for larger projects as a team.
         </p>
-        <button 
-          onClick={() => alert("Squad creation module is initializing... You will be redirected to the squad builder shortly.")}
-          className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all"
-        >
-          Create a Squad
-        </button>
+
+        {isCreating ? (
+          <div className="mt-8 max-w-sm mx-auto p-6 bg-slate-50 rounded-2xl border border-slate-200 text-left">
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-4">New Squad Identity</h4>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Squad Name</label>
+                <input 
+                  type="text" 
+                  value={newSquadName}
+                  onChange={(e) => setNewSquadName(e.target.value)}
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g. Dream Team Alpha"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Initial Project Budget (₱)</label>
+                <input 
+                  type="number" 
+                  value={totalBudget}
+                  onChange={(e) => setTotalBudget(e.target.value)}
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button 
+                  onClick={() => setIsCreating(false)}
+                  className="flex-1 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleCreateSquad}
+                  className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                >
+                  FORM SQUAD
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button 
+            onClick={() => setIsCreating(true)}
+            className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all"
+          >
+            Create a Squad
+          </button>
+        )}
       </div>
     );
   }
