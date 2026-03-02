@@ -40,6 +40,7 @@ import { cn } from "../lib/utils";
 import VideoCall from "./VideoCall";
 import WellnessDashboard from "./WellnessDashboard";
 import FocusMode from "./FocusMode";
+import AIAgent from "./AIAgent";
 import { UserWellness } from "../types/wellness";
 
 interface WorkspaceProps {
@@ -70,6 +71,7 @@ export default function Workspace({
   const [newProject, setNewProject] = useState({ title: "", client: "", workspaceType: "Code" as "Code" | "Design" });
   const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false);
   const [newWorkflow, setNewWorkflow] = useState({ trigger: "", action: "", name: "", icon: "Zap" });
+  const [showAIClauseAudit, setShowAIClauseAudit] = useState(false);
 
   const selectedMilestones = selectedProject?.milestones || [];
 
@@ -1046,15 +1048,21 @@ export default function Workspace({
                         </div>
                       </div>
 
-                      <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl relative z-10">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
-                            <ShieldCheck className="w-5 h-5 text-white" />
+                      <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl relative z-10 group/audit cursor-pointer hover:bg-indigo-100/50 transition-all"
+                           onClick={() => setShowAIClauseAudit(true)}>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+                              <ShieldCheck className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-indigo-900 uppercase tracking-tight">AI Clause Audit</h4>
+                              <p className="text-[10px] text-indigo-700 font-medium">Last audited: Today at 2:45 PM</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-sm font-black text-indigo-900 uppercase tracking-tight">AI Clause Audit</h4>
-                            <p className="text-[10px] text-indigo-700 font-medium">Last audited: Today at 2:45 PM</p>
-                          </div>
+                          <button className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-200 opacity-0 group-hover/audit:opacity-100 transition-opacity">
+                            Re-Run Audit
+                          </button>
                         </div>
                         <div className="space-y-3">
                           {[
@@ -1342,6 +1350,12 @@ export default function Workspace({
           Open Full Dashboard <ChevronRight className="w-4 h-4" />
         </button>
       </div>
+      <AIAgent 
+        isOpen={showAIClauseAudit} 
+        onClose={() => setShowAIClauseAudit(false)} 
+        mode="audit-contract" 
+        targetData={selectedProject} 
+      />
     </div>
   );
 }
