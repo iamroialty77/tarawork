@@ -25,6 +25,28 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
+-- 1.1 Create PROJECT_TASKS table
+CREATE TABLE IF NOT EXISTS public.project_tasks (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT DEFAULT 'Todo', -- Todo, In-Progress, Done
+    energy_cost TEXT DEFAULT 'Medium', -- Low, Medium, High
+    assignee_id UUID REFERENCES public.profiles(id),
+    due_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Enable RLS for PROJECT_TASKS
+ALTER TABLE public.project_tasks ENABLE ROW LEVEL SECURITY;
+
+-- Policies for PROJECT_TASKS
+CREATE POLICY "Users can view tasks for their projects." ON public.project_tasks
+    FOR SELECT USING (true); -- Simplified for demo
+
+CREATE POLICY "Users can manage tasks for their projects." ON public.project_tasks
+    FOR ALL USING (true);
+
 -- Enable Row Level Security
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 

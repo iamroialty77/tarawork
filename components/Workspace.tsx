@@ -3,6 +3,9 @@
 import { Project, Milestone } from "../types";
 import { 
   Code2, 
+  BarChart3,
+  Activity,
+  Trello,
   Layout, 
   Video, 
   Github, 
@@ -41,7 +44,7 @@ interface WorkspaceProps {
 }
 
 export default function Workspace({ projects, onUpdateProject }: WorkspaceProps) {
-  const [activeTab, setActiveTab] = useState<"active" | "warroom" | "reviews" | "calls" | "wellness">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "warroom" | "pulse" | "reviews" | "calls" | "wellness">("active");
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
   const [editingLink, setEditingLink] = useState<string | null>(null);
   const [tempLink, setTempLink] = useState("");
@@ -154,6 +157,7 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
         <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-fit border border-white/5">
           {[
             { id: "active", label: "Active Projects", icon: Clock },
+            { id: "pulse", label: "AI Pulse Board", icon: Activity },
             { id: "warroom", label: "Project War Room", icon: Shield },
             { id: "wellness", label: "Sustainable Performance", icon: Zap },
             { id: "reviews", label: "Code & Design", icon: Code2 },
@@ -162,7 +166,7 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as "active" | "warroom" | "reviews" | "calls" | "wellness");
+                setActiveTab(tab.id as any);
                 if (tab.id === 'warroom') setShowWarRoom(true);
                 else setShowWarRoom(false);
               }}
@@ -198,6 +202,170 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                   Enter Focus Environment
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === "pulse" && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="space-y-6"
+            >
+              {selectedProject ? (
+                <div className="space-y-6">
+                  {/* AI Health Nudge */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="md:col-span-2 bg-gradient-to-r from-slate-900 to-indigo-900 border border-slate-800 p-6 rounded-3xl flex items-center justify-between shadow-xl relative overflow-hidden group">
+                      <div className="relative z-10">
+                        <h4 className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-1">AI Velocity Prediction</h4>
+                        <div className="flex items-end gap-2">
+                          <span className="text-3xl font-black text-white tracking-tighter">On Track</span>
+                          <span className="text-xs font-bold text-emerald-400 mb-1.5 flex items-center gap-1">
+                            <TrendingUp className="w-3 h-3" />
+                            +12% vs last week
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-indigo-200/60 mt-2 font-medium">Predicted Completion: <span className="text-white font-bold">March 14, 2024</span></p>
+                      </div>
+                      <BarChart3 className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 group-hover:text-white/10 transition-colors" />
+                    </div>
+
+                    <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col justify-center items-center text-center">
+                      <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center mb-2">
+                        <Zap className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Energy Burn Rate</span>
+                      <span className="text-xl font-black text-slate-900">2.4<span className="text-[10px] text-slate-400 font-bold ml-1">pts/hr</span></span>
+                    </div>
+
+                    <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col justify-center items-center text-center">
+                      <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center mb-2">
+                        <Smile className="w-5 h-5 text-indigo-500" />
+                      </div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Sentiment Health</span>
+                      <span className="text-xl font-black text-slate-900">Positive</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-amber-100 flex items-center justify-center">
+                        <Activity className="w-6 h-6 text-amber-500 animate-pulse" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-amber-900 uppercase tracking-tight">AI Project Pulse</h4>
+                        <p className="text-xs text-amber-700 font-medium">
+                          {wellnessData.energyRating === "Low" 
+                            ? "CRITICAL: Worker energy is Low. AI predicts 20% slower velocity this week." 
+                            : "HEALTHY: Current energy levels match project requirements. On track for Mar 15."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black bg-amber-500 text-white px-3 py-1.5 rounded-lg uppercase tracking-widest shadow-lg shadow-amber-200">
+                        {wellnessData.energyRating} Energy Match
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Kanban Board */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {["Todo", "In-Progress", "Done"].map((col) => (
+                      <div key={col} className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 min-h-[400px]">
+                        <div className="flex justify-between items-center mb-4 px-2">
+                          <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{col}</h5>
+                          <span className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-500">
+                            {(selectedProject.tasks || [
+                              { id: 't1', title: 'Design Auth Flow', status: 'Todo', energyCost: 'Medium' },
+                              { id: 't2', title: 'Fix API Bug', status: 'In-Progress', energyCost: 'High' },
+                              { id: 't3', title: 'Setup DB Schema', status: 'Done', energyCost: 'Low' }
+                            ]).filter(t => t.status === col).length}
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {(selectedProject.tasks || [
+                            { id: 't1', title: 'Design Auth Flow', status: 'Todo', energyCost: 'Medium' },
+                            { id: 't2', title: 'Fix API Bug', status: 'In-Progress', energyCost: 'High' },
+                            { id: 't3', title: 'Setup DB Schema', status: 'Done', energyCost: 'Low' }
+                          ]).filter(t => t.status === col).map((task) => (
+                            <motion.div 
+                              key={task.id}
+                              whileHover={{ y: -2, scale: 1.02 }}
+                              className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all cursor-grab active:cursor-grabbing"
+                            >
+                              <h6 className="text-sm font-bold text-slate-900 mb-2">{task.title}</h6>
+                              <div className="flex justify-between items-center mt-3">
+                                <div className="flex items-center gap-1.5">
+                                  <div className={cn(
+                                    "w-1.5 h-1.5 rounded-full",
+                                    task.energyCost === 'High' ? "bg-rose-500" : task.energyCost === 'Medium' ? "bg-amber-500" : "bg-emerald-500"
+                                  )} />
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{task.energyCost} Energy</span>
+                                </div>
+                                <div className="w-6 h-6 rounded-full bg-slate-100 border border-white flex items-center justify-center">
+                                  <Smile className="w-3.5 h-3.5 text-slate-400" />
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                          <button className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-indigo-200 hover:text-indigo-400 transition-all mt-2">
+                            + New Task
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* TARA Smart Automations */}
+                  <div className="mt-8 border-t border-slate-100 pt-8">
+                    <div className="flex items-center justify-between mb-4 px-2">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-indigo-600" />
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">TARA Smart Workflows</h4>
+                      </div>
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">2 Active Automations</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-indigo-100 transition-all cursor-pointer shadow-sm hover:shadow-md">
+                        <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100 group-hover:scale-110 transition-transform">
+                          <Zap className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 uppercase tracking-tight">Auto-Escrow Release</p>
+                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">IF task status is <span className="text-indigo-600 font-bold">Done</span> THEN release <span className="text-emerald-600 font-bold">10% budget</span> from escrow.</p>
+                        </div>
+                        <div className="ml-auto">
+                          <div className="w-8 h-4 bg-emerald-500 rounded-full p-1 flex justify-end shadow-inner">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-indigo-100 transition-all cursor-pointer shadow-sm hover:shadow-md">
+                        <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-amber-100 group-hover:scale-110 transition-transform">
+                          <Activity className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 uppercase tracking-tight">Wellness Protection</p>
+                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">IF Energy is <span className="text-rose-600 font-bold">Low</span> THEN auto-decline <span className="text-slate-900 font-bold">urgent meeting requests</span>.</p>
+                        </div>
+                        <div className="ml-auto">
+                          <div className="w-8 h-4 bg-emerald-500 rounded-full p-1 flex justify-end shadow-inner">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-100">
+                  <Activity className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                  <h4 className="font-bold text-slate-900">Project Pulse requires a project</h4>
+                  <p className="text-sm text-slate-500 mt-1">Select a project to see real-time performance and task visualizer.</p>
+                </div>
+              )}
             </motion.div>
           )}
 

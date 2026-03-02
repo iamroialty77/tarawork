@@ -96,6 +96,15 @@ export interface VerifiedSkill {
   isVerified: boolean;
 }
 
+export interface ProjectTask {
+  id: string;
+  title: string;
+  status: "Todo" | "In-Progress" | "Done";
+  energyCost: "Low" | "Medium" | "High";
+  assigneeId?: string;
+  dueDate?: string;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -110,6 +119,7 @@ export interface Project {
   figmaFile?: string;
   projectLink?: string;
   milestones?: Milestone[];
+  tasks?: ProjectTask[];
 }
 
 export interface UserProfile {
