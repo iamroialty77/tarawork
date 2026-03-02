@@ -11,6 +11,7 @@ import CareerPath from "../components/CareerPath";
 import JobPostingForm from "../components/JobPostingForm";
 import AdminDashboard from "../components/AdminDashboard";
 import { supabase } from "../lib/supabase";
+import { cn } from "../lib/utils";
 import { useRouter } from "next/navigation";
 import { 
   Briefcase, 
@@ -33,18 +34,19 @@ import {
   Github,
   CheckCircle2,
   AlertCircle,
-  XCircle,
-  Code,
-  FileText,
-  ExternalLink,
-  DollarSign,
-  Lock,
-  Scale,
-  PlusCircle,
-  User,
-  Layout,
-  PieChart,
-  ChevronRight
+  XCircle, 
+  Code, 
+  FileText, 
+  ExternalLink, 
+  DollarSign, 
+  Lock, 
+  Scale, 
+  PlusCircle, 
+  User, 
+  Layout, 
+  PieChart, 
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";

@@ -230,10 +230,29 @@ ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
 
 -- 9. ENABLE REAL-TIME REPLICATION
 -- This allows the app to show new messages instantly without reloading.
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+-- Make publication additions idempotent to avoid errors on repeated execution.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        CREATE PUBLICATION supabase_realtime;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'messages') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'conversations') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'jobs') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.jobs;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'profiles') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+    END IF;
+END $$;
 
 -- 10. Create APPLICATIONS table
 CREATE TABLE IF NOT EXISTS public.applications (
@@ -275,7 +294,12 @@ CREATE POLICY "Users can insert their own applications" ON public.applications
     FOR INSERT WITH CHECK (auth.uid() = seeker_id);
 
 -- Add to Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.applications;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'applications') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.applications;
+    END IF;
+END $$;
 
 -- 11. Create NOTIFICATIONS table
 CREATE TABLE IF NOT EXISTS public.notifications (
@@ -302,7 +326,12 @@ CREATE POLICY "Users can update their own notifications" ON public.notifications
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- Add to Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'notifications') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+    END IF;
+END $$;
 
 -- Policies for CONVERSATIONS
 DROP POLICY IF EXISTS "Users can view their own conversations" ON public.conversations;
