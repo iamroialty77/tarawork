@@ -7,6 +7,7 @@ import {
   Activity,
   Trello,
   Layout, 
+  LayoutDashboard,
   Video, 
   Github, 
   FileText, 
@@ -24,11 +25,13 @@ import {
   TrendingUp,
   Award,
   Shield,
-  Zap,
-  DollarSign,
+  ShieldCheck,
+  Zap, 
+  DollarSign, 
   Loader2,
   Plus,
-  Brain
+  Brain,
+  ArrowUpRight
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,7 +57,7 @@ export default function Workspace({
   workflows = [],
   onUpdateWorkflows
 }: WorkspaceProps) {
-  const [activeTab, setActiveTab] = useState<"active" | "warroom" | "pulse" | "reviews" | "calls" | "wellness">("active");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "active" | "warroom" | "pulse" | "reviews" | "calls" | "wellness">("dashboard");
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
   const [editingLink, setEditingLink] = useState<string | null>(null);
   const [tempLink, setTempLink] = useState("");
@@ -66,6 +69,8 @@ export default function Workspace({
   const [newProject, setNewProject] = useState({ title: "", client: "", workspaceType: "Code" as "Code" | "Design" });
   const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false);
   const [newWorkflow, setNewWorkflow] = useState({ trigger: "", action: "", name: "", icon: "Zap" });
+
+  const selectedMilestones = selectedProject?.milestones || [];
 
   // Mock wellness data - in a real app this would come from the user profile/wellness service
   const wellnessData: UserWellness = {
@@ -210,6 +215,13 @@ export default function Workspace({
           </div>
           <div className="flex gap-2">
             <button 
+              onClick={() => setActiveTab("dashboard")}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-xs font-bold transition-all uppercase tracking-wider"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 text-indigo-400" />
+              Open Full Dashboard
+            </button>
+            <button 
               onClick={() => setActiveCall(true)}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 uppercase tracking-wider"
             >
@@ -221,6 +233,7 @@ export default function Workspace({
 
         <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-fit border border-white/5">
           {[
+            { id: "dashboard", label: "Full Dashboard", icon: LayoutDashboard },
             { id: "active", label: "Active Projects", icon: Clock },
             { id: "pulse", label: "AI Pulse Board", icon: Activity },
             { id: "warroom", label: "Project War Room", icon: Shield },
@@ -248,6 +261,200 @@ export default function Workspace({
 
       <div className="p-6">
         <AnimatePresence mode="wait">
+          {activeTab === "dashboard" && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
+            >
+              {/* Top Stats Bar */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {[
+                  { label: "Total Revenue", value: "$12,450", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-50" },
+                  { label: "Active Projects", value: projects.length.toString(), icon: Layout, color: "text-indigo-500", bg: "bg-indigo-50" },
+                  { label: "Avg. Velocity", value: "94%", icon: TrendingUp, color: "text-amber-500", bg: "bg-amber-50" },
+                  { label: "Sustainability Index", value: `${wellnessData.sustainabilityIndex}%`, icon: Zap, color: "text-purple-500", bg: "bg-purple-50" },
+                ].map((stat, i) => (
+                  <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", stat.bg)}>
+                        <stat.icon className={cn("w-6 h-6", stat.color)} />
+                      </div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live</span>
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{stat.value}</h3>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight mt-1">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Main Insight Card */}
+                <div className="lg:col-span-2 space-y-8">
+                  <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+                          <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">AI Intelligence Report</span>
+                        </div>
+                        <div className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full">
+                          <span className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Optimal Performance</span>
+                        </div>
+                      </div>
+                      
+                      <h2 className="text-4xl font-black tracking-tight mb-4">Your workspace is <span className="text-indigo-400">operating at peak efficiency.</span></h2>
+                      <p className="text-slate-400 text-lg font-medium max-w-xl mb-8">AI analysis shows that your current squad configuration and wellness levels are perfectly aligned for the upcoming milestones.</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors cursor-pointer group">
+                          <div className="flex items-center gap-3 mb-3">
+                            <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                            <h4 className="text-sm font-black uppercase tracking-wider">Burnout Protection</h4>
+                          </div>
+                          <p className="text-xs text-slate-400 leading-relaxed">Risk score is <span className="text-white font-bold">low ({wellnessData.burnoutRiskScore}%)</span>. Recommended focus block: 2 hours this afternoon.</p>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-colors cursor-pointer group">
+                          <div className="flex items-center gap-3 mb-3">
+                            <Zap className="w-5 h-5 text-amber-400" />
+                            <h4 className="text-sm font-black uppercase tracking-wider">Energy Forecasting</h4>
+                          </div>
+                          <p className="text-xs text-slate-400 leading-relaxed">Next week's predicted capacity: <span className="text-white font-bold">38.5 hours</span>. Ideal for high-intensity tasks.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <Brain className="absolute -right-12 -bottom-12 w-64 h-64 text-white/5 rotate-12" />
+                  </div>
+
+                  {/* Project Quick View */}
+                  <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
+                    <div className="flex justify-between items-center mb-8">
+                      <div>
+                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Active Projects Insight</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time delivery status</p>
+                      </div>
+                      <button className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline">View All Projects</button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {projects.length > 0 ? projects.slice(0, 3).map((project, i) => (
+                        <div key={project.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group">
+                          <div className="flex items-center gap-4">
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center font-black text-white shadow-lg", i === 0 ? "bg-indigo-600" : i === 1 ? "bg-slate-800" : "bg-purple-600")}>
+                              {project.title[0]}
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-slate-900">{project.title}</h4>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{project.client} • {project.workspaceType}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-8">
+                            <div className="hidden md:block">
+                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Progress</div>
+                              <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${project.progress || 0}%` }}
+                                  className="h-full bg-indigo-600"
+                                />
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</div>
+                              <span className="text-[10px] font-black px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 uppercase tracking-wider">{project.status}</span>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-900 transition-colors" />
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="text-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                          <Layout className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                          <p className="text-sm font-bold text-slate-400">No active projects found.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sidebar Analytics */}
+                <div className="space-y-8">
+                  {/* Wellness Gauge */}
+                  <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Performance Index</h4>
+                    <div className="relative flex justify-center items-center mb-6">
+                      <svg className="w-40 h-40">
+                        <circle cx="80" cy="80" r="70" className="fill-none stroke-slate-100 stroke-[12]" />
+                        <motion.circle 
+                          cx="80" cy="80" r="70" 
+                          className="fill-none stroke-indigo-600 stroke-[12]" 
+                          strokeDasharray="440"
+                          initial={{ strokeDashoffset: 440 }}
+                          animate={{ strokeDashoffset: 440 - (440 * wellnessData.sustainabilityIndex) / 100 }}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-black text-slate-900">{wellnessData.sustainabilityIndex}%</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Sustainable</span>
+                      </div>
+                    </div>
+                    <p className="text-center text-[10px] text-slate-500 font-medium px-4">Your current workload vs energy levels is <span className="text-indigo-600 font-bold">Highly Optimized</span>.</p>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-200">
+                    <h3 className="text-xl font-black mb-6">Quick Actions</h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: "Launch War Room", icon: Shield, tab: "warroom" },
+                        { label: "New Project", icon: Plus, action: () => setIsCreatingProject(true) },
+                        { label: "Check AI Pulse", icon: Activity, tab: "pulse" },
+                        { label: "Open Focus Mode", icon: Brain, action: () => setShowFocusMode(true) },
+                      ].map((action, i) => (
+                        <button 
+                          key={i} 
+                          onClick={() => {
+                            if (action.tab) setActiveTab(action.tab as any);
+                            if (action.action) action.action();
+                          }}
+                          className="w-full flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <action.icon className="w-5 h-5 text-indigo-200" />
+                            <span className="text-sm font-bold uppercase tracking-wide">{action.label}</span>
+                          </div>
+                          <ArrowUpRight className="w-4 h-4 text-indigo-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Upcoming Schedule */}
+                  <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Upcoming Milestones</h4>
+                    <div className="space-y-6">
+                      {selectedMilestones.length > 0 ? selectedMilestones.slice(0, 2).map((m, i) => (
+                        <div key={m.id || i} className="flex gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className="w-2 h-2 bg-indigo-600 rounded-full" />
+                            <div className="w-0.5 h-full bg-slate-100" />
+                          </div>
+                          <div>
+                            <h5 className="text-sm font-black text-slate-900 leading-none mb-1">{m.title}</h5>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-2">{m.dueDate || 'Mar 15, 2024'}</p>
+                            <span className="text-[10px] font-black px-2 py-0.5 bg-slate-100 rounded text-slate-600 uppercase tracking-widest">Pending</span>
+                          </div>
+                        </div>
+                      )) : (
+                        <p className="text-xs font-bold text-slate-400 uppercase text-center py-4">No upcoming milestones.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === "wellness" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
