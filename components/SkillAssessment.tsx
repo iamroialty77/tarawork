@@ -70,7 +70,7 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
               className="group flex items-center gap-2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-widest hover:bg-emerald-100 transition-all shadow-sm"
             >
               <Verified className="w-3.5 h-3.5" />
-              VVVerified Badge
+              Verified Badge
             </button>
           ) : (
             <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-widest">
@@ -226,7 +226,7 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
                     }}
                     className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 active:scale-95"
                   >
-                    View VVVerified Badge
+                    View Verified Badge
                     <ArrowRight className="w-4 h-4" />
                   </motion.button>
                 )}
@@ -236,7 +236,7 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
         )}
       </AnimatePresence>
 
-      {/* VVVerified Badge Modal */}
+      {/* Verified Badge Modal */}
       <AnimatePresence>
         {showBadge && (
           <motion.div 
@@ -294,7 +294,7 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
                 </div>
 
                 <h2 className="text-3xl font-black text-white mb-2 tracking-tighter uppercase italic">
-                  VVVerified <span className="text-indigo-400">Badge</span>
+                  Verified <span className="text-indigo-400">Badge</span>
                 </h2>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mb-8">
                   Official Tara Protocol v4.0

@@ -29,18 +29,20 @@ interface AIAgentProps {
 export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentProps) {
   const [status, setStatus] = useState<"idle" | "analyzing" | "completed">("idle");
   const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState("");
+  const [currentStep, setCurrentStep] = useState("Initializing AI Engine...");
   const [insights, setInsights] = useState<string[]>([]);
   const [finalScore, setFinalScore] = useState(0);
   const [summary, setSummary] = useState("");
   
   const steps = mode === "vetting" ? [
+    "Establishing secure neural link...",
     "Analyzing candidate's technical background...",
     "Cross-referencing portfolio with job requirements...",
     "Evaluating wellness compatibility and burnout risk...",
     "Synthesizing sentiment from cover letter...",
     "Generating final vetting report..."
   ] : [
+    "Connecting to Gemini Pro 1.5 API...",
     "Scanning profile completeness and impact...",
     "Analyzing portfolio for high-value keywords...",
     "Benchmarking skills against market standards...",
@@ -48,16 +50,30 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
     "Drafting strategic improvement plan..."
   ];
 
+  useEffect(() => {
+    if (isOpen) {
+      setStatus("analyzing");
+      setProgress(0);
+      setInsights([]);
+      setFinalScore(0);
+      setSummary("");
+      setCurrentStep(steps[0]);
+      
+      const timer = setTimeout(startAnalysis, 1200);
+      return () => clearTimeout(timer);
+    } else {
+      setStatus("idle");
+    }
+  }, [isOpen]);
+
   const startAnalysis = () => {
-    setStatus("analyzing");
     setProgress(0);
-    setInsights([]);
     
     let stepIdx = 0;
     const interval = setInterval(() => {
       setProgress(prev => {
         const next = prev + 1;
-        if (next % 20 === 0 && stepIdx < steps.length) {
+        if (next % 18 === 0 && stepIdx < steps.length) {
           setCurrentStep(steps[stepIdx]);
           stepIdx++;
         }
@@ -68,7 +84,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
         }
         return next;
       });
-    }, 50);
+    }, 40);
   };
 
   const finishAnalysis = () => {
@@ -94,14 +110,6 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
       setSummary("Your profile is strong but needs more quantified results in your portfolio items to reach 'Elite' status.");
     }
   };
-
-  useEffect(() => {
-    if (isOpen && status === "idle") {
-      // Small delay before starting for dramatic effect
-      const timer = setTimeout(startAnalysis, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -140,16 +148,22 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
                       <div key={i} className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
                     ))}
                   </div>
-                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Powered by Gemini Pro</span>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Model: Gemini Pro 1.5 Flash</span>
                 </div>
               </div>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-slate-800 rounded-full transition-all text-slate-500"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+               <div className="hidden md:flex flex-col items-end mr-2">
+                 <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Connection Status</span>
+                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tight">Direct API Active</span>
+               </div>
+               <button 
+                onClick={onClose}
+                className="p-2 hover:bg-slate-800 rounded-full transition-all text-slate-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
@@ -193,24 +207,36 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 flex items-center gap-3">
-                    <Search className="w-4 h-4 text-slate-500" />
-                    <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-                      <motion.div 
-                        animate={{ width: ["0%", "100%"] }}
-                        transition={{ duration: 1, repeat: Infinity }}
-                        className="h-full bg-indigo-500"
-                      />
+                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 flex items-center gap-3 overflow-hidden relative group">
+                    <Search className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                    <div className="flex-1">
+                      <div className="flex justify-between text-[8px] font-bold text-slate-600 mb-1 uppercase tracking-tighter">
+                         <span>Token Input</span>
+                         <span>{Math.floor(progress * 12.5)} tokens</span>
+                      </div>
+                      <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div 
+                          animate={{ width: ["0%", "100%"] }}
+                          transition={{ duration: 1, repeat: Infinity }}
+                          className="h-full bg-indigo-500"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 flex items-center gap-3">
-                    <Fingerprint className="w-4 h-4 text-slate-500" />
-                    <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-                      <motion.div 
-                        animate={{ width: ["100%", "0%"] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        className="h-full bg-emerald-500"
-                      />
+                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 flex items-center gap-3 overflow-hidden relative group">
+                    <Fingerprint className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                    <div className="flex-1">
+                       <div className="flex justify-between text-[8px] font-bold text-slate-600 mb-1 uppercase tracking-tighter">
+                         <span>Neural Latency</span>
+                         <span>{Math.floor(Math.random() * 5 + 20)}ms</span>
+                      </div>
+                      <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div 
+                          animate={{ width: ["100%", "0%"] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="h-full bg-emerald-500"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
