@@ -10,6 +10,7 @@ import {
   CheckCircle2, 
   Clock, 
   ChevronRight,
+  AlertTriangle,
   MessageSquare,
   ExternalLink,
   Link as LinkIcon,
@@ -22,13 +23,17 @@ import {
   Shield,
   Zap,
   DollarSign,
-  Loader2
+  Loader2,
+  Brain
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { cn } from "../lib/utils";
 import VideoCall from "./VideoCall";
+import WellnessDashboard from "./WellnessDashboard";
+import FocusMode from "./FocusMode";
+import { UserWellness } from "../types/wellness";
 
 interface WorkspaceProps {
   projects: Project[];
@@ -36,13 +41,25 @@ interface WorkspaceProps {
 }
 
 export default function Workspace({ projects, onUpdateProject }: WorkspaceProps) {
-  const [activeTab, setActiveTab] = useState<"active" | "warroom" | "reviews" | "calls">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "warroom" | "reviews" | "calls" | "wellness">("active");
   const [selectedProject, setSelectedProject] = useState<Project | null>(projects[0] || null);
   const [editingLink, setEditingLink] = useState<string | null>(null);
   const [tempLink, setTempLink] = useState("");
   const [showWarRoom, setShowWarRoom] = useState(false);
   const [activeCall, setActiveCall] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showFocusMode, setShowFocusMode] = useState(false);
+
+  // Mock wellness data - in a real app this would come from the user profile/wellness service
+  const wellnessData: UserWellness = {
+    weeklyCapacity: 35,
+    currentWorkload: 28,
+    energyRating: "Balanced",
+    focusHours: 12,
+    burnoutRiskScore: 35,
+    workToRestRatio: 4.2,
+    consecutiveHighLoadDays: 2
+  };
 
   // Sync selected project when projects prop changes from DB
   useEffect(() => {
@@ -99,6 +116,15 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
           onLeave={() => setActiveCall(false)} 
         />
       )}
+      <FocusMode 
+        isOpen={showFocusMode} 
+        onClose={() => setShowFocusMode(false)}
+        tasks={(selectedProject?.milestones || []).map(m => ({
+          id: m.id,
+          title: m.title,
+          completed: m.status === 'Completed'
+        }))}
+      />
       {/* Workspace Header */}
       <div className="bg-slate-900 p-6 text-white">
         <div className="flex justify-between items-center mb-6">
@@ -126,13 +152,14 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
           {[
             { id: "active", label: "Active Projects", icon: Clock },
             { id: "warroom", label: "Project War Room", icon: Shield },
+            { id: "wellness", label: "Sustainable Performance", icon: Zap },
             { id: "reviews", label: "Code & Design", icon: Code2 },
             { id: "calls", label: "AI Meeting Notes", icon: MessageSquare },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
-                setActiveTab(tab.id as "active" | "warroom" | "reviews" | "calls");
+                setActiveTab(tab.id as "active" | "warroom" | "reviews" | "calls" | "wellness");
                 if (tab.id === 'warroom') setShowWarRoom(true);
                 else setShowWarRoom(false);
               }}
@@ -149,6 +176,28 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
 
       <div className="p-6">
         <AnimatePresence mode="wait">
+          {activeTab === "wellness" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <WellnessDashboard 
+                wellness={wellnessData} 
+                revenuePerHour={85} 
+              />
+              <div className="mt-8 flex justify-center">
+                <button 
+                  onClick={() => setShowFocusMode(true)}
+                  className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20"
+                >
+                  <Brain className="w-5 h-5" />
+                  Enter Focus Environment
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === "active" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -199,9 +248,17 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                         <span className="text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-100">
                           {project.status}
                         </span>
-                        <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                          <Lock className="w-3 h-3" />
-                          Escrow Active
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            <Lock className="w-3 h-3" />
+                            Escrow Active
+                          </div>
+                          {wellnessData.currentWorkload > wellnessData.weeklyCapacity * 0.9 && (
+                            <div className="flex items-center gap-1 text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 uppercase tracking-tighter animate-pulse">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              Overcommitment Risk
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -345,6 +402,12 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
                                   <Clock className="w-3 h-3" />
                                   Due {milestone.dueDate}
                                 </span>
+                                {milestone.status === 'In-Progress' && wellnessData.currentWorkload > wellnessData.weeklyCapacity * 0.8 && (
+                                  <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-tighter flex items-center gap-1">
+                                    <Zap className="w-2.5 h-2.5" />
+                                    Healthy Suggestion: Mar 18
+                                  </span>
+                                )}
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                   <DollarSign className="w-3 h-3" />
                                   ₱{milestone.amount}

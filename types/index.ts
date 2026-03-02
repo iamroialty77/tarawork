@@ -1,3 +1,5 @@
+import { UserWellness, FocusSession, TeamWellness } from "./wellness";
+
 export type FreelancerCategory = "Developer" | "Virtual Assistant" | "Designer" | "Writer" | "Marketing Specialist";
 export type PaymentMethod = "Hourly" | "Flat-Rate";
 export type JobType = "Full-time" | "Part-time" | "Contract" | "One-time Project";
@@ -125,6 +127,7 @@ export interface UserProfile {
   aiInsights?: AIAnalysis;
   ranking?: number; // Leaderboard position
   portfolio?: PortfolioItem[];
+  wellness?: UserWellness;
 }
 
 export interface PortfolioItem {

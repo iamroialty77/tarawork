@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     ranking INTEGER,
     status TEXT DEFAULT 'pending', -- pending, approved, suspended
     "verification_documents" JSONB DEFAULT '[]', -- { type, url, name }
+    wellness JSONB DEFAULT '{"weeklyCapacity": 40, "currentWorkload": 0, "energyRating": "Balanced", "focusHours": 0, "burnoutRiskScore": 0, "workToRestRatio": 0, "consecutiveHighLoadDays": 0}',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
