@@ -32,7 +32,8 @@ import {
   Loader2,
   Plus,
   Brain,
-  ArrowUpRight
+  ArrowUpRight,
+  Bell
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -73,6 +74,9 @@ export default function Workspace({
   const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false);
   const [newWorkflow, setNewWorkflow] = useState({ trigger: "", action: "", name: "", icon: "Zap" });
   const [showAIClauseAudit, setShowAIClauseAudit] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [connectedApps, setConnectedApps] = useState<Record<string, string[]>>({});
 
   const selectedMilestones = selectedProject?.milestones || [];
 
@@ -114,6 +118,29 @@ export default function Workspace({
       setEditingLink(null);
       setIsSyncing(false);
     }
+  };
+
+  const handleConnect = (appName: string) => {
+    if (!selectedProject) return;
+    
+    const projectId = selectedProject.id;
+    const projectApps = connectedApps[projectId] || [];
+    
+    if (projectApps.includes(appName)) {
+      setToastMsg(`${appName} is already connected.`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+    
+    setConnectedApps({
+      ...connectedApps,
+      [projectId]: [...projectApps, appName]
+    });
+    
+    setToastMsg(`Successfully connected to ${appName}!`);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   const handleCreateProject = () => {
@@ -1463,27 +1490,39 @@ export default function Workspace({
 
                         const currentIntegrations = integrations[selectedProject.workspaceType as keyof typeof integrations] || integrations["General"];
 
-                        return currentIntegrations.map((app, i) => (
-                          <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all group cursor-pointer">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110", app.bg)}>
-                                <app.icon className={cn("w-5 h-5", app.color)} />
+                        return currentIntegrations.map((app, i) => {
+                          const isConnected = (connectedApps[selectedProject?.id || ""] || []).includes(app.name);
+                          
+                          return (
+                            <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all group cursor-pointer">
+                              <div className="flex items-center gap-3 mb-4">
+                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110", app.bg)}>
+                                  <app.icon className={cn("w-5 h-5", app.color)} />
+                                </div>
+                                <div>
+                                  <h6 className="text-xs font-black text-slate-900 tracking-tight">{app.name}</h6>
+                                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{app.description}</p>
+                                </div>
                               </div>
-                              <div>
-                                <h6 className="text-xs font-black text-slate-900 tracking-tight">{app.name}</h6>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{app.description}</p>
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => handleConnect(app.name)}
+                                  className={cn(
+                                    "flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                                    isConnected 
+                                      ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
+                                      : "bg-slate-50 group-hover:bg-indigo-600 group-hover:text-white"
+                                  )}
+                                >
+                                  {isConnected ? "Connected" : "Connect"}
+                                </button>
+                                <button className="w-10 h-10 bg-slate-50 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <button className="flex-1 py-2 bg-slate-50 group-hover:bg-indigo-600 group-hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
-                                Connect
-                              </button>
-                              <button className="w-10 h-10 bg-slate-50 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ));
+                          );
+                        });
                       })()}
                     </div>
                     
@@ -1497,7 +1536,14 @@ export default function Workspace({
                           <p className="text-[9px] text-indigo-600 font-medium">Request a new partnership or use our API.</p>
                         </div>
                       </div>
-                      <button className="px-4 py-1.5 bg-white text-indigo-600 border border-indigo-200 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all">
+                      <button 
+                        onClick={() => {
+                          setToastMsg("Request sent! Our team will look into adding this tool.");
+                          setShowToast(true);
+                          setTimeout(() => setShowToast(false), 3000);
+                        }}
+                        className="px-4 py-1.5 bg-white text-indigo-600 border border-indigo-200 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all"
+                      >
                         Request Tool
                       </button>
                     </div>
@@ -1620,6 +1666,31 @@ export default function Workspace({
         mode="audit-contract" 
         targetData={selectedProject} 
       />
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, x: "-50%" }}
+            className="fixed bottom-8 left-1/2 z-[100] w-full max-w-md px-4"
+          >
+            <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-4">
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                <Bell className="w-5 h-5 text-white animate-ring" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold tracking-tight">{toastMsg}</p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Partnership Sync</p>
+              </div>
+              <button onClick={() => setShowToast(false)} className="text-slate-500 hover:text-white transition-colors text-2xl">
+                &times;
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
