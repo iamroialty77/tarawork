@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { PortfolioItem } from "../types";
-import { Plus, Trash2, ExternalLink, Code, Image as ImageIcon, Briefcase, MessageSquare, Github, Layout, Sparkles } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Code, Image as ImageIcon, Briefcase, MessageSquare, Github, Layout, Sparkles, Brain, Search } from "lucide-react";
 import Link from "next/link";
 import PortfolioPreview from "./PortfolioPreview";
+import AIAgent from "./AIAgent";
 
 interface PortfolioManagerProps {
   items: PortfolioItem[];
@@ -14,6 +15,7 @@ interface PortfolioManagerProps {
 }
 
 export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: PortfolioManagerProps) {
+  const [isAuditing, setIsAuditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newItem, setNewItem] = useState<Partial<PortfolioItem>>({
     title: "",
@@ -43,20 +45,38 @@ export default function PortfolioManager({ items, onAdd, onRemove, isOwner }: Po
 
   return (
     <div className="space-y-6">
+      <AIAgent 
+        isOpen={isAuditing} 
+        onClose={() => setIsAuditing(false)} 
+        mode="audit" 
+        targetData={items} 
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Professional Portfolio</h3>
           <p className="text-sm text-slate-500">Ipakita ang iyong mga pinakamahusay na gawa.</p>
         </div>
-        {isOwner && !isAdding && (
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
-          >
-            <Plus className="w-4 h-4" />
-            Magdagdag
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {isOwner && (
+            <button
+              onClick={() => setIsAuditing(true)}
+              className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-md group"
+            >
+              <Brain className="w-4 h-4 text-indigo-400 group-hover:animate-pulse" />
+              Request AI Audit
+            </button>
+          )}
+          {isOwner && !isAdding && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+            >
+              <Plus className="w-4 h-4" />
+              Magdagdag
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdding && (

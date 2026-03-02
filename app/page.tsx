@@ -46,10 +46,12 @@ import {
   Layout, 
   PieChart, 
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Brain
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import AIAgent from "../components/AIAgent";
 
 export default function Home() {
   const router = useRouter();
@@ -120,6 +122,9 @@ export default function Home() {
   }, []);
 
   const [isSaving, setIsSaving] = useState(false);
+
+  const [isVetting, setIsVetting] = useState(false);
+  const [vettingData, setVettingData] = useState<any>(null);
 
   const energyScore = (userEnergy?: string, jobEnergy?: string) => {
     const u = (userEnergy || "Balanced").toLowerCase();
@@ -865,6 +870,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
+      {/* AI Vetting Agent */}
+      <AIAgent 
+        isOpen={isVetting} 
+        onClose={() => setIsVetting(false)} 
+        mode="vetting" 
+        targetData={vettingData} 
+      />
+
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200">
         {dbError && (
@@ -1893,6 +1906,16 @@ export default function Home() {
                           </div>
 
                           <div className="flex flex-wrap gap-3 pt-2">
+                            <button 
+                              onClick={() => {
+                                setVettingData(app);
+                                setIsVetting(true);
+                              }}
+                              className="px-6 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-slate-800 transition-all uppercase tracking-widest flex items-center gap-2 border border-slate-800 shadow-xl shadow-slate-900/10 active:scale-95"
+                            >
+                              <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                              Start AI Vetting
+                            </button>
                             {app.status === 'pending' && (
                               <button 
                                 onClick={() => {

@@ -1,0 +1,279 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Brain, 
+  Sparkles, 
+  ShieldCheck, 
+  Cpu, 
+  Loader2, 
+  CheckCircle2, 
+  AlertCircle, 
+  X,
+  Zap,
+  BarChart3,
+  Search,
+  Fingerprint,
+  Bot
+} from "lucide-react";
+import { cn } from "../lib/utils";
+
+interface AIAgentProps {
+  isOpen: boolean;
+  onClose: () => void;
+  mode: "vetting" | "audit";
+  targetData: any;
+}
+
+export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentProps) {
+  const [status, setStatus] = useState<"idle" | "analyzing" | "completed">("idle");
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState("");
+  const [insights, setInsights] = useState<string[]>([]);
+  const [finalScore, setFinalScore] = useState(0);
+  const [summary, setSummary] = useState("");
+  
+  const steps = mode === "vetting" ? [
+    "Analyzing candidate's technical background...",
+    "Cross-referencing portfolio with job requirements...",
+    "Evaluating wellness compatibility and burnout risk...",
+    "Synthesizing sentiment from cover letter...",
+    "Generating final vetting report..."
+  ] : [
+    "Scanning profile completeness and impact...",
+    "Analyzing portfolio for high-value keywords...",
+    "Benchmarking skills against market standards...",
+    "Evaluating SEO and discoverability factors...",
+    "Drafting strategic improvement plan..."
+  ];
+
+  const startAnalysis = () => {
+    setStatus("analyzing");
+    setProgress(0);
+    setInsights([]);
+    
+    let stepIdx = 0;
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        const next = prev + 1;
+        if (next % 20 === 0 && stepIdx < steps.length) {
+          setCurrentStep(steps[stepIdx]);
+          stepIdx++;
+        }
+        if (next >= 100) {
+          clearInterval(interval);
+          finishAnalysis();
+          return 100;
+        }
+        return next;
+      });
+    }, 50);
+  };
+
+  const finishAnalysis = () => {
+    setStatus("completed");
+    
+    if (mode === "vetting") {
+      setFinalScore(Math.floor(Math.random() * (98 - 85 + 1) + 85)); // High score for demo
+      setInsights([
+        "Strong alignment with technical stack (React/Next.js).",
+        "Portfolio demonstrates high-energy execution in past projects.",
+        "Wellness profile indicates high availability and low burnout risk.",
+        "Soft skills detected: Clear communication, proactive attitude."
+      ]);
+      setSummary("Recommended candidate. High probability of long-term success and cultural fit.");
+    } else {
+      setFinalScore(Math.floor(Math.random() * (95 - 75 + 1) + 75));
+      setInsights([
+        "Profile is 85% complete. Missing specific case study metrics.",
+        "Skills are highly relevant but need better SEO optimization.",
+        "Portfolio presentation is professional but lacks video demos.",
+        "Competitive ranking is in the top 15% for the current category."
+      ]);
+      setSummary("Your profile is strong but needs more quantified results in your portfolio items to reach 'Elite' status.");
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && status === "idle") {
+      // Small delay before starting for dramatic effect
+      const timer = setTimeout(startAnalysis, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
+      />
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative w-full max-w-lg bg-slate-950 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden shadow-indigo-500/10"
+      >
+        {/* Glowing Background Effect */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-gradient-to-b from-indigo-500/10 to-transparent blur-3xl pointer-events-none" />
+        
+        <div className="p-8">
+          <div className="flex justify-between items-start mb-8 relative">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <Brain className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white tracking-tight">
+                  {mode === "vetting" ? "AI Vetting Agent" : "AI Profile Auditor"}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Powered by Gemini Pro</span>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-slate-800 rounded-full transition-all text-slate-500"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {status === "analyzing" ? (
+              <motion.div 
+                key="analyzing"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-8 py-4"
+              >
+                <div className="relative h-48 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-32 h-32 rounded-full border-2 border-indigo-500/20" />
+                    <div className="absolute w-40 h-40 rounded-full border border-indigo-500/10 animate-[spin_8s_linear_infinite]" />
+                  </div>
+                  
+                  <div className="text-center relative">
+                    <motion.div
+                      animate={{ 
+                        scale: [1, 1.1, 1],
+                        opacity: [0.5, 1, 0.5]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Zap className="w-12 h-12 text-indigo-500 mx-auto mb-2" />
+                    </motion.div>
+                    <span className="text-4xl font-black text-white">{progress}%</span>
+                  </div>
+                  
+                  {/* Scan Line Effect */}
+                  <motion.div 
+                    animate={{ top: ["0%", "100%", "0%"] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-x-0 h-1 bg-indigo-500/50 blur-sm z-10"
+                  />
+                </div>
+
+                <div className="text-center">
+                  <p className="text-indigo-300 font-medium text-sm animate-pulse">{currentStep}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 flex items-center gap-3">
+                    <Search className="w-4 h-4 text-slate-500" />
+                    <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        animate={{ width: ["0%", "100%"] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                        className="h-full bg-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 flex items-center gap-3">
+                    <Fingerprint className="w-4 h-4 text-slate-500" />
+                    <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        animate={{ width: ["100%", "0%"] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="h-full bg-emerald-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="completed"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="bg-indigo-600/10 border border-indigo-500/20 p-6 rounded-3xl relative overflow-hidden">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em]">Overall Confidence Score</span>
+                    <div className="flex items-center gap-1">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-emerald-400">Verified by TARA AI</span>
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-3">
+                    <span className="text-6xl font-black text-white">{finalScore}</span>
+                    <span className="text-indigo-400 font-bold text-xl mb-2">%</span>
+                  </div>
+                  <p className="text-indigo-200/60 text-xs font-medium mt-2 leading-relaxed italic">
+                    "{summary}"
+                  </p>
+                  <Sparkles className="absolute top-6 right-6 w-12 h-12 text-indigo-500/20 rotate-12" />
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">AI Intelligence Insights</h4>
+                  {insights.map((insight, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="flex items-start gap-3 p-4 bg-slate-900/40 border border-slate-800/50 rounded-2xl"
+                    >
+                      <div className="p-1.5 bg-indigo-500/10 rounded-lg shrink-0 mt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                      </div>
+                      <p className="text-sm text-slate-300 font-medium leading-snug">{insight}</p>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button 
+                    onClick={onClose}
+                    className="flex-1 py-4 bg-white text-slate-950 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all shadow-xl shadow-white/5 active:scale-95"
+                  >
+                    Done
+                  </button>
+                  <button className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-all border border-slate-800">
+                    <BarChart3 className="w-5 h-5" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
