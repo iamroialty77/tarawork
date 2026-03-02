@@ -15,8 +15,10 @@ import {
   Frown,
   Coffee,
   Brain,
-  Timer
+  Timer,
+  ShieldCheck
 } from "lucide-react";
+import { ResponsiveContainer, AreaChart, Area } from "recharts";
 import { UserWellness, EnergyLevel, WorkloadStatus, TeamWellness } from "../types/wellness";
 import { cn } from "../lib/utils";
 
@@ -282,6 +284,63 @@ export default function WellnessDashboard({ wellness, revenuePerHour, teamWellne
             <p className="text-[10px] text-slate-500 mt-2 leading-tight">
               Teams with stable hours have 40% higher retention in 2026.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Proof of Sustainability + Financial Velocity */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Proof of Sustainability */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:col-span-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 rounded-lg">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 tracking-tight text-sm uppercase tracking-widest">Proof of Sustainability</h3>
+                <p className="text-slate-500 text-xs">Consistency without burnout</p>
+              </div>
+            </div>
+            {wellness.verifiedSustainable && (
+              <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 uppercase tracking-widest">Verified</span>
+            )}
+          </div>
+
+          <div className="flex items-end gap-3">
+            <div>
+              <div className="text-3xl font-black text-slate-900">{Math.round(wellness.sustainabilityIndex)}<span className="text-sm text-slate-400 font-extrabold">/100</span></div>
+              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sustainability Index</div>
+            </div>
+            {wellness.lastRecoveryBlock && (
+              <div className="ml-auto text-right">
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Last Recovery</div>
+                <div className="text-xs font-semibold text-slate-700">{new Date(wellness.lastRecoveryBlock).toLocaleDateString()}</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Financial Velocity */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-50 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 tracking-tight text-sm uppercase tracking-widest">Financial Velocity</h3>
+                <p className="text-slate-500 text-xs">Revenue per focus hour</p>
+              </div>
+            </div>
+            <div className="text-sm font-black text-slate-900">${Math.round(wellness.energyEfficiency)} / hr</div>
+          </div>
+          <div className="h-28">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={[{v: wellness.energyEfficiency * 0.8},{v: wellness.energyEfficiency * 0.9},{v: wellness.energyEfficiency * 1.0},{v: wellness.energyEfficiency * 0.95},{v: wellness.energyEfficiency * 1.1}]}> 
+                <Area type="monotone" dataKey="v" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.15} strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

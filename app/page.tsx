@@ -120,6 +120,16 @@ export default function Home() {
   }, []);
 
   const [isSaving, setIsSaving] = useState(false);
+
+  const energyScore = (userEnergy?: string, jobEnergy?: string) => {
+    const u = (userEnergy || "Balanced").toLowerCase();
+    const j = (jobEnergy || "Balanced").toLowerCase();
+    if (u === j) return 100;
+    if ((u === "high" && j === "balanced") || (u === "balanced" && j === "low") || (u === "low" && j === "balanced")) return 80;
+    if ((u === "high" && j === "low") || (u === "low" && j === "high")) return 50;
+    return 70;
+  };
+
   const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
   const [clientTab, setClientTab] = useState<"overview" | "post" | "postings" | "talents" | "profile">("overview");
 
@@ -1493,7 +1503,15 @@ export default function Home() {
                         </div>
                         <div>
                           <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
-                          <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
+                            {freelancer.wellness?.verifiedSustainable && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-widest" title="Verified Sustainable Performer">
+                                <ShieldCheck className="w-3 h-3" />
+                                Sustainable
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex justify-between items-center pt-4 border-t border-slate-50">
@@ -1709,6 +1727,14 @@ export default function Home() {
                               <h4 className="font-black text-slate-900 text-xl tracking-tight">{app.profiles?.name || "Unknown Freelancer"}</h4>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[10px] font-bold bg-white text-indigo-600 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-widest">{app.profiles?.category}</span>
+                                {app.profiles?.wellness && (
+                                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-amber-50 border-amber-100">
+                                    <Zap className="w-3 h-3 text-amber-500" />
+                                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">
+                                      {energyScore(app.profiles.wellness.energyRating, hirerJobs.find(j => j.title === selectedJobTitle)?.energyRequirement)}% Compatibility
+                                    </span>
+                                  </div>
+                                )}
                                 <span className={cn(
                                   "text-[10px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-widest",
                                   app.status === 'hired' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :

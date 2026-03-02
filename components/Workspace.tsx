@@ -58,7 +58,10 @@ export default function Workspace({ projects, onUpdateProject }: WorkspaceProps)
     focusHours: 12,
     burnoutRiskScore: 35,
     workToRestRatio: 4.2,
-    consecutiveHighLoadDays: 2
+    consecutiveHighLoadDays: 2,
+    sustainabilityIndex: 86,
+    energyEfficiency: 95, // $/focus hour
+    verifiedSustainable: true
   };
 
   // Sync selected project when projects prop changes from DB

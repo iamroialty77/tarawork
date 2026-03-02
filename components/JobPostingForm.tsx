@@ -27,6 +27,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
     customQuestions: [],
     deadline: "",
     category: "Developer",
+    energyRequirement: "Balanced",
   });
 
   const [skillInput, setSkillInput] = useState("");
@@ -52,6 +53,25 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
       setStep((s) => Math.min(s + 1, 3));
       setIsAiAnalyzing(false);
     }, 800);
+  };
+
+  const suggestEnergyRequirement = () => {
+    setIsAiAnalyzing(true);
+    setTimeout(() => {
+      const desc = (formData.description || "").toLowerCase();
+      const title = (formData.title || "").toLowerCase();
+      const combined = desc + " " + title;
+      
+      let suggestion: "High" | "Balanced" | "Low" = "Balanced";
+      if (combined.includes("urgent") || combined.includes("fast") || combined.includes("hard") || combined.includes("deadline") || combined.includes("complex") || combined.includes("immediate")) {
+        suggestion = "High";
+      } else if (combined.includes("flexible") || combined.includes("easy") || combined.includes("maintenance") || combined.includes("support") || combined.includes("whenever")) {
+        suggestion = "Low";
+      }
+      
+      setFormData(prev => ({ ...prev, energyRequirement: suggestion }));
+      setIsAiAnalyzing(false);
+    }, 1200);
   };
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
@@ -139,6 +159,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         customQuestions: [],
         deadline: "",
         category: "Developer",
+        energyRequirement: "Balanced",
       });
     } catch (err: any) {
       console.error("Error publishing job:", err);
@@ -211,7 +232,14 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         <div className="bg-white p-5 rounded-2xl shadow-xl shadow-indigo-200/50 border border-indigo-100 transition-all hover:scale-[1.02]">
            <div className="flex justify-between items-start mb-2">
              <div className="h-6 w-6 bg-indigo-100 rounded"></div>
-             <span className="text-[10px] font-bold text-indigo-500">{formData.duration}</span>
+             <div className="flex gap-1">
+               {formData.energyRequirement && (
+                 <span className="text-[8px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest">
+                   {formData.energyRequirement}
+                 </span>
+               )}
+               <span className="text-[10px] font-bold text-indigo-500">{formData.duration}</span>
+             </div>
            </div>
            <h5 className="font-bold text-sm text-gray-900 line-clamp-1">{formData.title || 'Project Title Placeholder'}</h5>
            <div className="flex flex-wrap gap-1.5 mt-2">
@@ -349,6 +377,27 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
             </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2 text-amber-600">Energy Requirement</label>
+          <div className="flex gap-2 p-1 bg-amber-50/30 border-2 border-amber-100/50 rounded-2xl">
+            {["High", "Balanced", "Low"].map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setFormData({ ...formData, energyRequirement: level as any })}
+                className={cn(
+                  "flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                  formData.energyRequirement === level 
+                    ? "bg-amber-500 text-white shadow-lg shadow-amber-200" 
+                    : "text-amber-700 hover:bg-amber-100"
+                )}
+              >
+                {level}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -596,19 +645,29 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         {/* Left Column: Form */}
         <div className="lg:col-span-7 bg-white p-8 rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100">
           <div className="mb-10">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-black text-gray-900 tracking-tight">Post your project</h2>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3].map((s) => (
-                  <div
-                    key={s}
-                    className={`h-1.5 w-12 rounded-full transition-all duration-500 ${
-                      step >= s ? "bg-indigo-600" : "bg-gray-100"
-                    }`}
-                  />
-                ))}
-              </div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Post your project</h2>
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={suggestEnergyRequirement}
+              className="group flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 hover:bg-amber-100 transition-all font-bold text-[10px] uppercase tracking-widest active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5 group-hover:animate-spin" />
+              AI Energy Predictor
+            </button>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3].map((s) => (
+                <div
+                  key={s}
+                  className={`h-1.5 w-12 rounded-full transition-all duration-500 ${
+                    step >= s ? "bg-indigo-600" : "bg-gray-100"
+                  }`}
+                />
+              ))}
             </div>
+          </div>
+        </div>
             
             <div className="flex items-center gap-4 text-sm font-bold text-indigo-600">
               <span className={`px-3 py-1 rounded-full ${step === 1 ? 'bg-indigo-100' : 'bg-gray-100 text-gray-400'}`}>1. Details</span>

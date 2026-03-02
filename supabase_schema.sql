@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     ranking INTEGER,
     status TEXT DEFAULT 'pending', -- pending, approved, suspended
     "verification_documents" JSONB DEFAULT '[]', -- { type, url, name }
-    wellness JSONB DEFAULT '{"weeklyCapacity": 40, "currentWorkload": 0, "energyRating": "Balanced", "focusHours": 0, "burnoutRiskScore": 0, "workToRestRatio": 0, "consecutiveHighLoadDays": 0}',
+    wellness JSONB DEFAULT '{"weeklyCapacity": 40, "currentWorkload": 0, "energyRating": "Balanced", "focusHours": 0, "burnoutRiskScore": 0, "workToRestRatio": 0, "consecutiveHighLoadDays": 0, "sustainabilityIndex": 85, "energyEfficiency": 0, "verifiedSustainable": false}',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     deadline TEXT,
     "customQuestions" JSONB DEFAULT '[]',
     hirer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    status TEXT DEFAULT 'live' -- live, closed, flagged, pending
+    status TEXT DEFAULT 'live', -- live, closed, flagged, pending
+    "energy_requirement" TEXT DEFAULT 'Balanced' -- High, Balanced, Low
 );
 
 -- Enable Row Level Security
@@ -227,6 +228,7 @@ ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_url TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_name TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_type TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
+ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS "energy_requirement" TEXT DEFAULT 'Balanced';
 
 -- 9. ENABLE REAL-TIME REPLICATION
 -- This allows the app to show new messages instantly without reloading.

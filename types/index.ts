@@ -85,6 +85,8 @@ export interface Job {
   customQuestions?: ProposalQuestion[];
   hirer_id?: string;
   applicantCount?: number;
+  energyRequirement?: "High" | "Balanced" | "Low"; // Energy requirement of the job
+  sustainabilityMatchScore?: number; // 0-100: Calculated compatibility
 }
 
 export interface VerifiedSkill {

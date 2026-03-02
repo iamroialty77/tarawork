@@ -27,6 +27,8 @@ export interface JobCardProps {
   missingSkills?: string[];
   onApply?: (jobId: string) => void;
   applicationStatus?: string;
+  sustainabilityMatch?: number;
+  energyRequirement?: string;
 }
 
 export default function JobCard({ 
@@ -36,7 +38,9 @@ export default function JobCard({
   matchedSkills = [],
   missingSkills = [],
   onApply,
-  applicationStatus
+  applicationStatus,
+  sustainabilityMatch,
+  energyRequirement
 }: JobCardProps) {
   const isApplied = !!applicationStatus;
   const [isSaved, setIsSaved] = useState(false);
@@ -73,6 +77,11 @@ export default function JobCard({
                   <span className="text-[10px] font-bold uppercase tracking-widest">
                     {job.category}
                   </span>
+                  {energyRequirement && (
+                    <span className="ml-1 text-[9px] font-bold bg-white text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-widest" title="Energy requirement">
+                      {energyRequirement}
+                    </span>
+                  )}
                   <Link 
                     href={job.hirer_id ? `/messages?with=${job.hirer_id}` : "/messages"} 
                     className="text-gray-400 hover:text-indigo-600 transition-colors"
@@ -82,7 +91,7 @@ export default function JobCard({
                   </Link>
                 </div>
                 {matchScore !== undefined && matchScore > 0 && (
-                  <div className="relative">
+                  <div className="relative flex items-center gap-2">
                     <button 
                       onMouseEnter={() => setShowMatchDetails(true)}
                       onMouseLeave={() => setShowMatchDetails(false)}
@@ -97,6 +106,18 @@ export default function JobCard({
                       <Sparkles className="w-3 h-3 mr-1" />
                       {matchScore}% Match
                     </button>
+
+                    {typeof sustainabilityMatch === 'number' && (
+                      <span className={cn(
+                        "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest",
+                        sustainabilityMatch >= 80 ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                        sustainabilityMatch >= 60 ? "bg-amber-50 text-amber-700 border-amber-100" :
+                        "bg-slate-50 text-slate-700 border-slate-100"
+                      )} title="Energy & sustainability compatibility">
+                        <ShieldCheck className="w-3 h-3 mr-1" />
+                        {sustainabilityMatch}% Sustainable
+                      </span>
+                    )}
 
                     {showMatchDetails && (
                       <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl border border-slate-200 shadow-xl z-20 p-4 animate-in fade-in slide-in-from-top-1 duration-200">

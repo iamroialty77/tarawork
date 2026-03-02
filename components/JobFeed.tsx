@@ -17,6 +17,15 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
+  const energyScore = (userEnergy?: string, jobEnergy?: string) => {
+    const u = (userEnergy || "Balanced").toLowerCase();
+    const j = (jobEnergy || "Balanced").toLowerCase();
+    if (u === j) return 100;
+    if ((u === "high" && j === "balanced") || (u === "balanced" && j === "low") || (u === "low" && j === "balanced")) return 80;
+    if ((u === "high" && j === "low") || (u === "low" && j === "high")) return 50;
+    return 70;
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -29,7 +38,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   const [useSmartMatching, setUseSmartMatching] = useState(true);
 
   const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
+    const filtered = jobs.filter((job) => {
       // 1. Smart Matching (Skills)
       if (useSmartMatching && profile.skills.length > 0) {
         const hasMatchingSkill = job.skills.some((skill) =>
@@ -52,19 +61,39 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
         job.skills.some(skill => skill.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
       if (!matchesSearch) return false;
 
-      // 3. Payment Method Filter
+      // 4. Payment Method Filter
       if (paymentFilter !== "All" && job.paymentMethod !== paymentFilter) {
         return false;
       }
 
-      // 4. Duration Filter
+      // 5. Duration Filter
       if (durationFilter !== "All" && job.duration !== durationFilter) {
         return false;
       }
 
       return true;
     });
-  }, [jobs, profile.skills, debouncedSearchTerm, paymentFilter, durationFilter, useSmartMatching, categoryFilter]);
+
+    if (useSmartMatching) {
+      return [...filtered].sort((a, b) => {
+        const matchedA = a.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase())).length;
+        const matchedB = b.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase())).length;
+        
+        const scoreA = matchedA / Math.max(a.skills.length, 1);
+        const scoreB = matchedB / Math.max(b.skills.length, 1);
+        
+        const energyMatchA = energyScore(profile.wellness?.energyRating, a.energyRequirement);
+        const energyMatchB = energyScore(profile.wellness?.energyRating, b.energyRequirement);
+        
+        const totalA = (0.6 * scoreA) + (0.4 * energyMatchA / 100);
+        const totalB = (0.6 * scoreB) + (0.4 * energyMatchB / 100);
+        
+        return totalB - totalA;
+      });
+    }
+
+    return filtered;
+  }, [jobs, profile.skills, profile.wellness, debouncedSearchTerm, paymentFilter, durationFilter, useSmartMatching, categoryFilter]);
 
   return (
     <div className="space-y-6">
@@ -156,6 +185,10 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             const matchScore = profile.skills.length > 0 
               ? Math.round((matchedSkills.length / Math.max(job.skills.length, 1)) * 100)
               : 0;
+            const eScore = energyScore(profile.wellness?.energyRating, job.energyRequirement);
+            let sustainabilityMatch = Math.round(0.6 * matchScore + 0.4 * eScore);
+            if (profile.wellness?.verifiedSustainable) sustainabilityMatch = Math.min(100, sustainabilityMatch + 5);
+
             return (
               <JobCard 
                 key={job.id} 
@@ -166,6 +199,8 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                 missingSkills={missingSkills}
                 onApply={onApply}
                 applicationStatus={appliedJobs[job.id]}
+                sustainabilityMatch={sustainabilityMatch}
+                energyRequirement={job.energyRequirement}
               />
             );
           })

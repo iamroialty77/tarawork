@@ -10,6 +10,9 @@ export interface UserWellness {
   workToRestRatio: number; // ratio
   lastRecoveryBlock?: string; // date
   consecutiveHighLoadDays: number;
+  sustainabilityIndex: number; // 0-100: reliability + consistency + health
+  energyEfficiency: number; // revenue per focus hour
+  verifiedSustainable: boolean; // badge status
 }
 
 export interface FocusSession {
