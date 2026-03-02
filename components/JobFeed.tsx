@@ -136,11 +136,25 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
               onChange={(e) => setCategoryFilter(e.target.value as any)}
             >
               <option value="All">All Categories</option>
+              <option value="General">General</option>
               <option value="Developer">Developer</option>
-              <option value="Virtual Assistant">Virtual Assistant</option>
               <option value="Designer">Designer</option>
+              <option value="Graphic Design">Graphic Design</option>
               <option value="Writer">Writer</option>
               <option value="Marketing Specialist">Marketing Specialist</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Virtual Assistant">Virtual Assistant</option>
+              <option value="Admin/VA">Admin/VA</option>
+              <option value="Customer Support">Customer Support</option>
+              <option value="Sales">Sales</option>
+              <option value="Project Management">Project Management</option>
+              <option value="QA/Testing">QA/Testing</option>
+              <option value="Data Entry">Data Entry</option>
+              <option value="Finance/Accounting">Finance/Accounting</option>
+              <option value="IT & Networking">IT & Networking</option>
+              <option value="Writing & Content">Writing & Content</option>
+              <option value="Data & Automation">Data & Automation</option>
+              <option value="Other">Other</option>
             </select>
           </div>
         </div>

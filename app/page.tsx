@@ -95,7 +95,7 @@ export default function Home() {
   const [profile, setProfile] = useState<UserProfile>({
     name: "User",
     role: "jobseeker",
-    category: "Developer",
+    category: "General",
     skills: [],
     verifiedSkills: [],
     softSkills: [
@@ -1127,6 +1127,9 @@ export default function Home() {
                   )}
                   {profile.category === "Marketing Specialist" && (
                     <>Discover <span className="font-bold text-white">{jobs.filter(j => j.category === "Marketing Specialist").length} marketing campaigns</span> you can lead.</>
+                  )}
+                  {!["Developer","Virtual Assistant","Designer","Writer","Marketing Specialist"].includes(profile.category as any) && (
+                    <>We found <span className="font-bold text-white">{jobs.filter(j => j.category === profile.category).length} opportunities</span> in your category.</>
                   )}
                 </p>
                 <div className="flex flex-wrap gap-4">

@@ -1,6 +1,25 @@
 import { UserWellness, FocusSession, TeamWellness } from "./wellness";
 
-export type FreelancerCategory = "Developer" | "Virtual Assistant" | "Designer" | "Writer" | "Marketing Specialist";
+export type FreelancerCategory =
+  | "Developer"
+  | "Designer"
+  | "Writer"
+  | "Virtual Assistant"
+  | "Marketing Specialist"
+  | "Admin/VA"
+  | "Marketing"
+  | "Graphic Design"
+  | "Customer Support"
+  | "Sales"
+  | "Project Management"
+  | "QA/Testing"
+  | "Data Entry"
+  | "Finance/Accounting"
+  | "IT & Networking"
+  | "Writing & Content"
+  | "Data & Automation"
+  | "General"
+  | "Other";
 export type PaymentMethod = "Hourly" | "Flat-Rate";
 export type JobType = "Full-time" | "Part-time" | "Contract" | "One-time Project";
 export type JobDuration = "1-2 weeks" | "1-3 months" | "Ongoing";

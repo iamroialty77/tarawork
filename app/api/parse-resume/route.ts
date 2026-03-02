@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
         name: file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' '),
         bio: `Successfully extracted text (${text.length} chars) but AI parsing is currently unavailable. Manual profile completion required.`,
         skills: [],
-        category: 'Developer'
+        category: 'General'
       }, { headers });
     }
 
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
           duration: z.string(),
           description: z.string(),
         })).optional(),
-        category: z.enum(['Developer', 'Designer', 'Writer', 'Virtual Assistant', 'Marketing Specialist']).optional(),
+        category: z.enum(['General','Developer','Designer','Graphic Design','Writer','Marketing Specialist','Marketing','Virtual Assistant','Admin/VA','Customer Support','Sales','Project Management','QA/Testing','Data Entry','Finance/Accounting','IT & Networking','Writing & Content','Data & Automation','Other']).optional(),
       }),
       prompt: `Extract professional information from the following resume text. 
 Note: The text might have been extracted from a multi-column or complex layout (like Canva). 
@@ -155,7 +155,7 @@ Use your natural language understanding to reassemble sections correctly if they
 Resume Text:
 \n\n${text}\n\n
 Please provide a concise bio, a list of technical and soft skills, and a summary of work experience. 
-Also categorize the person into one of the following: Developer, Designer, Writer, Virtual Assistant, Marketing Specialist.`,
+Also categorize the person into one of the following: General, Developer, Designer, Graphic Design, Writer, Marketing Specialist, Marketing, Virtual Assistant, Admin/VA, Customer Support, Sales, Project Management, QA/Testing, Data Entry, Finance/Accounting, IT & Networking, Writing & Content, Data & Automation, Other.`,
     });
 
     console.log('AI Resume Parser: Successfully parsed');

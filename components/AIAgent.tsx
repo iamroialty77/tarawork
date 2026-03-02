@@ -194,6 +194,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
               { id: 4, title: "Cloud Native Scalability", description: "Advanced Kubernetes orchestration and multi-region deployment strategies.", duration: "3 weeks", level: "Expert" }
             ];
           case "Designer":
+          case "Graphic Design":
             return [
               { id: 1, title: "Design Systems Governance", description: "Building and scaling cross-platform design systems for enterprise-grade applications.", duration: "4 weeks", level: "Expert" },
               { id: 2, title: "Behavioral UX Research", description: "Using cognitive psychology and data analytics to drive product design decisions.", duration: "3 weeks", level: "Advanced" },
@@ -201,6 +202,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
               { id: 4, title: "Motion Engineering", description: "Advanced principles of interface choreography and high-fidelity prototyping.", duration: "3 weeks", level: "Expert" }
             ];
           case "Marketing Specialist":
+          case "Marketing":
             return [
               { id: 1, title: "Algorithmic Growth Hacking", description: "Leveraging AI for predictive customer acquisition and churn reduction.", duration: "4 weeks", level: "Expert" },
               { id: 2, title: "Omni-channel Data Attribution", description: "Building complex tracking systems for multi-touch conversion analysis.", duration: "3 weeks", level: "Advanced" },
@@ -208,6 +210,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
               { id: 4, title: "Performance Marketing Audit", description: "Advanced financial modeling for ROAS optimization at $1M+ monthly spend.", duration: "3 weeks", level: "Expert" }
             ];
           case "Virtual Assistant":
+          case "Admin/VA":
             return [
               { id: 1, title: "Operations Architecture", description: "Building automated workflows using Zapier, Make, and custom AI agents.", duration: "4 weeks", level: "Expert" },
               { id: 2, title: "Executive Strategic Support", description: "High-level project management and stakeholder communication frameworks.", duration: "3 weeks", level: "Advanced" },
@@ -215,11 +218,19 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
               { id: 4, title: "Cross-functional Team Lead", description: "Mastering remote leadership and organizational scaling strategies.", duration: "3 weeks", level: "Expert" }
             ];
           case "Writer":
+          case "Writing & Content":
             return [
               { id: 1, title: "Semantic SEO Strategy", description: "Advanced topic clustering and NLP-driven content optimization for search engines.", duration: "4 weeks", level: "Expert" },
               { id: 2, title: "Brand Voice Engineering", description: "Developing comprehensive style guides and AI-assisted content pipelines.", duration: "3 weeks", level: "Advanced" },
               { id: 3, title: "Technical Whitepaper Mastery", description: "Distilling complex technical concepts into high-authority industry reports.", duration: "5 weeks", level: "Specialist" },
               { id: 4, title: "Ghostwriting for Executives", description: "Strategic thought-leadership development for C-suite professionals.", duration: "3 weeks", level: "Expert" }
+            ];
+          case "Data & Automation":
+            return [
+              { id: 1, title: "Data Engineering Pipelines", description: "Building scalable ETL processes and real-time data streaming architectures.", duration: "4 weeks", level: "Expert" },
+              { id: 2, title: "AI-Driven Automation", description: "Leveraging LLMs and custom agents for complex business process automation.", duration: "3 weeks", level: "Advanced" },
+              { id: 3, title: "Big Data Governance", description: "Implementing robust security, compliance, and quality controls for enterprise data.", duration: "4 weeks", level: "Specialist" },
+              { id: 4, title: "Predictive Analytics Systems", description: "Developing machine learning models for business intelligence and forecasting.", duration: "4 weeks", level: "Expert" }
             ];
           default:
             return [

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
     name TEXT,
     role TEXT DEFAULT 'jobseeker',
-    category TEXT DEFAULT 'Developer',
+    category TEXT DEFAULT 'General',
     skills TEXT[] DEFAULT '{}',
     "hourlyRate" TEXT DEFAULT '$0',
     bio TEXT,

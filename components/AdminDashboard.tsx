@@ -809,9 +809,10 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-bold text-slate-900 mb-6">User Demographic</h3>
               <div className="space-y-4">
                 {[
-                  { label: "Designers", value: "35%", color: "bg-indigo-500" },
-                  { label: "Developers", value: "45%", color: "bg-emerald-500" },
-                  { label: "Writers", value: "15%", color: "bg-amber-500" },
+                  { label: "Developers", value: "35%", color: "bg-emerald-500" },
+                  { label: "Designers / Graphic Design", value: "25%", color: "bg-indigo-500" },
+                  { label: "Virtual Assistants / Admin", value: "20%", color: "bg-purple-500" },
+                  { label: "Marketing", value: "15%", color: "bg-amber-500" },
                   { label: "Others", value: "5%", color: "bg-slate-300" },
                 ].map((item, i) => (
                   <div key={i}>

@@ -26,7 +26,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
     milestones: [],
     customQuestions: [],
     deadline: "",
-    category: "Developer",
+    category: "General",
     energyRequirement: "Balanced",
   });
 
@@ -158,7 +158,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         milestones: [],
         customQuestions: [],
         deadline: "",
-        category: "Developer",
+        category: "General",
         energyRequirement: "Balanced",
       });
     } catch (err: any) {
@@ -332,11 +332,25 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
             >
+              <option value="General">General</option>
               <option value="Developer">Developer</option>
-              <option value="Virtual Assistant">Virtual Assistant</option>
               <option value="Designer">Designer</option>
+              <option value="Graphic Design">Graphic Design</option>
               <option value="Writer">Writer</option>
               <option value="Marketing Specialist">Marketing Specialist</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Virtual Assistant">Virtual Assistant</option>
+              <option value="Admin/VA">Admin/VA</option>
+              <option value="Customer Support">Customer Support</option>
+              <option value="Sales">Sales</option>
+              <option value="Project Management">Project Management</option>
+              <option value="QA/Testing">QA/Testing</option>
+              <option value="Data Entry">Data Entry</option>
+              <option value="Finance/Accounting">Finance/Accounting</option>
+              <option value="IT & Networking">IT & Networking</option>
+              <option value="Writing & Content">Writing & Content</option>
+              <option value="Data & Automation">Data & Automation</option>
+              <option value="Other">Other</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
