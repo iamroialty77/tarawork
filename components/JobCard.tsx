@@ -29,6 +29,7 @@ export interface JobCardProps {
   applicationStatus?: string;
   sustainabilityMatch?: number;
   energyRequirement?: string;
+  onViewSmartMatch?: (job: Job) => void;
 }
 
 export default function JobCard({ 
@@ -40,7 +41,8 @@ export default function JobCard({
   onApply,
   applicationStatus,
   sustainabilityMatch,
-  energyRequirement
+  energyRequirement,
+  onViewSmartMatch
 }: JobCardProps) {
   const isApplied = !!applicationStatus;
   const [isSaved, setIsSaved] = useState(false);
@@ -93,17 +95,18 @@ export default function JobCard({
                 {matchScore !== undefined && matchScore > 0 && (
                   <div className="relative flex items-center gap-2">
                     <button 
+                      onClick={() => onViewSmartMatch?.(job)}
                       onMouseEnter={() => setShowMatchDetails(true)}
                       onMouseLeave={() => setShowMatchDetails(false)}
-                      onClick={() => setShowMatchDetails(!showMatchDetails)}
                       className={cn(
-                        "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest transition-all",
-                        matchScore >= 80 ? "bg-indigo-50 text-indigo-700 border-indigo-100 shadow-sm shadow-indigo-100" :
-                        matchScore >= 50 ? "bg-amber-50 text-amber-700 border-amber-100" :
-                        "bg-slate-50 text-slate-700 border-slate-100"
+                        "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest transition-all group/match",
+                        matchScore >= 80 ? "bg-indigo-50 text-indigo-700 border-indigo-100 shadow-sm shadow-indigo-100 hover:bg-indigo-600 hover:text-white" :
+                        matchScore >= 50 ? "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-600 hover:text-white" :
+                        "bg-slate-50 text-slate-700 border-slate-100 hover:bg-slate-600 hover:text-white"
                       )}
+                      title="Click for AI Smart Match Scan"
                     >
-                      <Sparkles className="w-3 h-3 mr-1" />
+                      <Sparkles className="w-3 h-3 mr-1 group-hover/match:animate-spin" />
                       {matchScore}% Match
                     </button>
 

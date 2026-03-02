@@ -11,7 +11,7 @@ import CareerPath from "../components/CareerPath";
 import JobPostingForm from "../components/JobPostingForm";
 import AdminDashboard from "../components/AdminDashboard";
 import { supabase } from "../lib/supabase";
-import { cn } from "../lib/utils";
+import { cn, energyScore } from "../lib/utils";
 import { useRouter } from "next/navigation";
 import { 
   Briefcase, 
@@ -125,15 +125,6 @@ export default function Home() {
 
   const [isVetting, setIsVetting] = useState(false);
   const [vettingData, setVettingData] = useState<any>(null);
-
-  const energyScore = (userEnergy?: string, jobEnergy?: string) => {
-    const u = (userEnergy || "Balanced").toLowerCase();
-    const j = (jobEnergy || "Balanced").toLowerCase();
-    if (u === j) return 100;
-    if ((u === "high" && j === "balanced") || (u === "balanced" && j === "low") || (u === "low" && j === "balanced")) return 80;
-    if ((u === "high" && j === "low") || (u === "low" && j === "high")) return 50;
-    return 70;
-  };
 
   const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
   const [clientTab, setClientTab] = useState<"overview" | "post" | "postings" | "talents" | "profile">("overview");
@@ -1898,10 +1889,10 @@ export default function Home() {
                           <div className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-100 shadow-sm">
                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2.5 flex items-center gap-2">
                               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                              Jobseeker's Message
+                              Jobseeker&apos;s Message
                             </p>
                             <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
-                              "{app.cover_letter || "No cover letter provided."}"
+                              &quot;{app.cover_letter || "No cover letter provided."}&quot;
                             </p>
                           </div>
 

@@ -1,28 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Brain, 
   Sparkles, 
   ShieldCheck, 
-  Cpu, 
-  Loader2, 
   CheckCircle2, 
-  AlertCircle, 
   X,
   Zap,
   BarChart3,
   Search,
-  Fingerprint,
-  Bot
+  Fingerprint
 } from "lucide-react";
-import { cn } from "../lib/utils";
+import { energyScore } from "../lib/utils";
 
 interface AIAgentProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: "vetting" | "audit";
+  mode: "vetting" | "audit" | "smart-match";
   targetData: any;
 }
 
@@ -41,13 +37,20 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
     "Calibrating bio-metric energy and burnout thresholds...",
     "Applying NLP sentiment analysis to candidate narrative...",
     "Synthesizing final heuristic vetting report..."
-  ] : [
+  ] : mode === "audit" ? [
     "Initializing Gemini Pro 1.5 Flash API context...",
     "Auditing profile architectural integrity and reach...",
     "Extracting semantic keywords from visual assets...",
     "Benchmarking technical nodes against global market index...",
     "Calculating SEO visibility and algorithmic density...",
     "Drafting multi-dimensional strategic roadmap..."
+  ] : [
+    "Establishing neural connection between hirer and seeker...",
+    "Cross-referencing technical requirements with profile nodes...",
+    "Analyzing energy-match and wellness compatibility...",
+    "Synthesizing semantic alignment score...",
+    "Predicting project success probability...",
+    "Finalizing AI Intelligence Match Report..."
   ];
 
   useEffect(() => {
@@ -154,7 +157,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
         ? "Strategic Hire: Strong match with minor areas for growth. Candidate shows high adaptive potential for your specific workflow."
         : "Conditional Consideration: Potential alignment detected, but requires intensive manual vetting of specific project gaps.");
 
-    } else {
+    } else if (mode === "audit") {
       // Data-driven audit analysis
       let data: any = {};
       if (Array.isArray(targetData)) {
@@ -213,6 +216,55 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
         : score > 70 
         ? "Mid-Market Leader: You are well-positioned for consistent project acquisition. Optimizing your SEO will unlock premium rate tiers."
         : "Strategic Realignment Required: Current profile markers are insufficient for top-tier competition. Follow the AI roadmap to scale.");
+    } else if (mode === "smart-match") {
+      const { job, profile } = targetData || {};
+      const jobSkills = job?.skills || [];
+      const userSkills = profile?.skills || [];
+      const matched = jobSkills.filter((s: string) => userSkills.some((us: string) => us.toLowerCase() === s.toLowerCase()));
+      const matchPercent = matched.length / Math.max(jobSkills.length, 1);
+      
+      let score = Math.round(matchPercent * 60 + 40); 
+      const dynamicInsights = [];
+      
+      if (matchPercent > 0.8) {
+        score += 10;
+        dynamicInsights.push(`Technical Convergence: 80%+ skill alignment detected. High-fidelity match for the ${job?.category} domain.`);
+      } else if (matchPercent > 0.5) {
+        score += 5;
+        dynamicInsights.push("Domain Resonance: Significant overlap in core competencies; minor skill gap identified for sub-requisites.");
+      } else if (matchPercent > 0) {
+        dynamicInsights.push("Bridge Potential: Core skills are present, but supplemental training or collaboration may be required for optimal output.");
+      } else {
+        dynamicInsights.push("High-Risk Alignment: Limited skill overlap detected. AI suggests specialized upskilling before committing to this role.");
+      }
+      
+      const energyMatch = energyScore(profile?.wellness?.energyRating, job?.energyRequirement);
+      if (energyMatch >= 90) {
+        score += 10;
+        dynamicInsights.push("Sustainable Synergy: Worker's current energy capacity perfectly aligns with job intensity, ensuring long-term productivity.");
+      } else if (energyMatch < 70) {
+        score -= 5;
+        dynamicInsights.push("Burnout Alert: Mismatch detected between job intensity and seeker's current wellness profile. High risk of early fatigue.");
+      }
+      
+      if (job?.category === profile?.category) {
+        score += 5;
+        dynamicInsights.push(`Market Specialization: Applicant is a recognized expert in the ${job?.category} niche.`);
+      }
+
+      setFinalScore(Math.min(100, score));
+      setInsights(dynamicInsights.length > 0 ? dynamicInsights : [
+        "Intelligence Report: Moderate alignment with project goals.",
+        "Sustainable Match: Worker has enough capacity for this project's requirements.",
+        "Technical Analysis: Core skills are partially aligned with technical stack.",
+        "Risk Assessment: Low to medium risk of project friction."
+      ]);
+      
+      setSummary(score > 85 
+        ? "Strategic Elite Match: The probability of project excellence is exceptionally high. Recommended for immediate acquisition." 
+        : score > 70 
+        ? "Sustainable Professional Match: Solid alignment with manageable risks. High potential for a successful long-term relationship."
+        : "Strategic Caution Recommended: Significant gaps in alignment. Consider additional vetting or scope realignment.");
     }
   };
 
@@ -245,7 +297,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData }: AIAgentPr
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white tracking-tight">
-                  {mode === "vetting" ? "AI Vetting Agent" : "AI Profile Auditor"}
+                  {mode === "vetting" ? "AI Vetting Agent" : mode === "audit" ? "AI Profile Auditor" : "AI Smart Match Engine"}
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex gap-1">

@@ -3,8 +3,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCategory } from "../types";
 import JobCard from "./JobCard";
+import AIAgent from "./AIAgent";
 
 import { Search, Filter, Sparkles } from "lucide-react";
+import { energyScore } from "../lib/utils";
 
 interface JobFeedProps {
   jobs: Job[];
@@ -16,15 +18,8 @@ interface JobFeedProps {
 export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: JobFeedProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-
-  const energyScore = (userEnergy?: string, jobEnergy?: string) => {
-    const u = (userEnergy || "Balanced").toLowerCase();
-    const j = (jobEnergy || "Balanced").toLowerCase();
-    if (u === j) return 100;
-    if ((u === "high" && j === "balanced") || (u === "balanced" && j === "low") || (u === "low" && j === "balanced")) return 80;
-    if ((u === "high" && j === "low") || (u === "low" && j === "high")) return 50;
-    return 70;
-  };
+  const [showAIAgent, setShowAIAgent] = useState(false);
+  const [selectedJobForAI, setSelectedJobForAI] = useState<Job | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -201,6 +196,10 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                 applicationStatus={appliedJobs[job.id]}
                 sustainabilityMatch={sustainabilityMatch}
                 energyRequirement={job.energyRequirement}
+                onViewSmartMatch={(j) => {
+                  setSelectedJobForAI(j);
+                  setShowAIAgent(true);
+                }}
               />
             );
           })
@@ -216,6 +215,14 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
           </div>
         )}
       </div>
+      
+      {/* AI Agent Modal */}
+      <AIAgent 
+        isOpen={showAIAgent}
+        onClose={() => setShowAIAgent(false)}
+        mode="smart-match"
+        targetData={{ job: selectedJobForAI, profile }}
+      />
     </div>
   );
 }

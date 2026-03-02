@@ -26,3 +26,12 @@ export function formatRelativeTime(dateString: string) {
   
   return date.toLocaleDateString();
 }
+
+export const energyScore = (userEnergy?: string, jobEnergy?: string) => {
+  const u = (userEnergy || "Balanced").toLowerCase();
+  const j = (jobEnergy || "Balanced").toLowerCase();
+  if (u === j) return 100;
+  if ((u === "high" && j === "balanced") || (u === "balanced" && j === "low") || (u === "low" && j === "balanced")) return 80;
+  if ((u === "high" && j === "low") || (u === "low" && j === "high")) return 50;
+  return 70;
+};
