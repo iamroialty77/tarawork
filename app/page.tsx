@@ -55,6 +55,7 @@ import {
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
+import LandingPage from "../components/LandingPage";
 
 export default function Home() {
   const router = useRouter();
@@ -693,7 +694,7 @@ export default function Home() {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push("/auth");
+        setLoading(false);
       } else {
         setUser(session.user);
         
@@ -787,7 +788,8 @@ export default function Home() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        router.push("/auth");
+        setUser(null);
+        setLoading(false);
       } else {
         setUser(session.user);
         fetchProfile(session.user.id, session.user);
@@ -807,6 +809,10 @@ export default function Home() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <LandingPage />;
   }
 
   const addPortfolioItem = async (item: Partial<PortfolioItem>) => {
