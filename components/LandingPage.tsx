@@ -8,43 +8,49 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-transparent">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <circle cx="8" cy="8" r="3" fill="white" />
-                  <circle cx="16" cy="8" r="3" fill="white" />
-                  <circle cx="12" cy="16" r="3" fill="white" />
+                  <circle cx="8" cy="8" r="3" fill="#2563eb" />
+                  <circle cx="16" cy="8" r="3" fill="#2563eb" />
+                  <circle cx="12" cy="16" r="3" fill="#2563eb" />
                 </svg>
               </div>
-              <span className="text-slate-900 font-bold text-xl tracking-tight">TaraWork<span className="text-blue-600">.ph</span></span>
+              <span className="text-white font-bold text-xl tracking-tight">TaraWork.ph</span>
             </Link>
 
             {/* Navigation */}
             <nav className="hidden md:flex items-center gap-8">
-              <Link href="/" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
+              <Link href="/" className="text-white hover:text-blue-200 font-medium transition-colors">
                 Home
               </Link>
-              <Link href="/auth" className="flex items-center gap-1 text-slate-600 hover:text-blue-600 font-medium transition-colors">
-                Find Jobs
-              </Link>
-              <Link href="/auth" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
+              <div className="flex items-center gap-1 text-white hover:text-blue-200 font-medium transition-colors cursor-pointer">
+                Find Jobs <ChevronDown className="w-4 h-4" />
+              </div>
+              <Link href="/auth" className="text-white hover:text-blue-200 font-medium transition-colors">
                 Hire Talent
+              </Link>
+              <Link href="/auth" className="text-white hover:text-blue-200 font-medium transition-colors">
+                Community
+              </Link>
+              <Link href="/auth" className="text-white hover:text-blue-200 font-medium transition-colors">
+                Pricing
               </Link>
             </nav>
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-3">
               <Link href="/auth">
-                <button className="px-5 py-2 text-slate-600 hover:text-blue-600 font-semibold transition-colors">
+                <button className="px-5 py-2 text-white border border-white/30 hover:bg-white/10 rounded-lg font-semibold transition-all">
                   Sign In
                 </button>
               </Link>
               <Link href="/auth">
-                <button className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full transition-all shadow-md shadow-blue-200 active:scale-95">
+                <button className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-900/20 active:scale-95">
                   Join Now
                 </button>
               </Link>
@@ -54,10 +60,10 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative pt-32 pb-20 px-6 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-teal-400 min-h-screen flex items-center">
         {/* Decorative Background Elements */}
-        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-3xl -z-10"></div>
-        <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-3xl -z-10"></div>
+        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[600px] h-[600px] bg-white/10 rounded-full blur-3xl -z-10"></div>
+        <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl -z-10"></div>
         
         <div className="container mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -67,53 +73,50 @@ export default function LandingPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold mb-6">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                </span>
-                The Future of Work in the Philippines
-              </div>
-              <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 mb-6 leading-[1.1]">
-                Tara, Work <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">Together</span>
+              <h1 className="text-6xl lg:text-8xl font-extrabold text-white mb-6 leading-[1.1]">
+                Tara, Work Together
               </h1>
-              <h2 className="text-2xl font-semibold text-slate-700 mb-6">
+              <h2 className="text-3xl font-bold text-white/90 mb-8">
                 Need an extra hand? You're in the right place.
               </h2>
-              <p className="text-xl mb-8 text-slate-600 leading-relaxed">
+              <p className="text-xl mb-12 text-white/80 leading-relaxed max-w-xl">
                 Tarawork.ph connects you with skilled freelancers and virtual assistants across the Philippines. 
                 From admin help and content creation to design, tech, and more — we make it easy to find the right people, fast.
+              </p>
+              
+              <p className="text-lg mb-8 text-white/80 leading-relaxed max-w-xl">
+                We're all about making work feel lighter, smoother, and more collaborative. Because when we say "Tara," we mean let's do this together.
               </p>
 
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-4 mb-12">
                 <Link href="/auth">
-                  <button className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-95 flex items-center gap-2">
-                    Join as a Freelancer <ArrowRight className="w-5 h-5" />
+                  <button className="px-8 py-4 bg-white text-blue-600 text-lg font-bold rounded-xl transition-all shadow-xl shadow-blue-900/20 active:scale-95 flex items-center gap-2">
+                    Join as a Freelancer
                   </button>
                 </Link>
                 <Link href="/auth">
-                  <button className="px-8 py-4 bg-white border-2 border-slate-200 hover:border-blue-600 hover:text-blue-600 text-slate-700 text-lg font-bold rounded-2xl transition-all active:scale-95">
+                  <button className="px-8 py-4 bg-white/10 border-2 border-white/20 hover:bg-white/20 text-white text-lg font-bold rounded-xl transition-all active:scale-95">
                     Post a Job
                   </button>
                 </Link>
               </div>
 
               {/* Trust Badges */}
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-y-6 gap-x-12">
                 {[
                   "AI-Verified Talent",
                   "Smart Match Score",
                   "Secure Escrow Payments",
                   "Escrow Protection",
-                  "Built for Filipinos",
+                  "Built for Filipino Freelancers",
                   "Milestone Tracker"
                 ].map((feature, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-blue-600" />
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <Check className="w-4 h-4 text-white" />
                     </div>
-                    <span className="text-slate-700 font-medium">{feature}</span>
+                    <span className="text-white/90 font-semibold">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -147,82 +150,108 @@ export default function LandingPage() {
                 </div>
 
                 {/* Profile Card */}
-                <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-[2rem] p-6 border border-white/50 shadow-inner">
+                <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
                   <div className="flex items-start gap-4 mb-6">
                     <div className="relative">
-                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-teal-400 p-0.5 shadow-lg">
-                         <div className="w-full h-full rounded-2xl bg-white flex items-center justify-center overflow-hidden">
-                            <div className="w-full h-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-2xl">MR</div>
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-teal-400 p-0.5 shadow-lg">
+                         <div className="w-full h-full rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+                            <div className="w-full h-full bg-gradient-to-br from-blue-400 to-teal-400 flex items-center justify-center text-white font-bold text-2xl"></div>
                          </div>
                       </div>
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
-                        <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                      <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-white">
+                        <Check className="w-3.5 h-3.5 text-white" />
                       </div>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-extrabold text-slate-900 text-xl">Mark Rivera</h3>
+                        <h3 className="font-extrabold text-slate-900 text-xl flex items-center gap-1">Mark Rivera <ChevronDown className="w-4 h-4 text-blue-500" /></h3>
                       </div>
-                      <p className="text-sm font-semibold text-blue-600 mb-3">Top-Rated Graphic Designer</p>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="px-2 py-0.5 bg-white text-[10px] font-bold text-slate-500 rounded border border-slate-100">Logo Design</span>
-                        <span className="px-2 py-0.5 bg-white text-[10px] font-bold text-slate-500 rounded border border-slate-100">UI/UX</span>
-                        <span className="px-2 py-0.5 bg-white text-[10px] font-bold text-blue-500 rounded border border-blue-100">Figma</span>
+                      <p className="text-sm font-semibold text-slate-500 mb-3">Top-Rated Graphic Designer</p>
+                      <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-400">
+                        <span>Viet</span>
+                        <span>SR: 3K</span>
+                        <span>Nodame</span>
+                        <span className="text-teal-500">Vex3s</span>
                       </div>
                     </div>
-                    <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 text-center">
-                      <span className="block text-xl font-bold text-slate-900">₱500</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">per hour</span>
+                    <div className="bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100 text-[10px] font-bold text-slate-400 flex gap-4">
+                       <div className="text-center">
+                         <span className="block text-emerald-500 text-sm">●</span>
+                         <span>Escrow</span>
+                       </div>
+                       <div className="text-center">
+                         <span>350/hr</span>
+                       </div>
+                       <div className="text-center">
+                         <span>30/hr</span>
+                       </div>
                     </div>
                   </div>
 
                   {/* Tabs */}
-                  <div className="flex gap-6 mb-6 border-b border-slate-200">
-                    <button className="pb-3 px-1 text-sm font-bold text-blue-600 border-b-2 border-blue-600">Overview</button>
-                    <button className="pb-3 px-1 text-sm font-bold text-slate-400 hover:text-slate-600">Milestones</button>
-                    <button className="pb-3 px-1 text-sm font-bold text-slate-400 hover:text-slate-600">Messages</button>
+                  <div className="flex gap-6 mb-6 border-b border-slate-100">
+                    <button className="pb-3 px-1 text-sm font-bold text-slate-900 border-b-2 border-blue-600">Overview</button>
+                    <button className="pb-3 px-1 text-sm font-bold text-slate-400">Milestones</button>
+                    <button className="pb-3 px-1 text-sm font-bold text-slate-400">Files</button>
+                    <button className="pb-3 px-1 text-sm font-bold text-slate-400">Messages</button>
                   </div>
 
                   {/* Progress Section */}
                   <div className="space-y-3 mb-6">
-                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      <span>Project Progress</span>
-                      <span className="text-teal-600">75% Complete</span>
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase">
+                      <span>Initial Payment</span>
+                      <span>Final Design</span>
                     </div>
-                    <div className="h-3 bg-slate-200 rounded-full overflow-hidden p-0.5 border border-white shadow-inner">
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <motion.div 
                         initial={{ width: 0 }}
-                        animate={{ width: '75%' }}
+                        animate={{ width: '80%' }}
                         transition={{ duration: 1, delay: 0.5 }}
-                        className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full shadow-sm"
+                        className="h-full bg-emerald-400 rounded-full"
                       ></motion.div>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                      <span>St.metrki</span>
+                      <div className="flex gap-4">
+                        <span>1st Draft</span>
+                        <span>Revision Phase</span>
+                        <span className="text-slate-900">Today</span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Message Bubble Mock */}
-                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold">Client</div>
+                  <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-200"></div>
                     <div className="flex-1">
-                      <p className="text-[11px] text-slate-600 line-clamp-1 italic font-medium">"The new logo concepts look amazing! Let's proceed with..."</p>
+                      <p className="text-[11px] text-slate-500 line-clamp-1">Intem dessxay is a doc or ihage to piece...</p>
                     </div>
-                    <button className="px-3 py-1 bg-teal-500 text-white text-[10px] font-bold rounded-lg hover:bg-teal-600 transition-colors">Send</button>
+                    <span className="text-[10px] text-slate-400 mr-2">2d</span>
+                    <button className="px-4 py-1.5 bg-emerald-500 text-white text-[11px] font-bold rounded-lg">Send</button>
+                  </div>
+                  
+                  <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3 mt-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-200"></div>
+                    <div className="flex-1">
+                      <p className="text-[11px] text-slate-500 line-clamp-1">Youmi41025 amet cealisy eo gineharice you...</p>
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mb-2 shadow-lg shadow-blue-200">
-                      <Award className="w-5 h-5 text-white" />
+                  <div className="bg-emerald-50/50 rounded-2xl p-6">
+                    <div className="w-8 h-8 bg-emerald-400 rounded-full flex items-center justify-center mb-4">
+                      <Check className="w-5 h-5 text-white" />
                     </div>
-                    <h4 className="font-bold text-slate-900 text-xs mb-1">AI Verified</h4>
-                    <p className="text-[10px] text-slate-500 font-medium">Skills confirmed by AI assessments.</p>
+                    <h4 className="font-bold text-slate-900 text-sm mb-1">AI-Powered Skill Verification</h4>
+                    <p className="text-[11px] text-slate-500 font-medium">Certified skills through assessments and vetting.</p>
                   </div>
-                  <div className="bg-teal-50 rounded-2xl p-4 border border-teal-100">
-                    <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center mb-2 shadow-lg shadow-teal-200">
-                      <ShieldCheck className="w-5 h-5 text-white" />
+                  <div className="bg-emerald-50/50 rounded-2xl p-6">
+                    <div className="w-8 h-8 bg-emerald-400 rounded-full flex items-center justify-center mb-4">
+                      <Check className="w-5 h-5 text-white" />
                     </div>
-                    <h4 className="font-bold text-slate-900 text-xs mb-1">Secure Escrow</h4>
-                    <p className="text-[10px] text-slate-500 font-medium">Payment released upon milestone approval.</p>
+                    <h4 className="font-bold text-slate-900 text-sm mb-1">Milestone Tracker</h4>
+                    <p className="text-[11px] text-slate-500 font-medium">Funds released as each step is approved.</p>
                   </div>
                 </div>
               </div>
