@@ -152,7 +152,7 @@ export default function AdminDashboard() {
     checkTableHealth();
   }, []);
 
-  const notify = (msg: str0ing) => {
+  const notify = (msg: string) => {
     setToastMsg(msg);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
