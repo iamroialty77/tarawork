@@ -31,6 +31,21 @@ export default function AuthForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSMTPHelp, setShowSMTPHelp] = useState(false);
+  const [referringId, setReferringId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const refId = params.get('referring_freelancer_id');
+      const action = params.get('action');
+      
+      if (refId) setReferringId(refId);
+      if (action === 'hire') {
+        setMode('signup');
+        setRole('hirer');
+      }
+    }
+  }, []);
 
   const handleSocialLogin = async (provider: 'google' | 'facebook' | 'linkedin' | 'github') => {
     setLoading(true);
@@ -77,6 +92,8 @@ export default function AuthForm() {
             data: {
               full_name: fullName,
               role: role,
+              referring_freelancer_id: referringId,
+              username: email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },

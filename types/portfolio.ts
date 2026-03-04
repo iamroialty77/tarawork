@@ -1,0 +1,47 @@
+export interface PortfolioProject {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  project_url?: string;
+  github_url?: string;
+  technologies: string[];
+}
+
+export interface PortfolioSkill {
+  id: string;
+  name: string;
+  level?: string;
+  category?: string;
+}
+
+export interface PortfolioLink {
+  id: string;
+  label: string;
+  url: string;
+  icon?: string;
+}
+
+export interface Portfolio {
+  id: string;
+  profile_id: string;
+  about_me: string;
+  tagline: string;
+  projects: PortfolioProject[];
+  skills: PortfolioSkill[];
+  links: PortfolioLink[];
+  theme_settings: {
+    aesthetic: 'minimalist' | 'modern' | 'classic';
+    primaryColor: string;
+  };
+}
+
+export interface FreelancerProfile {
+  id: string;
+  name: string;
+  role: string;
+  avatar_url?: string;
+  bio?: string;
+  hourlyRate?: string;
+  portfolio?: Portfolio;
+}

@@ -411,4 +411,105 @@ ALTER TABLE public._test_connection ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can select from test table" ON public._test_connection;
 CREATE POLICY "Anyone can select from test table" ON public._test_connection FOR SELECT USING (true);
 
--- FINAL STEP: If you still see errors, try running "RELOAD SCHEMA" in Supabase settings or refresh your app.
+-- 12. Trigger to handle new user registration from Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user() 
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, name, avatar_url, role, username, referring_freelancer_id)
+  VALUES (
+    new.id, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url',
+    COALESCE(new.raw_user_meta_data->>'role', 'jobseeker'),
+    COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    CASE WHEN (new.raw_user_meta_data->>'referring_freelancer_id') IS NOT NULL 
+         THEN (new.raw_user_meta_data->>'referring_freelancer_id')::uuid 
+         ELSE NULL END
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Safe trigger creation
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'on_auth_user_created') THEN
+        CREATE TRIGGER on_auth_user_created
+          AFTER INSERT ON auth.users
+          FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+    END IF;
+END $$;
+
+-- 11. Portfolio Builder Tables
+CREATE TABLE IF NOT EXISTS public.portfolios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL UNIQUE,
+    about_me TEXT,
+    tagline TEXT,
+    custom_domain TEXT,
+    theme_settings JSONB DEFAULT '{"aesthetic": "minimalist", "primaryColor": "#000000"}',
+    is_public BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.portfolio_projects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    portfolio_id UUID REFERENCES public.portfolios(id) ON DELETE CASCADE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    image_url TEXT,
+    project_url TEXT,
+    github_url TEXT,
+    technologies TEXT[] DEFAULT '{}',
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.portfolio_skills (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    portfolio_id UUID REFERENCES public.portfolios(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    level TEXT,
+    category TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.portfolio_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    portfolio_id UUID REFERENCES public.portfolios(id) ON DELETE CASCADE NOT NULL,
+    label TEXT NOT NULL,
+    url TEXT NOT NULL,
+    icon TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Add username and referring_freelancer_id for viral feature
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referring_freelancer_id UUID REFERENCES public.profiles(id);
+
+-- Enable RLS for Portfolio tables
+ALTER TABLE public.portfolios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.portfolio_projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.portfolio_skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.portfolio_links ENABLE ROW LEVEL SECURITY;
+
+-- Policies for Portfolios
+CREATE POLICY "Portfolios are viewable by everyone." ON public.portfolios FOR SELECT USING (is_public = true OR auth.uid() = profile_id);
+CREATE POLICY "Users can manage their own portfolio." ON public.portfolios FOR ALL USING (auth.uid() = profile_id);
+
+-- Policies for Projects, Skills, Links
+CREATE POLICY "Portfolio content is viewable by everyone." ON public.portfolio_projects FOR SELECT USING (true);
+CREATE POLICY "Users can manage their own projects." ON public.portfolio_projects FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.portfolios WHERE id = portfolio_id AND profile_id = auth.uid())
+);
+
+CREATE POLICY "Portfolio skills are viewable by everyone." ON public.portfolio_skills FOR SELECT USING (true);
+CREATE POLICY "Users can manage their own skills." ON public.portfolio_skills FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.portfolios WHERE id = portfolio_id AND profile_id = auth.uid())
+);
+
+CREATE POLICY "Portfolio links are viewable by everyone." ON public.portfolio_links FOR SELECT USING (true);
+CREATE POLICY "Users can manage their own links." ON public.portfolio_links FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.portfolios WHERE id = portfolio_id AND profile_id = auth.uid())
+);
