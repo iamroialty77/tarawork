@@ -2218,14 +2218,14 @@ export default function Home() {
                       </h4>
                       <div className="flex flex-col gap-3">
                         <button 
-                          onClick={() => toggleFollow(selectedFreelancer.id)}
+                          onClick={() => toggleFollow(selectedFreelancer.id!)}
                           className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
-                            userFollows.includes(selectedFreelancer.id)
+                            userFollows.includes(selectedFreelancer.id!)
                             ? 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                             : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/20'
                           }`}
                         >
-                          {userFollows.includes(selectedFreelancer.id) ? (
+                          {userFollows.includes(selectedFreelancer.id!) ? (
                             <>
                               <CheckCircle2 className="w-4 h-4" />
                               Following
@@ -2239,7 +2239,7 @@ export default function Home() {
                         </button>
                         <button 
                           onClick={() => {
-                            router.push(`/messages?with=${selectedFreelancer.id}`);
+                            router.push(`/messages?with=${selectedFreelancer.id!}`);
                           }}
                           className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
                         >
@@ -2267,7 +2267,7 @@ export default function Home() {
                       <h4 className="text-sm font-bold mb-2">Quick Action</h4>
                       <p className="text-xs text-indigo-200 mb-6 leading-relaxed">Ready to discuss your project with {selectedFreelancer.name.split(' ')[0]}?</p>
                       <Link 
-                        href={`/messages?with=${selectedFreelancer.id}`}
+                        href={`/messages?with=${selectedFreelancer.id!}`}
                         className="w-full bg-white text-indigo-600 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all uppercase tracking-widest"
                       >
                         <Mail className="w-4 h-4" />
