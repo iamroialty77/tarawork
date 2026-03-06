@@ -149,7 +149,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     // 3. Robust Name Match (Fallback)
     console.log(`[Portfolio] Step 3: Attempting name-based lookup for: "${username}"`);
     const alphaParts = username.match(/[a-z]{3,}/gi) || [];
-    const searchWord = alphaParts.length > 0 ? alphaParts[0] : username;
+    const searchWord = alphaParts[0] || username || '';
     const flexibleSearch = searchWord.length > 6 ? searchWord.substring(0, 6) : searchWord;
     
     const { data: profilesByName } = await supabaseAdmin
