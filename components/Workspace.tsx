@@ -263,7 +263,7 @@ export default function Workspace({
           </div>
         </div>
 
-        <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-full overflow-x-auto border border-white/5 scrollbar-hide">
+        <div className="flex flex-wrap gap-1 p-1 bg-slate-800/50 rounded-lg w-full border border-white/5">
           {[
             { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
             { id: "active", label: "Projects", icon: Clock },
@@ -309,7 +309,7 @@ export default function Workspace({
                   { label: "Avg. Velocity", value: "94%", icon: TrendingUp, color: "text-amber-500", bg: "bg-amber-50" },
                   { label: "Sustainability Index", value: `${wellnessData.sustainabilityIndex}%`, icon: Zap, color: "text-purple-500", bg: "bg-purple-50" },
                 ].map((stat, i) => (
-                  <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                  <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
                     <div className="flex justify-between items-start mb-4">
                       <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", stat.bg)}>
                         <stat.icon className={cn("w-6 h-6", stat.color)} />
@@ -325,7 +325,7 @@ export default function Workspace({
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Insight Card */}
                 <div className="lg:col-span-2 space-y-8">
-                  <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
+                  <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden shadow-2xl">
                     <div className="relative z-10">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
@@ -360,7 +360,7 @@ export default function Workspace({
                   </div>
 
                   {/* Project Quick View */}
-                  <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
                     <div className="flex justify-between items-center mb-8">
                       <div>
                         <h3 className="text-xl font-black text-slate-900 tracking-tight">Active Projects Insight</h3>
@@ -400,7 +400,7 @@ export default function Workspace({
                           </div>
                         </div>
                       )) : (
-                        <div className="text-center py-12 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                           <Layout className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                           <p className="text-sm font-bold text-slate-400">No active projects found.</p>
                         </div>
@@ -412,7 +412,7 @@ export default function Workspace({
                 {/* Sidebar Analytics */}
                 <div className="space-y-8">
                   {/* Wellness Gauge */}
-                  <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Performance Index</h4>
                     <div className="relative flex justify-center items-center mb-6">
                       <svg className="w-40 h-40">
@@ -435,7 +435,7 @@ export default function Workspace({
                   </div>
 
                   {/* Quick Actions */}
-                  <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-200">
+                  <div className="bg-indigo-600 rounded-2xl p-8 text-white shadow-xl shadow-indigo-200">
                     <h3 className="text-xl font-black mb-6">Quick Actions</h3>
                     <div className="space-y-3">
                       {[
@@ -464,7 +464,7 @@ export default function Workspace({
                   </div>
 
                   {/* Upcoming Schedule */}
-                  <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Upcoming Milestones</h4>
                     <div className="space-y-6">
                       {selectedMilestones.length > 0 ? selectedMilestones.slice(0, 2).map((m, i) => (
@@ -522,7 +522,7 @@ export default function Workspace({
                 <div className="space-y-6">
                   {/* AI Health Nudge */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div className="md:col-span-2 bg-gradient-to-r from-slate-900 to-indigo-900 border border-slate-800 p-6 rounded-3xl flex items-center justify-between shadow-xl relative overflow-hidden group">
+                    <div className="md:col-span-2 bg-gradient-to-r from-slate-900 to-indigo-900 border border-slate-800 p-6 rounded-2xl flex items-center justify-between shadow-xl relative overflow-hidden group">
                       <div className="relative z-10">
                         <h4 className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-1">AI Velocity Prediction</h4>
                         <div className="flex items-end gap-2">
@@ -537,7 +537,7 @@ export default function Workspace({
                       <BarChart3 className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 group-hover:text-white/10 transition-colors" />
                     </div>
 
-                    <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col justify-center items-center text-center">
+                    <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm flex flex-col justify-center items-center text-center">
                       <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center mb-2">
                         <Zap className="w-5 h-5 text-amber-500" />
                       </div>
@@ -545,7 +545,7 @@ export default function Workspace({
                       <span className="text-xl font-black text-slate-900">2.4<span className="text-[10px] text-slate-400 font-bold ml-1">pts/hr</span></span>
                     </div>
 
-                    <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm flex flex-col justify-center items-center text-center">
+                    <div className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm flex flex-col justify-center items-center text-center">
                       <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center mb-2">
                         <Smile className="w-5 h-5 text-indigo-500" />
                       </div>
@@ -643,7 +643,7 @@ export default function Workspace({
                     </div>
 
                     {isCreatingWorkflow && (
-                      <div className="p-5 bg-white border-2 border-indigo-100 rounded-3xl mb-4 shadow-xl">
+                      <div className="p-5 bg-white border-2 border-indigo-100 rounded-2xl mb-4 shadow-xl">
                         <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-4">Build New Automation</h4>
                         <div className="space-y-4 mb-4">
                           <div>
@@ -698,7 +698,7 @@ export default function Workspace({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {workflows.map((wf) => (
-                        <div key={wf.id} className="p-5 bg-slate-50/50 rounded-3xl border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-indigo-100 transition-all cursor-pointer shadow-sm hover:shadow-md">
+                        <div key={wf.id} className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-indigo-100 transition-all cursor-pointer shadow-sm hover:shadow-md">
                           <div className={`w-10 h-10 ${wf.color} text-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
                             {wf.icon === 'Zap' ? <Zap className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
                           </div>
@@ -717,7 +717,7 @@ export default function Workspace({
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-100">
+                <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-100">
                   <Activity className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                   <h4 className="font-bold text-slate-900">Project Pulse requires a project</h4>
                   <p className="text-sm text-slate-500 mt-1">Select a project to see real-time performance and task visualizer.</p>
@@ -894,7 +894,7 @@ export default function Workspace({
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
+                <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-2xl">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-slate-300" />
                   </div>
@@ -913,7 +913,7 @@ export default function Workspace({
               className="space-y-6"
             >
               {selectedProject ? (
-                <div className="bg-slate-50 rounded-3xl border border-slate-200 p-8">
+                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8">
                   <div className="flex justify-between items-start mb-8">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
@@ -1055,7 +1055,7 @@ export default function Workspace({
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-100">
+                <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-100">
                   <Shield className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                   <h4 className="font-bold text-slate-900">Select a project to enter War Room</h4>
                   <p className="text-sm text-slate-500 mt-1">Real-time collaboration is just a click away.</p>
@@ -1074,7 +1074,7 @@ export default function Workspace({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-6">
                     {/* Contract Header */}
-                    <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden">
+                    <div className="bg-white border border-slate-100 p-8 rounded-2xl shadow-sm relative overflow-hidden">
                       <div className="flex justify-between items-start mb-8 relative z-10">
                         <div>
                           <div className="flex items-center gap-2 mb-2">
@@ -1105,7 +1105,7 @@ export default function Workspace({
                         </div>
                       </div>
 
-                      <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl relative z-10 group/audit cursor-pointer hover:bg-indigo-100/50 transition-all"
+                      <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl relative z-10 group/audit cursor-pointer hover:bg-indigo-100/50 transition-all"
                            onClick={() => setShowAIClauseAudit(true)}>
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
@@ -1141,7 +1141,7 @@ export default function Workspace({
                     </div>
 
                     {/* Milestones & Payout Schedule */}
-                    <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-sm">
+                    <div className="bg-white border border-slate-100 p-8 rounded-2xl shadow-sm">
                       <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">Payment Schedule</h3>
                         <div className="flex items-center gap-2">
@@ -1180,7 +1180,7 @@ export default function Workspace({
 
                   {/* Sidebar Actions */}
                   <div className="space-y-6">
-                    <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-xl">
+                    <div className="bg-slate-900 rounded-2xl p-8 text-white shadow-xl">
                       <h4 className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-6">Contract Governance</h4>
                       <div className="space-y-3">
                         <button className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20">
@@ -1195,7 +1195,7 @@ export default function Workspace({
                       </div>
                     </div>
 
-                    <div className="bg-emerald-50 border border-emerald-100 rounded-[2.5rem] p-8">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-8">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
                           <DollarSign className="w-5 h-5 text-white" />
@@ -1218,7 +1218,7 @@ export default function Workspace({
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                   <FileText className="w-16 h-16 text-slate-200 mx-auto mb-4" />
                   <h4 className="text-xl font-black text-slate-900 tracking-tight">No Contract Selected</h4>
                   <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">Please select a project from the dashboard to view and manage its legal agreement.</p>
@@ -1247,7 +1247,7 @@ export default function Workspace({
                         <span className="text-[10px] font-black bg-indigo-600 text-white px-2 py-1 rounded">DEV MODE</span>
                       </div>
                       <p className="text-sm text-slate-600 mb-6">
-                        Milestones are automatically marked as &quot;In-Review&quot; nang i-merge ang code sa <code className="bg-slate-200 px-1 rounded">main</code> branch.
+                        Milestones are automatically marked as &quot;In-Review&quot; when code is merged into the <code className="bg-slate-200 px-1 rounded">main</code> branch.
                       </p>
                       <div className="space-y-3">
                         {[
@@ -1403,16 +1403,16 @@ export default function Workspace({
                   )}
 
                   {selectedProject.workspaceType === "General" && (
-                    <div className="p-12 text-center bg-slate-50 rounded-3xl border border-slate-200">
+                    <div className="p-12 text-center bg-slate-50 rounded-2xl border border-slate-200">
                       <LayoutDashboard className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                       <h4 className="text-slate-900 font-bold tracking-tight">Standard Workspace</h4>
-                      <p className="text-slate-500 text-sm max-w-xs mx-auto mt-2">Ito ay ang general-purpose workspace. Maaari kang gumamit ng War Room at Pulse tabs para sa advanced project management.</p>
+                      <p className="text-slate-500 text-sm max-w-xs mx-auto mt-2">This is a general-purpose workspace. You can use War Room and Pulse tabs for advanced project management.</p>
                     </div>
                   )}
 
                   {/* General tools for all types */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-6 bg-indigo-900 rounded-3xl text-white relative overflow-hidden group">
+                    <div className="p-6 bg-indigo-900 rounded-2xl text-white relative overflow-hidden group">
                       <div className="relative z-10">
                         <Code2 className="w-8 h-8 mb-4 text-indigo-300" />
                         <h5 className="font-bold mb-1">Collaborative Sandbox</h5>
@@ -1423,7 +1423,7 @@ export default function Workspace({
                       </div>
                       <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                     </div>
-                    <div className="p-6 bg-slate-900 rounded-3xl text-white relative overflow-hidden group">
+                    <div className="p-6 bg-slate-900 rounded-2xl text-white relative overflow-hidden group">
                       <div className="relative z-10">
                         <Activity className="w-8 h-8 mb-4 text-purple-300" />
                         <h5 className="font-bold mb-1">AI Project Audit</h5>
@@ -1551,12 +1551,12 @@ export default function Workspace({
                   </div>
                 </>
               ) : (
-                <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
+                <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-2xl">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Layout className="w-8 h-8 text-slate-300" />
                   </div>
                   <h4 className="text-slate-900 font-bold">No Active Workspace</h4>
-                  <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">Mangyaring pumili ng proyekto sa dashboard para makita ang workspace tools.</p>
+                  <p className="text-slate-500 text-sm max-w-xs mx-auto mt-1">Please select a project from the dashboard to see the workspace tools.</p>
                 </div>
               )}
             </motion.div>
@@ -1627,7 +1627,7 @@ export default function Workspace({
                   </div>
                 </>
               ) : (
-                <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-3xl">
+                <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-2xl">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Video className="w-8 h-8 text-slate-300" />
                   </div>

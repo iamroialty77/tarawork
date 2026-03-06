@@ -322,7 +322,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   </p>
                   <div className="pt-6">
                     <button 
-                      onClick={() => window.location.href = `/auth?referring_freelancer_id=${profile.id}&action=signup&role=hirer`}
+                      onClick={() => window.location.href = `/auth?referring_freelancer_id=${profile.id}&action=signup&role=employer`}
                       className="text-sm font-semibold text-black underline underline-offset-4 hover:text-gray-600 transition-colors"
                     >
                       Want to track your hires? Sign up here.

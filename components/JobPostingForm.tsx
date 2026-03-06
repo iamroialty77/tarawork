@@ -128,8 +128,8 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
       const jobData = {
         ...formData,
         id: Math.random().toString(36).substr(2, 9),
-        company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Hirer",
-        hirer_id: user.id,
+        company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Employer",
+        employer_id: user.id,
         createdAt: new Date().toISOString(),
       };
 
@@ -139,7 +139,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
 
       if (error) {
         if (error.message.includes("relation \"jobs\" does not exist")) {
-          throw new Error("Initialization Required: Ang 'jobs' table ay kasalukuyang hindi pa naka-setup sa platform. Bilang isang seryosong platform, kailangan ang tamang database configuration para sa security ng inyong escrow funds. Pakisuri ang Admin Dashboard > System Health.");
+          throw new Error("Initialization Required: The 'jobs' table is not yet set up on the platform. As a professional platform, proper database configuration is required for the security of your escrow funds. Please check Admin Dashboard > System Health.");
         }
         throw error;
       }
@@ -481,7 +481,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         <div>
           <h4 className="font-bold text-indigo-900 text-sm">Escrow Protection Enabled</h4>
           <p className="text-xs text-indigo-700/80 mt-1 leading-relaxed">
-            All payments on Tara are protected. Once you hire a jobseeker, the budget is moved to a secure escrow account. This proves to the jobseeker that you have the budget, and protects your money until the work is delivered.
+            All payments on Tara are protected. Once you hire a freelancer, the budget is moved to a secure escrow account. This proves to the freelancer that you have the budget, and protects your money until the work is delivered.
           </p>
         </div>
       </div>
@@ -515,7 +515,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             ))}
           </div>
 
-          <div className="p-6 bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-200 space-y-4">
+          <div className="p-6 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
@@ -613,7 +613,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
       </div>
 
       <div className="pt-6 border-t border-gray-100">
-        <div className="p-6 bg-gray-900 rounded-3xl text-white shadow-2xl shadow-indigo-200">
+        <div className="p-6 bg-gray-900 rounded-2xl text-white shadow-2xl shadow-indigo-200">
           <div className="flex justify-between items-start mb-6">
             <div>
               <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-1">Confirmation Summary</p>
@@ -657,7 +657,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
     <div className="w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Form */}
-        <div className="lg:col-span-7 bg-white p-8 rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100">
+        <div className="lg:col-span-7 bg-white p-8 rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100">
           <div className="mb-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Post your project</h2>

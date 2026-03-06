@@ -158,10 +158,10 @@ export default function ProfileForm({
   };
 
   return (
-    <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50">
+    <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50">
       <div className="flex flex-col items-center mb-8">
         <div className="relative group">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-1 shadow-lg group-hover:shadow-indigo-200 transition-all overflow-hidden">
+          <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-1 shadow-lg group-hover:shadow-indigo-200 transition-all overflow-hidden">
             {profile.avatar_url ? (
               <img 
                 src={profile.avatar_url} 
@@ -190,7 +190,7 @@ export default function ProfileForm({
           />
         </div>
         <h2 className="text-xl font-bold mt-4 text-slate-900">{profile.name || "Set your profile"}</h2>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{profile.role === "jobseeker" ? "Freelancer" : "Hirer"}</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{profile.role === "freelancer" ? "Freelancer" : "employer"}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -209,17 +209,17 @@ export default function ProfileForm({
                 onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
               />
             </div>
-            <p className="text-[10px] text-slate-400 mt-1 italic">Ito ang iyong professional URL identifier.</p>
+            <p className="text-[10px] text-slate-400 mt-1 italic">This is your professional URL identifier.</p>
           </div>
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Account Role</label>
             <select
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-slate-50 font-bold"
               value={profile.role}
-              onChange={(e) => setProfile({ ...profile, role: e.target.value as "jobseeker" | "hirer" })}
+              onChange={(e) => setProfile({ ...profile, role: e.target.value as "freelancer" | "employer" })}
             >
-              <option value="jobseeker">Jobseeker (Freelancer)</option>
-              <option value="hirer">Hirer (Client)</option>
+              <option value="freelancer">freelancer (Freelancer)</option>
+              <option value="employer">employer (Client)</option>
             </select>
           </div>
           <div>
@@ -233,7 +233,7 @@ export default function ProfileForm({
           </div>
         </div>
 
-        {profile.role === "hirer" && (
+        {profile.role === "employer" && (
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Company Name</label>
             <input
@@ -246,7 +246,7 @@ export default function ProfileForm({
           </div>
         )}
 
-        {profile.role === "jobseeker" && (
+        {profile.role === "freelancer" && (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
@@ -298,7 +298,7 @@ export default function ProfileForm({
           />
         </div>
 
-        {profile.role === "jobseeker" && (
+        {profile.role === "freelancer" && (
           <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 border-dashed">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ export default function ProfileForm({
           </div>
         )}
 
-        {profile.role === "jobseeker" && (
+        {profile.role === "freelancer" && (
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Skills</label>
             <div className="flex gap-2 mt-1">
@@ -369,7 +369,7 @@ export default function ProfileForm({
           </div>
         )}
 
-        {profile.role === "jobseeker" && (
+        {profile.role === "freelancer" && (
           <div className="pt-6 border-t border-slate-100">
             <PortfolioManager
               items={profile.portfolio || []}

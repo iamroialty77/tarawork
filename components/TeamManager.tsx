@@ -97,7 +97,7 @@ export default function TeamManager({ squad, onCreateSquad, onUpdateSquad }: Tea
 
   if (!defaultSquad) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-6 p-10 text-center">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6 p-10 text-center">
         <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
           <Users className="w-8 h-8 text-slate-300" />
         </div>
@@ -160,7 +160,7 @@ export default function TeamManager({ squad, onCreateSquad, onUpdateSquad }: Tea
   const isLead = defaultSquad.leadId === currentUserId;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
       <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
@@ -282,7 +282,7 @@ export default function TeamManager({ squad, onCreateSquad, onUpdateSquad }: Tea
       {/* Add Member Modal */}
       {isAddingMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
             <div className="p-8">
               <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6">
                 <UserPlus className="w-8 h-8 text-emerald-600" />

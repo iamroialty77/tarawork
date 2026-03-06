@@ -43,7 +43,7 @@ type TabType = "overview" | "users" | "jobs" | "escrow" | "disputes" | "reports"
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const [counts, setCounts] = useState({ users: 0, jobs: 0, hirers: 0, seekers: 0, escrows: 0, disputes: 0 });
+  const [counts, setCounts] = useState({ users: 0, jobs: 0, employers: 0, freelancers: 0, escrows: 0, disputes: 0 });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -89,16 +89,16 @@ export default function AdminDashboard() {
     try {
       // Fetch Stats
       const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-      const { count: hirerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'hirer');
-      const { count: seekerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'jobseeker');
+      const { count: employerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'employer');
+      const { count: freelancerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'freelancer');
       const { count: jobCount } = await supabase.from('jobs').select('*', { count: 'exact', head: true });
       const { count: escrowCount } = await supabase.from('escrows').select('*', { count: 'exact', head: true });
       const { count: disputeCount } = await supabase.from('disputes').select('*', { count: 'exact', head: true });
 
       setCounts({
         users: userCount || 0,
-        hirers: hirerCount || 0,
-        seekers: seekerCount || 0,
+        employers: employerCount || 0,
+        freelancers: freelancerCount || 0,
         jobs: jobCount || 0,
         escrows: escrowCount || 0,
         disputes: disputeCount || 0
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
   };
 
   const deleteUser = async (userId: string) => {
-    if (!confirm("Sigurado ka bang gusto mong tanggalin ang user na ito? LAHAT ng data (messages, jobs, profiles) ay mabubura nang tuluyan. Hindi ito maibabalik.")) return;
+    if (!confirm("Are you sure you want to delete this user? ALL data (messages, jobs, profiles) will be permanently deleted. This cannot be undone.")) return;
     
     setLoading(true);
     try {
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
   };
 
   const deleteJob = async (jobId: string) => {
-    if (!confirm("Sigurado ka bang gusto mong tanggalin ang job posting na ito?")) return;
+    if (!confirm("Are you sure you want to delete this job posting?")) return;
     
     const { error } = await supabase
       .from('jobs')
@@ -229,7 +229,7 @@ export default function AdminDashboard() {
   };
 
   const deleteEscrow = async (escrowId: string) => {
-    if (!confirm("Sigurado ka bang gusto mong tanggalin ang escrow na ito?")) return;
+    if (!confirm("Are you sure you want to delete this escrow?")) return;
     
     const { error } = await supabase
       .from('escrows')
@@ -262,7 +262,7 @@ export default function AdminDashboard() {
           <p className="text-slate-500 font-medium mt-1">Review, moderate, and manage Tara platform operations.</p>
         </div>
         
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto w-full xl:w-auto scrollbar-hide">
+                  <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm w-full xl:w-auto">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -314,7 +314,7 @@ export default function AdminDashboard() {
                   color: "amber" 
                 },
               ].map((stat, i) => (
-                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                   <div className="flex justify-between items-start">
                     <div className={`p-3 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600`}>
                       <stat.icon className="w-6 h-6" />
@@ -335,7 +335,7 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
                   <div className="flex justify-between items-center mb-8">
                     <div>
                       <h3 className="text-xl font-bold text-slate-900">Platform Performance</h3>
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Audit Trail Section */}
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-slate-900">Recent Admin Audit Logs</h3>
                     <FileText className="w-5 h-5 text-slate-400" />
@@ -383,7 +383,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-slate-900 rounded-3xl shadow-xl p-8 text-white flex flex-col">
+              <div className="bg-slate-900 rounded-2xl shadow-xl p-8 text-white flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-bold">Moderation Queue</h3>
                   <Scale className="w-5 h-5 text-indigo-400" />
@@ -415,7 +415,7 @@ export default function AdminDashboard() {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between gap-4 md:items-center">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Verification Queue</h3>
@@ -548,7 +548,7 @@ export default function AdminDashboard() {
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-8 border-b border-slate-50">
                 <h3 className="text-xl font-bold text-slate-900">Job Posting Moderation</h3>
                 <p className="text-sm text-slate-500 font-medium">Monitor marketplace content and take down invalid jobs.</p>
@@ -616,7 +616,7 @@ export default function AdminDashboard() {
           >
             {/* Financial Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
                     <TrendingUp className="w-5 h-5" />
@@ -629,7 +629,7 @@ export default function AdminDashboard() {
                 <p className="text-[10px] text-slate-400 font-medium mt-1">Gross volume currently managed by platform</p>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
                     <ArrowUpRight className="w-5 h-5" />
@@ -642,7 +642,7 @@ export default function AdminDashboard() {
                 <p className="text-[10px] text-slate-400 font-medium mt-1">Total payments successfully completed to freelancers</p>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
                     <Lock className="w-5 h-5" />
@@ -656,7 +656,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-8 border-b border-slate-50 flex justify-between items-center">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Financial Transparency</h3>
@@ -733,7 +733,7 @@ export default function AdminDashboard() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-8 border-b border-slate-50">
                 <h3 className="text-xl font-bold text-slate-900">Dispute Resolution Center</h3>
                 <p className="text-sm text-slate-500 font-medium">Review "He said, She said" cases with urgency levels and evidence.</p>
@@ -805,7 +805,7 @@ export default function AdminDashboard() {
             animate={{ opacity: 1 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-8"
           >
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900 mb-6">User Demographic</h3>
               <div className="space-y-4">
                 {[
@@ -828,7 +828,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center items-center text-center">
+            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center items-center text-center">
               <div className="p-4 bg-indigo-50 text-indigo-600 rounded-full mb-4">
                 <TrendingUp className="w-8 h-8" />
               </div>
@@ -850,7 +850,7 @@ export default function AdminDashboard() {
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">System Health & User Impact</h3>
@@ -942,12 +942,12 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white relative overflow-hidden">
+              <div className="mt-12 p-8 bg-slate-900 rounded-2xl text-white relative overflow-hidden">
                 <div className="relative z-10">
                   <h3 className="text-xl font-bold mb-4">Manual Database Setup</h3>
                   <p className="text-slate-400 text-sm mb-8 max-w-2xl leading-relaxed">
-                    If you are seeing "Missing" tables, you need to run aming schema script in your Supabase SQL Editor. 
-                    Ito ay bubuo ng lahat ng kailangang tables (profiles, jobs, escrows, messages) at i-e-enable ang Realtime sync.
+                    If you are seeing "Missing" tables, you need to run our schema script in your Supabase SQL Editor. 
+                    This will create all the necessary tables (profiles, jobs, escrows, messages) and enable Realtime sync.
                   </p>
                   <div className="flex flex-wrap gap-4">
                     <button 

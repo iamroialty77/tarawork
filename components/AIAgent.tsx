@@ -47,7 +47,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
     "Calculating SEO visibility and algorithmic density...",
     "Drafting multi-dimensional strategic roadmap..."
   ] : mode === "smart-match" ? [
-    "Establishing neural connection between hirer and seeker...",
+    "Establishing neural connection between employer and freelancer...",
     "Cross-referencing technical requirements with profile nodes...",
     "Analyzing energy-match and wellness compatibility...",
     "Synthesizing semantic alignment score...",
@@ -389,7 +389,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
         dynamicInsights.push("Sustainable Synergy: Worker's current energy capacity perfectly aligns with job intensity, ensuring long-term productivity.");
       } else if (energyMatch < 70) {
         score -= 5;
-        dynamicInsights.push("Burnout Alert: Mismatch detected between job intensity and seeker's current wellness profile. High risk of early fatigue.");
+        dynamicInsights.push("Burnout Alert: Mismatch detected between job intensity and freelancer's current wellness profile. High risk of early fatigue.");
       }
       
       if (job?.category === profile?.category) {
@@ -461,7 +461,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative w-full max-w-lg bg-slate-950 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden shadow-indigo-500/10"
+        className="relative w-full max-w-lg bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden shadow-indigo-500/10"
       >
         {/* Glowing Background Effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-gradient-to-b from-indigo-500/10 to-transparent blur-3xl pointer-events-none" />
@@ -587,7 +587,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                <div className="bg-indigo-600/10 border border-indigo-500/20 p-6 rounded-3xl relative overflow-hidden">
+                <div className="bg-indigo-600/10 border border-indigo-500/20 p-6 rounded-2xl relative overflow-hidden">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em]">Overall Confidence Score</span>
                     <div className="flex items-center gap-1">

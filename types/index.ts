@@ -110,7 +110,7 @@ export interface Job {
   milestones?: Milestone[];
   deadline?: string;
   customQuestions?: ProposalQuestion[];
-  hirer_id?: string;
+  employer_id?: string;
   applicantCount?: number;
   energyRequirement?: "High" | "Balanced" | "Low"; // Energy requirement of the job
   sustainabilityMatchScore?: number; // 0-100: Calculated compatibility
@@ -176,7 +176,7 @@ export interface UserProfile {
   id?: string;
   username?: string;
   name: string;
-  role: "jobseeker" | "hirer" | "admin";
+  role: "freelancer" | "employer" | "admin";
   category: FreelancerCategory;
   skills: string[];
   verifiedSkills?: VerifiedSkill[];

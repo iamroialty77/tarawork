@@ -28,7 +28,7 @@ export default function AuthForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"jobseeker" | "hirer">("jobseeker");
+  const [role, setRole] = useState<"freelancer" | "employer">("freelancer");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSMTPHelp, setShowSMTPHelp] = useState(false);
@@ -43,7 +43,7 @@ export default function AuthForm() {
       if (refId) setReferringId(refId);
       if (action === 'hire') {
         setMode('signup');
-        setRole('hirer');
+        setRole('employer');
       }
 
       // Check for password reset mode
@@ -81,7 +81,7 @@ export default function AuthForm() {
       let message = err.message || "An error occurred during social login.";
       
       if (message.includes("provider is not enabled")) {
-        message = `Authentication Error: Ang ${provider} login ay hindi pa enabled sa Supabase Dashboard. Pakipuntahan ang Authentication > Providers at i-enable ang ${provider}.`;
+        message = `Authentication Error: ${provider} login is not yet enabled in the Supabase Dashboard. Please go to Authentication > Providers and enable ${provider}.`;
       }
       
       setError(message);
@@ -140,10 +140,10 @@ export default function AuthForm() {
           let message = error.message || "An error occurred during signup.";
           
           if (message.includes("Database error saving new user") || error.status === 500) {
-            message = "Authentication Error (500): Ang iyong Supabase project ay may problema sa email sending o database configuration. Pakisuri ang Supabase Dashboard > Authentication > Logs.";
+            message = "Authentication Error (500): Your Supabase project has an issue with email sending or database configuration. Please check Supabase Dashboard > Authentication > Logs.";
             setShowSMTPHelp(true);
           } else if (message.includes("Email rate limit exceeded")) {
-            message = "Communication Bottleneck Detected: Masyadong maraming email requests. Ang platform ay kasalukuyang may limitasyon na 5 emails per hour para sa security purposes. Subukan muli pagkalipas ng isang oras.";
+            message = "Communication Bottleneck Detected: Too many email requests. The platform currently has a limit of 5 emails per hour for security purposes. Please try again after an hour.";
             setShowSMTPHelp(true);
           }
           
@@ -152,7 +152,7 @@ export default function AuthForm() {
         }
         
         if (data?.user && data.user.identities?.length === 0) {
-          setError("Ang email na ito ay rehistrado na. Subukang mag-login o gumamit ng ibang email.");
+          setError("This email is already registered. Try logging in or use a different email.");
           return;
         }
 
@@ -172,9 +172,9 @@ export default function AuthForm() {
       let message = err.message || "An error occurred during authentication.";
       
       if (message.includes("Email rate limit exceeded")) {
-        message = "System Limit Reached: Sobra na ang dami ng email requests (5 per hour limit). Pakihintay ng isang oras bago sumubok muli o makipag-ugnayan sa aming technical team para sa scaling options.";
+        message = "System Limit Reached: Too many email requests (5 per hour limit). Please wait an hour before trying again or contact our technical team for scaling options.";
       } else if (err.status === 500 || err.code === '500' || message.includes("500") || message.toLowerCase().includes("internal server error") || message.includes("Database error")) {
-        message = "Security & Trust Alert: May teknikal na isyu sa aming backend configuration. Sinisiguro namin na ang iyong data ay mananatiling ligtas habang inaayos namin ito. Pakicheck ang platform health sa admin dashboard.";
+        message = "Security & Trust Alert: There is a technical issue with our backend configuration. We are ensuring your data remains safe while we fix this. Please check platform health in the admin dashboard.";
       }
       
       setError(message);
@@ -250,29 +250,29 @@ export default function AuthForm() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
-                        onClick={() => setRole("jobseeker")}
+                        onClick={() => setRole("freelancer")}
                         className={cn(
                           "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
-                          role === "jobseeker" 
+                          role === "freelancer" 
                             ? "border-indigo-600 bg-indigo-50/30 text-indigo-600" 
                             : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
                         )}
                       >
-                        <Briefcase className={cn("w-6 h-6", role === "jobseeker" ? "text-indigo-600" : "text-slate-400")} />
-                        <span className="text-xs font-bold uppercase tracking-wider">Job Seeker</span>
+                        <Briefcase className={cn("w-6 h-6", role === "freelancer" ? "text-indigo-600" : "text-slate-400")} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Freelancer</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setRole("hirer")}
+                        onClick={() => setRole("employer")}
                         className={cn(
                           "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2",
-                          role === "hirer" 
+                          role === "employer" 
                             ? "border-indigo-600 bg-indigo-50/30 text-indigo-600" 
                             : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
                         )}
                       >
-                        <Users className={cn("w-6 h-6", role === "hirer" ? "text-indigo-600" : "text-slate-400")} />
-                        <span className="text-xs font-bold uppercase tracking-wider">Hirer</span>
+                        <Users className={cn("w-6 h-6", role === "employer" ? "text-indigo-600" : "text-slate-400")} />
+                        <span className="text-xs font-bold uppercase tracking-wider">Employer</span>
                       </button>
                     </div>
                   </div>
@@ -382,11 +382,11 @@ export default function AuthForm() {
                         <ul className="space-y-2 opacity-90">
                           <li className="flex gap-2">
                             <span className="text-indigo-400 font-bold">1.</span>
-                            <span>Pumunta sa <b>Authentication {">"} Providers {">"} Email</b> at i-disable ang <b>"Confirm email"</b> para sa temporary fix.</span>
+                            <span>Go to <b>Authentication {">"} Providers {">"} Email</b> and disable <b>"Confirm email"</b> for a temporary fix.</span>
                           </li>
                           <li className="flex gap-2">
                             <span className="text-indigo-400 font-bold">2.</span>
-                            <span>Para sa production, gamitin ang <b>Custom SMTP</b> (gaya ng Resend o SendGrid) sa SMTP Settings.</span>
+                            <span>For production, use <b>Custom SMTP</b> (like Resend or SendGrid) in SMTP Settings.</span>
                           </li>
                         </ul>
                       </div>

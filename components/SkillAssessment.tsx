@@ -115,7 +115,7 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
               animate={{ scale: 1, opacity: 1, rotateY: 0 }}
               exit={{ scale: 0.8, opacity: 0, rotateY: -90 }}
               transition={{ type: "spring", damping: 15 }}
-              className="relative w-full max-w-md bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[2.5rem] border border-white/20 shadow-[0_0_50px_rgba(79,70,229,0.3)] overflow-hidden"
+              className="relative w-full max-w-md bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl border border-white/20 shadow-[0_0_50px_rgba(79,70,229,0.3)] overflow-hidden"
             >
               {/* Holographic Overlays */}
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none"></div>
@@ -146,7 +146,7 @@ export default function SkillAssessment({ verifiedSkills, aiInsights }: SkillAss
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                     className="absolute inset-0 rounded-full border-2 border-dashed border-indigo-500/30 scale-125"
                   />
-                  <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.5)] rotate-12 relative z-10">
+                  <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.5)] rotate-12 relative z-10">
                     <Verified className="w-12 h-12 text-white -rotate-12" />
                   </div>
                   <motion.div 

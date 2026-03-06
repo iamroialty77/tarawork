@@ -23,12 +23,12 @@ export async function POST(req: NextRequest) {
     // 2. Cleanup Public Data (Order matters for foreign keys)
     
     // - Delete Applications
-    await supabaseAdmin.from('applications').delete().eq('seeker_id', userId)
+    await supabaseAdmin.from('applications').delete().eq('freelancer_id', userId)
     
-    // - Delete Jobs (if they are a hirer)
+    // - Delete Jobs (if they are a employer)
     // Note: If they have jobs, we should delete them. 
     // This will trigger cascade delete for applications if set in DB.
-    await supabaseAdmin.from('jobs').delete().eq('hirer_id', userId)
+    await supabaseAdmin.from('jobs').delete().eq('employer_id', userId)
 
     // - Delete Conversations & Messages
     // Since messages reference conversation_id ON DELETE CASCADE, 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     // - Delete Escrows & Disputes (optional? maybe keep for financial records? 
     // but user wants TOTAL delete, so we should clean up)
-    await supabaseAdmin.from('escrows').delete().or(`hirer_id.eq.${userId},seeker_id.eq.${userId}`)
+    await supabaseAdmin.from('escrows').delete().or(`employer_id.eq.${userId},freelancer_id.eq.${userId}`)
 
     // 3. Delete Profile (This should be done before auth delete if no cascade exists)
     const { error: profileDeleteError } = await supabaseAdmin

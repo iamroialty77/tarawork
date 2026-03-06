@@ -30,7 +30,7 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
     setIsSummarizing(true);
     try {
       // Mock transcript for demonstration
-      const mockTranscript = "Client: We need the homepage done by Friday. Seeker: I can do that, but I'll need the Figma assets. Client: Okay, I'll send them over today. Let's agree on ₱5,000 for this milestone.";
+      const mockTranscript = "Client: We need the homepage done by Friday. freelancer: I can do that, but I'll need the Figma assets. Client: Okay, I'll send them over today. Let's agree on ₱5,000 for this milestone.";
       
       const response = await fetch('/api/summarize-interview', {
         method: 'POST',
@@ -53,7 +53,7 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-5xl aspect-video bg-slate-800 rounded-3xl overflow-hidden relative shadow-2xl border border-white/5">
+      <div className="w-full max-w-5xl aspect-video bg-slate-800 rounded-2xl overflow-hidden relative shadow-2xl border border-white/5">
         {/* Mock Video Grid */}
         <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
           <div className="bg-slate-700 rounded-2xl relative flex items-center justify-center overflow-hidden">
@@ -71,7 +71,7 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
              <div className="w-20 h-20 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/30">
                 <Sparkles className="w-10 h-10" />
              </div>
-             <div className="absolute bottom-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-lg text-white text-xs font-bold uppercase tracking-widest">Client (Hirer)</div>
+             <div className="absolute bottom-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-lg text-white text-xs font-bold uppercase tracking-widest">Client (employer)</div>
           </div>
         </div>
 
@@ -157,7 +157,7 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100"
+              className="relative bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-slate-100"
             >
               <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
                 <Sparkles className="w-8 h-8" />

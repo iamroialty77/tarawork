@@ -114,7 +114,7 @@ BEGIN
 END $$;
 
 -- 7. Add sample jobs (if needed)
-INSERT INTO public.jobs (id, title, description, hirer_id, category, rate, budget, status)
+INSERT INTO public.jobs (id, title, description, employer_id, category, rate, budget, status)
 VALUES 
 ('job-001', 'Experienced Go Developer', 'Looking for someone to help with microservices architecture.', '11272cc5-378f-4db1-b52d-ba41a53a1aee', 'Developer', '$50/hr', 5000, 'live'),
 ('job-002', 'Product UI Designer', 'Designing a new marketplace mobile app.', '11272cc5-378f-4db1-b52d-ba41a53a1aee', 'Designer', 'Flat-rate', 1500, 'live')

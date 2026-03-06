@@ -72,7 +72,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Professional Portfolio</h3>
-          <p className="text-sm text-slate-500">Ipakita ang iyong mga pinakamahusay na gawa.</p>
+          <p className="text-sm text-slate-500">Showcase your best work.</p>
         </div>
         <div className="flex items-center gap-3">
           {isOwner && (
@@ -106,7 +106,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 text-slate-900"
                 value={newItem.title}
                 onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
-                placeholder="Pangalan ng Proyekto"
+                placeholder="Project Name"
               />
             </div>
             <div>
@@ -127,7 +127,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
               rows={3}
               value={newItem.description}
               onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-              placeholder="Ano ang nagawa mo sa proyektong ito?"
+              placeholder="What did you do in this project?"
             />
           </div>
           <div>
@@ -181,9 +181,9 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {items.length === 0 && !isAdding && (
-          <div className="col-span-full py-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+          <div className="col-span-full py-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100">
             <Briefcase className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-            <p className="text-slate-400 font-medium">Wala pang portfolio items na nakalista.</p>
+            <p className="text-slate-400 font-medium">No portfolio items listed yet.</p>
           </div>
         )}
         {items.map((item) => (

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       'Access-Control-Allow-Headers': 'Content-Type',
     };
 
-    // Siguraduhin na ang Content-Type ay tama para sa formData
+    // Ensure Content-Type is correct for formData
     const contentType = req.headers.get('content-type') || '';
     if (!contentType.includes('multipart/form-data')) {
       return NextResponse.json({ error: 'Invalid content type. Expected multipart/form-data.' }, { status: 400 });
@@ -95,18 +95,18 @@ export async function POST(req: NextRequest) {
         };
       }
 
-      // Dynamic import para maiwasan ang top-level initialization errors sa ilang environments
+      // Dynamic import to avoid top-level initialization errors in some environments
       const { PDFParse } = await import('pdf-parse');
       
-      // I-wrap sa Promise para siguradong asynchronous execution
+      // Wrap in Promise to ensure asynchronous execution
       const parser = new PDFParse({ 
         data: buffer,
-        verbosity: 0 // Iwasan ang masyadong maraming logs mula sa pdfjs
+        verbosity: 0 // Avoid too many logs from pdfjs
       });
       
       const data = await parser.getText({
         lineEnforce: true,
-        lineThreshold: 4.0 // Mas sensitibo para sa multi-column layouts tulad ng sa Canva
+        lineThreshold: 4.0 // More sensitive for multi-column layouts like those in Canva
       });
       text = data.text;
     } catch (parseError: any) {

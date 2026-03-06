@@ -179,7 +179,7 @@ export default function LandingPage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="relative"
             >
-              <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 p-8 space-y-6 relative overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 p-8 space-y-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
                 
                 {/* Smart Match Score Header */}
@@ -200,7 +200,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Profile Card */}
-                <div className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm">
+                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                   <div className="flex items-start gap-4 mb-6">
                     <div className="relative">
                       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-teal-400 p-0.5 shadow-lg">
@@ -351,7 +351,7 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <div className="p-8 rounded-[2rem] bg-white border border-slate-100 shadow-xl shadow-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+            <div className="p-8 rounded-2xl bg-white border border-slate-100 shadow-xl shadow-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
               <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6">
                 <Zap className="w-8 h-8 text-blue-600" />
               </div>
@@ -361,7 +361,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="p-8 rounded-[2rem] bg-white border border-slate-100 shadow-xl shadow-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+            <div className="p-8 rounded-2xl bg-white border border-slate-100 shadow-xl shadow-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
               <div className="w-14 h-14 bg-teal-100 rounded-2xl flex items-center justify-center mb-6">
                 <Users className="w-8 h-8 text-teal-600" />
               </div>
@@ -371,7 +371,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="p-8 rounded-[2rem] bg-white border border-slate-100 shadow-xl shadow-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+            <div className="p-8 rounded-2xl bg-white border border-slate-100 shadow-xl shadow-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
               <div className="w-14 h-14 bg-pink-100 rounded-2xl flex items-center justify-center mb-6 text-2xl">🇵🇭</div>
               <h3 className="text-2xl font-bold text-slate-900 mb-4">Proudly Filipino</h3>
               <p className="text-slate-600 leading-relaxed font-medium">
@@ -408,7 +408,7 @@ export default function LandingPage() {
               ].map((service, index) => (
                 <div
                   key={index}
-                  className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:scale-105 transition-all cursor-pointer group text-center"
+                  className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:scale-105 transition-all cursor-pointer group text-center"
                 >
                   <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">{service.emoji}</div>
                   <p className="text-sm font-bold text-slate-800">{service.name}</p>
@@ -431,7 +431,7 @@ export default function LandingPage() {
              <div className="hidden md:block absolute top-10 left-0 right-0 h-0.5 bg-slate-100 -z-10"></div>
              
             <div className="text-center group">
-              <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black mx-auto mb-8 shadow-xl shadow-blue-200 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">1</div>
+              <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-8 shadow-xl shadow-blue-200 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">1</div>
               <h3 className="text-2xl font-bold text-slate-900 mb-4">Create Your Profile</h3>
               <p className="text-slate-600 leading-relaxed font-medium">
                 Sign up in minutes. Set up your profile and tell us what you're looking for.
@@ -439,7 +439,7 @@ export default function LandingPage() {
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-teal-500 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black mx-auto mb-8 shadow-xl shadow-teal-200 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300">2</div>
+              <div className="w-20 h-20 bg-teal-500 rounded-2xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-8 shadow-xl shadow-teal-200 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300">2</div>
               <h3 className="text-2xl font-bold text-slate-900 mb-4">Get Matched</h3>
               <p className="text-slate-600 leading-relaxed font-medium">
                 Our smart matching system connects you based on skills and work style.
@@ -447,7 +447,7 @@ export default function LandingPage() {
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black mx-auto mb-8 shadow-xl shadow-indigo-200 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">3</div>
+              <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-8 shadow-xl shadow-indigo-200 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">3</div>
               <h3 className="text-2xl font-bold text-slate-900 mb-4">Start Working</h3>
               <p className="text-slate-600 leading-relaxed font-medium">
                 Chat, collaborate, and get paid securely. Our escrow system protects you.
@@ -458,7 +458,7 @@ export default function LandingPage() {
       </section>
 
       {/* Trust & Security */}
-      <section className="py-24 px-6 bg-slate-900 text-white rounded-[3rem] mx-6 mb-24 overflow-hidden relative">
+      <section className="py-24 px-6 bg-slate-900 text-white rounded-2xl mx-6 mb-24 overflow-hidden relative">
          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-[100px]"></div>
          <div className="container mx-auto max-w-5xl relative z-10">
             <div className="text-center mb-20">
@@ -467,7 +467,7 @@ export default function LandingPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-12">
-              <div className="bg-white/5 backdrop-blur-md rounded-[2.5rem] p-10 border border-white/10">
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-10 border border-white/10">
                 <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-blue-500/20">
                   <ShieldCheck className="w-10 h-10 text-white" />
                 </div>
@@ -484,7 +484,7 @@ export default function LandingPage() {
                 </ul>
               </div>
 
-              <div className="bg-white/5 backdrop-blur-md rounded-[2.5rem] p-10 border border-white/10">
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-10 border border-white/10">
                 <div className="w-16 h-16 bg-teal-500 rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-teal-500/20">
                   <Award className="w-10 h-10 text-white" />
                 </div>
@@ -511,15 +511,15 @@ export default function LandingPage() {
             <h2 className="text-5xl lg:text-7xl font-black text-slate-900 mb-8 leading-tight">
               Work is better when we<br /><span className="text-blue-600">do it together.</span>
             </h2>
-            <p className="text-2xl text-slate-600 mb-12 font-medium">Tara, be part of Tarawork today.</p>
+            <p className="text-2xl text-slate-600 mb-12 font-medium">Join TaraWork and start building your future today.</p>
             <div className="flex flex-wrap justify-center gap-6">
               <Link href="/auth">
-                <button className="px-12 py-5 bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold rounded-3xl transition-all shadow-2xl shadow-blue-200 active:scale-95 flex items-center gap-3 mx-auto">
+                <button className="px-12 py-5 bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold rounded-2xl transition-all shadow-2xl shadow-blue-200 active:scale-95 flex items-center gap-3 mx-auto">
                    Start Hiring Now <ArrowRight className="w-6 h-6" />
                 </button>
               </Link>
               <Link href="/auth">
-                <button className="px-12 py-5 bg-white border-2 border-slate-200 hover:border-blue-600 hover:text-blue-600 text-slate-700 text-xl font-bold rounded-3xl transition-all active:scale-95">
+                <button className="px-12 py-5 bg-white border-2 border-slate-200 hover:border-blue-600 hover:text-blue-600 text-slate-700 text-xl font-bold rounded-2xl transition-all active:scale-95">
                   Find Work
                 </button>
               </Link>
@@ -543,7 +543,7 @@ export default function LandingPage() {
                 <span className="text-slate-900 font-extrabold text-xl tracking-tight">TaraWork.ph</span>
               </Link>
               <p className="text-slate-500 font-medium leading-relaxed mb-8">
-                Smart job matching for Filipino freelancers and clients. Built with ❤️ in the Philippines.
+                Smart job matching for Filipino freelancers and employers. Built with ❤️ in the Philippines.
               </p>
               <div className="flex gap-4">
                 {[Facebook, Twitter, Linkedin, Instagram].map((Icon, i) => (
@@ -564,7 +564,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h4 className="font-bold text-slate-900 mb-8 uppercase tracking-widest text-xs">For Clients</h4>
+              <h4 className="font-bold text-slate-900 mb-8 uppercase tracking-widest text-xs">For Employers</h4>
               <ul className="space-y-4">
                 {['Hire Talent', 'Post a Job', 'Pricing', 'Enterprise'].map((item) => (
                   <li key={item}><Link href="/auth" className="text-slate-500 hover:text-blue-600 font-bold transition-colors">{item}</Link></li>

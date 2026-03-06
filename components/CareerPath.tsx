@@ -54,7 +54,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
         {/* Career Recommendations */}
         <div className="flex-1 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-900 p-8 rounded-3xl text-white relative overflow-hidden">
+            <div className="bg-slate-900 p-8 rounded-2xl text-white relative overflow-hidden">
                <div className="relative z-10">
                   <TrendingUp className="w-10 h-10 text-emerald-400 mb-6" />
                   <h4 className="font-black text-2xl mb-2 uppercase tracking-tight">Market Insight</h4>
@@ -71,7 +71,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px]"></div>
             </div>
 
-            <div className="bg-indigo-600 p-8 rounded-3xl text-white relative overflow-hidden">
+            <div className="bg-indigo-600 p-8 rounded-2xl text-white relative overflow-hidden">
                <div className="relative z-10">
                   <Target className="w-10 h-10 text-indigo-200 mb-6" />
                   <h4 className="font-black text-2xl mb-2 uppercase tracking-tight">Career Alignment</h4>
@@ -88,7 +88,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50">
+          <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50">
              <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-indigo-600" />
                 Recommended Skills & Strategic Gap Analysis
@@ -154,7 +154,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
             className="space-y-8"
           >
             {/* Professional Section */}
-            <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white relative overflow-hidden border border-white/10 shadow-2xl">
+            <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 rounded-2xl p-8 md:p-12 text-white relative overflow-hidden border border-white/10 shadow-2xl">
                 {/* Visual Flair */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
                 <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
@@ -192,13 +192,13 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                         {/* Certification Card */}
                         <motion.div 
                             whileHover={{ y: -5 }}
-                            className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-3xl group cursor-pointer hover:bg-white/10 transition-all"
+                            className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl group cursor-pointer hover:bg-white/10 transition-all"
                         >
                             <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                                 <ShieldCheck className="w-6 h-6 text-indigo-400" />
                             </div>
                             <h4 className="text-xl font-bold mb-3 tracking-tight">Verified Professional Certification</h4>
-                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Makuha ang ecosystem-wide badge na nagpapatunay sa iyong seniority at expertise sa mga global clients.</p>
+                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Earn an ecosystem-wide badge that proves your seniority and expertise to global clients.</p>
                             <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs group-hover:gap-3 transition-all">
                                 Get Certified <ArrowRight className="w-4 h-4" />
                             </div>
@@ -207,13 +207,13 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                         {/* Expert Mentorship Card */}
                         <motion.div 
                             whileHover={{ y: -5 }}
-                            className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-3xl group cursor-pointer hover:bg-white/10 transition-all"
+                            className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl group cursor-pointer hover:bg-white/10 transition-all"
                         >
                             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                                 <Trophy className="w-6 h-6 text-emerald-400" />
                             </div>
                             <h4 className="text-xl font-bold mb-3 tracking-tight">Expert-Led Workshops</h4>
-                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Sumali sa exclusive live sessions mula sa mga industry veterans na nagtrabaho na sa Fortune 500 companies.</p>
+                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Join exclusive live sessions from industry veterans who have worked at Fortune 500 companies.</p>
                             <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs group-hover:gap-3 transition-all">
                                 Join Workshops <ArrowRight className="w-4 h-4" />
                             </div>
@@ -222,20 +222,20 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                         {/* Simulation Card */}
                         <motion.div 
                             whileHover={{ y: -5 }}
-                            className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-3xl group cursor-pointer hover:bg-white/10 transition-all"
+                            className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl group cursor-pointer hover:bg-white/10 transition-all"
                         >
                             <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                                 <Zap className="w-6 h-6 text-purple-400" />
                             </div>
                             <h4 className="text-xl font-bold mb-3 tracking-tight">High-Stakes Simulations</h4>
-                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Mag-ensayo sa mga real-world high-pressure scenarios na may AI-powered performance feedback.</p>
+                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">Practice in real-world high-pressure scenarios with AI-powered performance feedback.</p>
                             <div className="flex items-center gap-2 text-purple-400 font-bold text-xs group-hover:gap-3 transition-all">
                                 Start Simulation <ArrowRight className="w-4 h-4" />
                             </div>
                         </motion.div>
                     </div>
 
-                    <div className="mt-12 p-8 bg-indigo-500/10 border border-indigo-400/20 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="mt-12 p-8 bg-indigo-500/10 border border-indigo-400/20 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-8">
                         <div className="flex items-center gap-6">
                             <div className="relative">
                                 <div className="w-16 h-16 rounded-full bg-slate-800 border-4 border-indigo-500/30 overflow-hidden shadow-xl">
@@ -249,7 +249,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                                 <h5 className="font-bold text-white mb-1">
                                     {roadmapData?.nextMilestone ? `Next: ${roadmapData.nextMilestone}` : "Personalized Path Ready"}
                                 </h5>
-                                <p className="text-xs text-slate-400">Based sa iyong current profile, mayroon kaming inihandang customized mastery roadmap para sa iyo.</p>
+                                <p className="text-xs text-slate-400">Based on your current profile, we have prepared a customized mastery roadmap for you.</p>
                             </div>
                         </div>
                         <button 
@@ -310,7 +310,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                                                 </div>
                                             </div>
 
-                                            <div className={`flex-1 p-6 rounded-[2rem] border transition-all ${
+                                            <div className={`flex-1 p-6 rounded-2xl border transition-all ${
                                                 index === 0
                                                 ? "bg-white/10 border-indigo-500/30 backdrop-blur-md"
                                                 : "bg-white/5 border-white/5 hover:bg-white/10"

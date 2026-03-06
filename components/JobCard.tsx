@@ -85,7 +85,7 @@ export default function JobCard({
                     </span>
                   )}
                   <Link 
-                    href={job.hirer_id ? `/messages?with=${job.hirer_id}` : "/messages"} 
+                    href={job.employer_id ? `/messages?with=${job.employer_id}` : "/messages"}
                     className="text-gray-400 hover:text-indigo-600 transition-colors"
                     title={`Message ${job.company} about ${job.category} project`}
                   >
@@ -248,17 +248,17 @@ export default function JobCard({
           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
             Posted {formatRelativeTime(job.createdAt)}
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
             <Link
-              href={job.hirer_id ? `/messages?with=${job.hirer_id}` : "/messages"}
-              className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer uppercase tracking-wider"
+              href={job.employer_id ? `/messages?with=${job.employer_id}` : "/messages"}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer uppercase tracking-wider"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              Message
+              <span className="hidden xs:inline">Message</span>
             </Link>
             <button 
               onClick={() => alert(`Details for "${job.title}" at ${job.company}:\n\n${job.description}`)}
-              className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer uppercase tracking-wider"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer uppercase tracking-wider"
             >
               Details
             </button>
@@ -273,7 +273,7 @@ export default function JobCard({
               }}
               disabled={isApplied || isApplyingLocal}
               className={cn(
-                "flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-lg transition-all active:scale-95 cursor-pointer uppercase tracking-wider",
+                "flex items-center gap-2 px-4 sm:px-5 py-2 text-xs font-bold text-white rounded-lg transition-all active:scale-95 cursor-pointer uppercase tracking-wider",
                 isApplied ? "bg-emerald-600 shadow-emerald-100" : "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200",
                 (isApplied || isApplyingLocal) && "opacity-80 cursor-not-allowed"
               )}
@@ -281,13 +281,15 @@ export default function JobCard({
               {isApplyingLocal ? (
                 <span className="flex items-center gap-2">
                   <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Applying...
+                  <span className="hidden xs:inline">Applying...</span>
+                  <span className="xs:hidden">...</span>
                 </span>
               ) : isApplied ? (
-                applicationStatus === 'hired' ? "Hired ✓" : "Pending Approval..."
+                applicationStatus === 'hired' ? "Hired ✓" : "Pending"
               ) : (
                 <>
-                  Apply Now
+                  <span className="hidden xs:inline">Apply Now</span>
+                  <span className="xs:hidden">Apply</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </>
               )}

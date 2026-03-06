@@ -16,7 +16,7 @@ function MessagesContent() {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [hirerJobs, setHirerJobs] = useState<Job[]>([]);
+  const [employerJobs, setemployerJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [restrictionError, setRestrictionError] = useState<string | null>(null);
 
@@ -33,12 +33,12 @@ function MessagesContent() {
         
         if (profile) {
           setCurrentUser(profile);
-          if (profile.role === 'hirer') {
+          if (profile.role === 'employer') {
             const { data: jobs } = await supabase
               .from('jobs')
               .select('*')
-              .eq('hirer_id', session.user.id);
-            if (jobs) setHirerJobs(jobs);
+              .eq('employer_id', session.user.id);
+            if (jobs) setemployerJobs(jobs);
           }
         }
       }
@@ -100,20 +100,20 @@ function MessagesContent() {
           
           const isMutualFollow = follow1 && follow2;
           
-          // Check for Hirer-Freelancer relationship (application)
+          // Check for employer-Freelancer relationship (application)
           const { data: application } = await supabase
             .from('applications')
-            .select('seeker_id, jobs(hirer_id)')
-            .or(`and(seeker_id.eq.${userId},jobs.hirer_id.eq.${withUserId}),and(seeker_id.eq.${withUserId},jobs.hirer_id.eq.${userId})`)
+            .select('freelancer_id, jobs(employer_id)')
+            .or(`and(freelancer_id.eq.${userId},jobs.employer_id.eq.${withUserId}),and(freelancer_id.eq.${withUserId},jobs.employer_id.eq.${userId})`)
             .maybeSingle();
 
           // Check for Team Membership (Squad)
-          // Simplified: If both are same role 'hirer', assume they might be in a team for now, 
+          // Simplified: If both are same role 'employer', assume they might be in a team for now, 
           // or we can check the 'squad' JSONB if needed.
-          const isTeam = currentUser?.role === 'hirer' && (await supabase.from('profiles').select('role').eq('id', withUserId).maybeSingle())?.data?.role === 'hirer';
+          const isTeam = currentUser?.role === 'employer' && (await supabase.from('profiles').select('role').eq('id', withUserId).maybeSingle())?.data?.role === 'employer';
 
           if (!isMutualFollow && !application && !isTeam) {
-            setRestrictionError("Maaari mo lamang i-message ang mga taong mutual follow mo, o mga employer/freelancer na may active project sa iyo.");
+            setRestrictionError("You can only message people you mutually follow, or employers/freelancers who have an active project with you.");
             return;
           }
 
@@ -219,12 +219,12 @@ function MessagesContent() {
         }, async payload => {
           const newMessage = payload.new as Message;
           setMessages(prev => {
-            // Iwasan ang duplicate messages kung na-add na ito locally
+            // Avoid duplicate messages if already added locally
             if (prev.find(m => m.id === newMessage.id)) return prev;
             return [...prev, newMessage];
           });
           
-          // Awtomatikong i-mark as read kung ang user ay nasa active conversation at hindi siya ang sender
+          // Automatically mark as read if the user is in an active conversation and is not the sender
           if (currentUser?.id && newMessage.sender_id !== currentUser.id) {
             await supabase
               .from('messages')
@@ -275,19 +275,19 @@ function MessagesContent() {
 
       if (error) throw error;
 
-      // Local update para sa instant feedback
+      // Local update for instant feedback
       setMessages(prev => {
         if (prev.find(m => m.id === data.id)) return prev;
         return [...prev, data];
       });
 
-      // Update conversation timestamp sa database
+      // Update conversation timestamp in the database
       await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', convId);
 
-      // I-update ang conversation list locally para lumipat sa itaas at magbago ang last message
+      // Update the conversation list locally to move it to the top and update the last message
       setConversations(prev => {
         const otherConvs = prev.filter(c => c.id !== convId);
         const targetConv = prev.find(c => c.id === convId);
@@ -333,7 +333,7 @@ function MessagesContent() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 text-center max-w-sm">
           <h2 className="text-xl font-bold text-slate-900 mb-2">Access Denied</h2>
-          <p className="text-slate-500 mb-6">Pakisigurado na ikaw ay naka-login para makita ang iyong inbox.</p>
+          <p className="text-slate-500 mb-6">Please make sure you are logged in to view your inbox.</p>
           <Link href="/auth" className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold">
             Go to Login
           </Link>
@@ -351,7 +351,7 @@ function MessagesContent() {
             className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-all font-bold text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            Balik sa Marketplace
+            Back to Marketplace
           </Link>
           <h1 className="text-2xl font-black text-slate-900 hidden md:block">Inbox</h1>
           <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400">
@@ -366,7 +366,7 @@ function MessagesContent() {
           selectedConversationId={selectedId}
           onSelectConversation={setSelectedId}
           onSendMessage={handleSend}
-          hirerJobs={hirerJobs}
+          employerJobs={employerJobs}
         />
       </div>
     </div>

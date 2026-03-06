@@ -105,11 +105,11 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             />
           </div>
           
-          <div className="flex gap-2">
-            <div className="relative">
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-[120px]">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <select
-                className="appearance-none rounded-xl border border-gray-200 pl-10 pr-8 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
+                className="w-full appearance-none rounded-xl border border-gray-200 pl-10 pr-8 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value as any)}
               >
@@ -120,7 +120,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             </div>
 
             <select
-              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
+              className="flex-1 min-w-[120px] rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
               value={durationFilter}
               onChange={(e) => setDurationFilter(e.target.value as any)}
             >
@@ -131,7 +131,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             </select>
 
             <select
-              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
+              className="w-full md:w-auto rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as any)}
             >

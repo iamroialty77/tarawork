@@ -2,11 +2,11 @@
 -- Copy and run this script in your Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql)
 
 -- 1. Create PROFILES table
--- This table stores user profile information for both Jobseekers and Hirers.
+-- This table stores user profile information for both freelancers and employers.
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
     name TEXT,
-    role TEXT DEFAULT 'jobseeker',
+    role TEXT DEFAULT 'freelancer',
     category TEXT DEFAULT 'General',
     skills TEXT[] DEFAULT '{}',
     "hourlyRate" TEXT DEFAULT '$0',
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     milestones JSONB DEFAULT '[]',
     deadline TEXT,
     "customQuestions" JSONB DEFAULT '[]',
-    hirer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    employer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     status TEXT DEFAULT 'live', -- live, closed, flagged, pending
     "energy_requirement" TEXT DEFAULT 'Balanced' -- High, Balanced, Low
 );
@@ -147,8 +147,8 @@ CREATE TABLE IF NOT EXISTS public.portfolio_items (
 CREATE TABLE IF NOT EXISTS public.escrows (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id TEXT REFERENCES public.jobs(id) ON DELETE SET NULL,
-    hirer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    seeker_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    employer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     amount NUMERIC NOT NULL,
     platform_fee NUMERIC DEFAULT 0,
     status TEXT DEFAULT 'pending', -- pending, funded, released, disputed, refunded
@@ -186,13 +186,13 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('attachments', 'attachments', true) 
 ON CONFLICT (id) DO NOTHING;
 
--- Policy para payagan ang authenticated users na mag-upload
+-- Policy to allow authenticated users to upload
 DROP POLICY IF EXISTS "Authenticated users can upload attachments" ON storage.objects;
 CREATE POLICY "Authenticated users can upload attachments" 
 ON storage.objects FOR INSERT 
 WITH CHECK (bucket_id = 'attachments' AND auth.role() = 'authenticated');
 
--- Policy para makita ng lahat ang attachments (dahil public: true)
+-- Policy to allow everyone to see attachments (since public: true)
 DROP POLICY IF EXISTS "Anyone can view attachments" ON storage.objects;
 CREATE POLICY "Anyone can view attachments" 
 ON storage.objects FOR SELECT 
@@ -283,40 +283,40 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id TEXT REFERENCES public.jobs(id) ON DELETE CASCADE NOT NULL,
-    seeker_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     status TEXT DEFAULT 'pending', -- pending, interviewing, hired, rejected
     cover_letter TEXT,
     resume_url TEXT,
     portfolio_url TEXT,
     interview_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    UNIQUE(job_id, seeker_id)
+    UNIQUE(job_id, freelancer_id)
 );
 
 -- Enable Row Level Security
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
 
 -- Policies for APPLICATIONS
--- Seeker can view their own applications
+-- freelancer can view their own applications
 DROP POLICY IF EXISTS "Users can view their own applications" ON public.applications;
 CREATE POLICY "Users can view their own applications" ON public.applications
-    FOR SELECT USING (auth.uid() = seeker_id);
+    FOR SELECT USING (auth.uid() = freelancer_id);
 
--- Hirer can view applications for their own jobs
-DROP POLICY IF EXISTS "Hirers can view applications for their jobs" ON public.applications;
-CREATE POLICY "Hirers can view applications for their jobs" ON public.applications
+-- employer can view applications for their own jobs
+DROP POLICY IF EXISTS "employers can view applications for their jobs" ON public.applications;
+CREATE POLICY "employers can view applications for their jobs" ON public.applications
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM public.jobs
             WHERE jobs.id = applications.job_id
-            AND jobs.hirer_id = auth.uid()
+            AND jobs.employer_id = auth.uid()
         )
     );
 
--- Seeker can insert their own application
+-- freelancer can insert their own application
 DROP POLICY IF EXISTS "Users can insert their own applications" ON public.applications;
 CREATE POLICY "Users can insert their own applications" ON public.applications
-    FOR INSERT WITH CHECK (auth.uid() = seeker_id);
+    FOR INSERT WITH CHECK (auth.uid() = freelancer_id);
 
 -- Add to Realtime
 DO $$
@@ -510,7 +510,7 @@ BEGIN
     new.id, 
     new.raw_user_meta_data->>'full_name', 
     new.raw_user_meta_data->>'avatar_url',
-    COALESCE(new.raw_user_meta_data->>'role', 'jobseeker'),
+    COALESCE(new.raw_user_meta_data->>'role', 'freelancer'),
     COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
     CASE WHEN (new.raw_user_meta_data->>'referring_freelancer_id') IS NOT NULL 
          THEN (new.raw_user_meta_data->>'referring_freelancer_id')::uuid 

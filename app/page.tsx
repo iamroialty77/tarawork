@@ -51,7 +51,9 @@ import {
   Brain,
   Medal,
   Verified,
-  Trophy
+  Trophy,
+  Menu,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -66,7 +68,7 @@ export default function Home() {
   const [toastMsg, setToastMsg] = useState("");
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [hirerJobs, setHirerJobs] = useState<Job[]>([]);
+  const [employerJobs, setemployerJobs] = useState<Job[]>([]);
   const [appliedJobs, setAppliedJobs] = useState<Record<string, string>>({});
   const [freelancers, setFreelancers] = useState<UserProfile[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
@@ -80,7 +82,7 @@ export default function Home() {
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [selectedJobIdParaSaApply, setSelectedJobIdParaSaApply] = useState<string | null>(null);
+  const [selectedJobIdForApply, setSelectedJobIdForApply] = useState<string | null>(null);
   const [applyData, setApplyData] = useState({
     resumeUrl: "",
     portfolioUrl: "",
@@ -98,7 +100,7 @@ export default function Home() {
 
   const [profile, setProfile] = useState<UserProfile>({
     name: "User",
-    role: "jobseeker",
+    role: "freelancer",
     category: "General",
     skills: [],
     verifiedSkills: [],
@@ -117,6 +119,8 @@ export default function Home() {
     bio: "",
     activeProjects: [],
   });
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     // Handle email confirmation success message
@@ -210,7 +214,7 @@ export default function Home() {
 
         setProfile({ ...data, portfolio: portfolioItems });
         
-        if (data.role === 'hirer') {
+        if (data.role === 'employer') {
           setView('client');
         } else if (data.role === 'admin') {
           setView('admin');
@@ -219,7 +223,7 @@ export default function Home() {
         }
       } else {
         // Create initial profile if it doesn't exist
-        const role = userAuth?.user_metadata?.role || "jobseeker";
+        const role = userAuth?.user_metadata?.role || "freelancer";
         const initialData: UserProfile = {
           id: userId,
           name: userAuth?.user_metadata?.full_name || userAuth?.email?.split('@')[0] || "User",
@@ -239,7 +243,7 @@ export default function Home() {
            }
         }
         setProfile(prev => ({ ...prev, ...initialData }));
-        if (role === 'hirer') setView('client');
+        if (role === 'employer') setView('client');
         else if (role === 'admin') setView('admin');
         else setView('freelancer');
       }
@@ -268,7 +272,7 @@ export default function Home() {
       if (error) throw error;
       
       setProfile(updatedProfile);
-      if (updatedProfile.role === 'hirer') {
+      if (updatedProfile.role === 'employer') {
         setView('client');
       } else if (updatedProfile.role === 'admin') {
         setView('admin');
@@ -456,17 +460,17 @@ export default function Home() {
     }
   };
 
-  const fetchHirerJobs = async (userId: string) => {
+  const fetchEmployerJobs = async (userId: string) => {
     try {
       // Fetch jobs along with their application counts
       const { data, error } = await supabase
         .from('jobs')
         .select('*, applications(count)')
-        .eq('hirer_id', userId)
+        .eq('employer_id', userId)
         .order('createdAt', { ascending: false });
 
       if (error) {
-        console.error("Error fetching hirer jobs:", error);
+        console.error("Error fetching employer jobs:", error);
         return;
       }
 
@@ -475,10 +479,10 @@ export default function Home() {
           ...job,
           applicantCount: job.applications?.[0]?.count || 0
         }));
-        setHirerJobs(formattedJobs);
+        setemployerJobs(formattedJobs);
       }
     } catch (err) {
-      console.error("Unexpected error fetching hirer jobs:", err);
+      console.error("Unexpected error fetching employer jobs:", err);
     }
   };
 
@@ -506,7 +510,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from('applications')
         .select('job_id, status')
-        .eq('seeker_id', userId);
+        .eq('freelancer_id', userId);
       
       if (!error && data) {
         const apps = data.reduce((acc: any, app: any) => {
@@ -527,12 +531,12 @@ export default function Home() {
       return;
     }
     
-    setSelectedJobIdParaSaApply(jobId);
+    setSelectedJobIdForApply(jobId);
     setShowApplyModal(true);
   };
 
   const submitApplication = async () => {
-    if (!user || !selectedJobIdParaSaApply) return;
+    if (!user || !selectedJobIdForApply) return;
     
     if (!applyData.resumeUrl || !applyData.portfolioUrl) {
       setToastMsg("Please provide both Resume and Portfolio links to proceed.");
@@ -545,8 +549,8 @@ export default function Home() {
       const { error } = await supabase
         .from('applications')
         .insert([{ 
-          job_id: selectedJobIdParaSaApply, 
-          seeker_id: user.id,
+          job_id: selectedJobIdForApply,
+          freelancer_id: user.id,
           status: 'pending',
           resume_url: applyData.resumeUrl,
           portfolio_url: applyData.portfolioUrl,
@@ -561,8 +565,8 @@ export default function Home() {
           throw error;
         }
       } else {
-        setAppliedJobs(prev => ({ ...prev, [selectedJobIdParaSaApply]: 'pending' }));
-        setToastMsg("Application submitted! Hirer will review your credentials.");
+        setAppliedJobs(prev => ({ ...prev, [selectedJobIdForApply]: 'pending' }));
+        setToastMsg("Application submitted! employer will review your credentials.");
         setShowApplyModal(false);
         setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
       }
@@ -575,7 +579,7 @@ export default function Home() {
     }
   };
 
-  const approveApplication = async (applicationId: string, seekerId: string, jobId: string, jobTitle: string, budget: number) => {
+  const approveApplication = async (applicationId: string, freelancerId: string, jobId: string, jobTitle: string, budget: number) => {
     if (!user) return;
     try {
       setIsSaving(true);
@@ -593,8 +597,8 @@ export default function Home() {
         .from('escrows')
         .insert([{
           job_id: jobId,
-          hirer_id: user.id,
-          seeker_id: seekerId,
+          employer_id: user.id,
+          freelancer_id: freelancerId,
           amount: budget,
           status: 'funded',
           description: `Budget for ${jobTitle}`
@@ -602,11 +606,11 @@ export default function Home() {
       
       if (escrowError) throw escrowError;
 
-      // 3. Send Notification to Jobseeker
+      // 3. Send Notification to freelancer
       const { error: notifError } = await supabase
         .from('notifications')
         .insert([{
-          user_id: seekerId,
+          user_id: freelancerId,
           title: 'Project Approved!',
           message: `Congratulations! You have been approved for the project: ${jobTitle}. Budget is now in escrow.`,
           type: 'success',
@@ -615,7 +619,7 @@ export default function Home() {
       
       if (notifError) throw notifError;
 
-      setToastMsg("Jobseeker approved and budget funded in escrow!");
+      setToastMsg("freelancer approved and budget funded in escrow!");
       setShowToast(true);
       
       // Refresh applicants list locally
@@ -640,7 +644,7 @@ export default function Home() {
           *,
           portfolio_items(*)
         `)
-        .eq('role', 'jobseeker')
+        .eq('role', 'freelancer')
         .order('ranking', { ascending: true })
         .limit(10);
 
@@ -754,7 +758,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from('escrows')
         .select('*, jobs(*)')
-        .eq('seeker_id', userId);
+        .eq('freelancer_id', userId);
       
       if (!error && data) {
         setUserEscrows(data);
@@ -809,7 +813,7 @@ export default function Home() {
         // Fetch jobs from DB
         await fetchJobs();
         await fetchAppliedJobs(session.user.id);
-        await fetchHirerJobs(session.user.id);
+        await fetchEmployerJobs(session.user.id);
         await fetchFreelancers();
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
@@ -888,7 +892,7 @@ export default function Home() {
             schema: 'public', 
             table: 'applications' 
           }, () => {
-            fetchHirerJobs(session.user.id);
+            fetchEmployerJobs(session.user.id);
             fetchAppliedJobs(session.user.id);
           })
           .subscribe();
@@ -1112,7 +1116,7 @@ export default function Home() {
               <span className="uppercase tracking-widest">Platform Status: Initialization Required</span>
             </div>
             <div className="h-4 w-px bg-white/20 hidden sm:block"></div>
-            <span className="opacity-90 font-medium">Ang ilang database tables ({missingTables.join(", ")}) ay kailangang i-setup para sa full functionality.</span>
+            <span className="opacity-90 font-medium">Some database tables ({missingTables.join(", ")}) need to be set up for full functionality.</span>
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => setView("admin")}
@@ -1151,6 +1155,12 @@ export default function Home() {
 
             <div className="flex items-center gap-4">
               <button 
+                className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+              <button 
                 onClick={async () => {
                   await supabase.auth.signOut();
                   router.push("/auth");
@@ -1178,7 +1188,7 @@ export default function Home() {
                       initial={{ opacity: 0, scale: 0.95, y: 10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      className="absolute top-full right-0 mt-3 w-80 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-[60]"
+                      className="absolute top-full right-0 mt-3 w-80 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-[60]"
                     >
                       <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50 backdrop-blur-sm">
                         <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
@@ -1266,6 +1276,65 @@ export default function Home() {
           </div>
         </div>
       </nav>
+
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden bg-white border-b border-slate-200 overflow-hidden sticky top-[65px] z-40"
+          >
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-1 gap-2">
+                <button 
+                  onClick={() => { setView('freelancer'); setIsMenuOpen(false); }}
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${view === 'freelancer' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <Briefcase className="w-5 h-5" />
+                  Freelancer Workspace
+                </button>
+                <button 
+                  onClick={() => { setView('client'); setIsMenuOpen(false); }}
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${view === 'client' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <Users className="w-5 h-5" />
+                  Employer Dashboard
+                </button>
+                {profile.role === 'admin' && (
+                  <button 
+                    onClick={() => { setView('admin'); setIsMenuOpen(false); }}
+                    className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${view === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <ShieldCheck className="w-5 h-5" />
+                    Admin Portal
+                  </button>
+                )}
+              </div>
+              <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
+                <Link 
+                  href="/messages" 
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-50"
+                >
+                  <Mail className="w-5 h-5" />
+                  Messages {unreadCount > 0 && `(${unreadCount})`}
+                </Link>
+                <button 
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    router.push("/auth");
+                  }}
+                  className="flex items-center gap-3 p-3 rounded-xl font-bold text-sm text-rose-600 hover:bg-rose-50"
+                >
+                  <LogIn className="w-5 h-5 rotate-180" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="max-w-full px-4 sm:px-10 py-8">
         {view === "freelancer" ? (
@@ -1357,12 +1426,12 @@ export default function Home() {
             </div>
 
             {/* --- NEW PROFESSIONAL PORTFOLIO LINK CARD --- */}
-            {profile.role === 'jobseeker' && (
+            {profile.role === 'freelancer' && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-white p-5 rounded-3xl border-2 border-indigo-50/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-5 relative overflow-hidden group"
+                className="bg-white p-5 rounded-2xl border-2 border-indigo-50/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-5 relative overflow-hidden group"
               >
                 <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-all duration-500"></div>
                 <div className="flex items-center gap-4 relative">
@@ -1404,10 +1473,10 @@ export default function Home() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="md:col-span-2 lg:col-span-3 space-y-6">
-                      <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
+                      <div className="bg-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
                         <div className="relative z-10">
                           <h3 className="text-2xl font-black mb-2 tracking-tight">Focus on your workspace</h3>
-                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">Mayroon kang {userEscrows.length} approved projects na may pondo sa escrow.</p>
+                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">You have {userEscrows.length} approved projects with funds in escrow.</p>
                           <div className="flex flex-wrap gap-3">
                             <button 
                               onClick={() => setFreelancerTab("workspace")}
@@ -1430,7 +1499,7 @@ export default function Home() {
                       </div>
 
                       {userEscrows.length > 0 && (
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                        <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
                           <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
                               <ShieldCheck className="w-5 h-5 text-indigo-600" />
@@ -1449,7 +1518,7 @@ export default function Home() {
                                     <h4 className="font-bold text-slate-900">{escrow.jobs?.title || "Project Title"}</h4>
                                     <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1 mt-1">
                                       <Lock className="w-3 h-3" />
-                                      Pondo sa Escrow: ${Number(escrow.amount).toLocaleString()}
+                                      Funds in Escrow: ${Number(escrow.amount).toLocaleString()}
                                     </p>
                                   </div>
                                 </div>
@@ -1468,7 +1537,7 @@ export default function Home() {
                       )}
 
                       {/* --- PORTFOLIO INQUIRIES SECTION --- */}
-                      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                      <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
                         <div className="flex justify-between items-center mb-6">
                           <div className="space-y-1">
                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
@@ -1558,7 +1627,7 @@ export default function Home() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
                           <div>
                             <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
                               <TrendingUp className="w-5 h-5 text-emerald-600" />
@@ -1573,7 +1642,7 @@ export default function Home() {
                             View Analysis <ChevronRight className="w-3 h-3" />
                           </button>
                         </div>
-                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
                           <div>
                             <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
                               <Briefcase className="w-5 h-5 text-amber-600" />
@@ -1592,7 +1661,7 @@ export default function Home() {
                     </div>
                     
                     <div className="space-y-6">
-                      <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                      <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xl">
                         <div className="flex items-center gap-3 mb-6">
                           <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center overflow-hidden border-2 border-white/10">
                             {profile.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5" />}
@@ -1621,7 +1690,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Trust & Safety Section for Seekers */}
+                  {/* Trust & Safety Section for freelancer */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4">
                       <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
@@ -1629,7 +1698,7 @@ export default function Home() {
                       </div>
                       <div>
                         <h4 className="font-bold text-emerald-900">Safe-Vault Protection</h4>
-                        <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Ang iyong bayad ay protektado. Ang pondo ay itinatabi sa aming secure vault bago magsimula ang trabaho.</p>
+                        <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Your payment is protected. Funds are kept in our secure vault before work begins.</p>
                       </div>
                     </div>
                     <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex gap-4">
@@ -1638,7 +1707,7 @@ export default function Home() {
                       </div>
                       <div>
                         <h4 className="font-bold text-indigo-900">Escrow Milestone</h4>
-                        <p className="text-xs text-indigo-700 mt-1 leading-relaxed">Sinisiguro namin na ang bawat milestone ay may katumbas na pondo na nakareserba para sa iyo.</p>
+                        <p className="text-xs text-indigo-700 mt-1 leading-relaxed">We ensure that each milestone has corresponding funds reserved for you.</p>
                       </div>
                     </div>
                     <div className="bg-slate-900 p-6 rounded-2xl flex gap-4 text-white">
@@ -1647,7 +1716,7 @@ export default function Home() {
                       </div>
                       <div>
                         <h4 className="font-bold">24/7 Support</h4>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">May dispute? Ang aming admin team ay handang tumulong sa pag-resolve ng anumang isyu.</p>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Have a dispute? Our admin team is ready to help resolve any issues.</p>
                       </div>
                     </div>
                   </div>
@@ -1737,7 +1806,7 @@ export default function Home() {
                     />
                   </div>
                   <div className="lg:col-span-4 space-y-6">
-                    {profile.role === 'jobseeker' && (
+                    {profile.role === 'freelancer' && (
                       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
                         <div className="relative">
@@ -1941,7 +2010,7 @@ export default function Home() {
                 </p>
                 <div className="flex gap-4">
                   <div className="flex flex-col">
-                    <span className="text-2xl font-bold text-white">{hirerJobs.length}</span>
+                    <span className="text-2xl font-bold text-white">{employerJobs.length}</span>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Posts</span>
                   </div>
                   <div className="w-px h-10 bg-white/10 mx-2"></div>
@@ -1955,15 +2024,15 @@ export default function Home() {
             </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-indigo-600" />
-                      Hirer Stats
+                      Employer Stats
                     </h3>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Active Postings</span>
-                        <span className="text-sm font-bold text-slate-900">{hirerJobs.length}</span>
+                        <span className="text-sm font-bold text-slate-900">{employerJobs.length}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Spent</span>
@@ -1972,14 +2041,14 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="lg:col-span-2 bg-slate-900 p-6 rounded-3xl text-white shadow-lg overflow-hidden relative">
+                  <div className="lg:col-span-2 bg-slate-900 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative">
                     <div className="relative z-10">
                       <h3 className="text-lg font-bold mb-2">Team Management</h3>
                       <p className="text-sm text-slate-400 mb-4 leading-relaxed">
                         Invite teammates to review applications and manage projects together.
                       </p>
                       <button 
-                        onClick={() => alert("Squad management for Hirers coming soon!")}
+                        onClick={() => alert("Squad management for Employers coming soon!")}
                         className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
                       >
                         Configure Team <ArrowUpRight className="w-3 h-3" />
@@ -2011,7 +2080,7 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                  <JobPostingForm onPublish={() => { fetchHirerJobs(user.id); setClientTab("postings"); }} />
+                  <JobPostingForm onPublish={() => { fetchEmployerJobs(user.id); setClientTab("postings"); }} />
                 </div>
               </motion.div>
             )}
@@ -2031,9 +2100,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                {hirerJobs.length > 0 ? (
+                {employerJobs.length > 0 ? (
                   <div className="grid gap-4">
-                    {hirerJobs.map((job) => (
+                    {employerJobs.map((job) => (
                       <div key={job.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all">
                         <div className="flex justify-between items-start mb-4">
                           <div>
@@ -2179,7 +2248,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+              className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div className="flex items-center gap-4">
@@ -2319,7 +2388,7 @@ export default function Home() {
                           ))
                         ) : (
                           <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-2xl">
-                            <p className="text-slate-400 text-sm">Walang portfolio items na ipinakita.</p>
+                            <p className="text-slate-400 text-sm">No portfolio items shown.</p>
                           </div>
                         )}
                       </div>
@@ -2347,7 +2416,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
@@ -2365,7 +2434,7 @@ export default function Home() {
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {selectedJobApplicants.length > 0 ? (
                   selectedJobApplicants.map((app: any) => (
-                    <div key={app.id} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group">
+                    <div key={app.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group">
                       <div className="flex flex-col md:flex-row items-start gap-6">
                         <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
                           {app.profiles?.avatar_url ? (
@@ -2384,7 +2453,7 @@ export default function Home() {
                                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-amber-50 border-amber-100">
                                     <Zap className="w-3 h-3 text-amber-500" />
                                     <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">
-                                      {energyScore(app.profiles.wellness.energyRating, hirerJobs.find(j => j.title === selectedJobTitle)?.energyRequirement)}% Compatibility
+                                      {energyScore(app.profiles.wellness.energyRating, employerJobs.find(j => j.title === selectedJobTitle)?.energyRequirement)}% Compatibility
                                     </span>
                                   </div>
                                 )}
@@ -2428,7 +2497,7 @@ export default function Home() {
                           <div className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-100 shadow-sm">
                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2.5 flex items-center gap-2">
                               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                              Jobseeker&apos;s Message
+                              freelancer&apos;s Message
                             </p>
                             <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
                               &quot;{app.cover_letter || "No cover letter provided."}&quot;
@@ -2449,8 +2518,8 @@ export default function Home() {
                             {app.status === 'pending' && (
                               <button 
                                 onClick={() => {
-                                  const job = hirerJobs.find(j => j.title === selectedJobTitle);
-                                  approveApplication(app.id, app.seeker_id, app.job_id, selectedJobTitle, job?.budget || 0);
+                                  const job = employerJobs.find(j => j.title === selectedJobTitle);
+                                  approveApplication(app.id, app.freelancer_id, app.job_id, selectedJobTitle, job?.budget || 0);
                                 }}
                                 disabled={isSaving}
                                 className="px-6 py-3 bg-indigo-600 text-white text-[10px] font-bold rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-500/20 active:scale-95"
@@ -2469,7 +2538,7 @@ export default function Home() {
                               Profile Details
                             </button>
                             <Link 
-                              href={`/messages?with=${app.seeker_id}`}
+                              href={`/messages?with=${app.freelancer_id}`}
                               className="px-5 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
                             >
                               <Mail className="w-4 h-4 text-indigo-400" />
@@ -2509,12 +2578,12 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-100"
+              className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100"
             >
               <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
                   <h3 className="text-xl font-black text-slate-900 tracking-tight">Prove Your Legitimacy</h3>
-                  <p className="text-sm font-medium text-slate-500">Provide your credentials to the hirer.</p>
+                  <p className="text-sm font-medium text-slate-500">Provide your credentials to the employer.</p>
                 </div>
                 <button 
                   onClick={() => setShowApplyModal(false)}
@@ -2570,11 +2639,11 @@ export default function Home() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5" />
-                    Short Message to Hirer
+                    Short Message to employer
                   </label>
                   <textarea 
                     rows={4}
-                    placeholder="Tell the hirer why you're a good fit..."
+                    placeholder="Tell the employer why you're a good fit..."
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
                     value={applyData.coverLetter}
                     onChange={(e) => setApplyData({...applyData, coverLetter: e.target.value})}
@@ -2635,7 +2704,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-100"
+              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100"
             >
               <div className="bg-slate-900 p-8 text-white relative">
                 <div className="relative z-10">
@@ -2653,12 +2722,12 @@ export default function Home() {
                 {[
                   { 
                     title: "Funds are Locked", 
-                    desc: "When a project starts, the hirer deposits funds into Tara's secure Escrow account. This confirms the budget is ready.",
+                    desc: "When a project starts, the employer deposits funds into Tara's secure Escrow account. This confirms the budget is ready.",
                     icon: Lock
                   },
                   { 
                     title: "Work is Verified", 
-                    desc: "The freelancer submits milestones. Hirers review the work before any payment is released.",
+                    desc: "The freelancer submits milestones. employers review the work before any payment is released.",
                     icon: CheckCircle2
                   },
                   { 

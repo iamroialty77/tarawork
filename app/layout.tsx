@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TaraWork",
-  description: "The Premium Marketplace for Filipino Freelancers & Hirers",
+  description: "The Premium Marketplace for Filipino Freelancers & employers",
   icons: {
     icon: "/tarawork-removebg-preview.png",
     apple: "/tarawork-removebg-preview.png",

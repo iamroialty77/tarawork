@@ -29,7 +29,7 @@ export default function PortfolioPreview({ item }: PortfolioPreviewProps) {
   };
 
   return (
-    <div className="group bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
+    <div className="group bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
       <div className="aspect-video relative overflow-hidden bg-slate-100">
         <img 
           src={getPreviewImage()} 
