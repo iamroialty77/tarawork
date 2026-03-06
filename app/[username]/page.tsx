@@ -46,11 +46,21 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
     
     if (oldItems && oldItems.length > 0) {
       profile.portfolios = [{ 
+        id: 'fallback-' + (profile.id?.toString().substring(0, 8) || '0000'),
+        about_me: profile.bio || '',
+        tagline: 'Professional Portfolio',
+        theme_settings: { aesthetic: 'minimalist', primaryColor: '#000000' },
         portfolio_projects: oldItems.map((item: any) => ({
-          id: item.id, title: item.title, description: item.description, 
-          image_url: item.image_url, project_url: item.project_url, technologies: item.technologies 
-        }))
-      }];
+          id: item.id, 
+          title: item.title, 
+          description: item.description, 
+          image_url: item.image_url, 
+          project_url: item.project_url, 
+          technologies: item.technologies 
+        })),
+        portfolio_skills: [],
+        portfolio_links: []
+      }] as any;
     }
   }
 
@@ -189,11 +199,21 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
               .eq('profile_id', p.id);
             if (oldItems && oldItems.length > 0) {
               p.portfolios = [{ 
+                id: 'fallback-' + (p.id?.toString().substring(0, 8) || '0000'),
+                about_me: p.bio || '',
+                tagline: 'Professional Portfolio',
+                theme_settings: { aesthetic: 'minimalist', primaryColor: '#000000' },
                 portfolio_projects: oldItems.map((item: any) => ({
-                  id: item.id, title: item.title, description: item.description, 
-                  image_url: item.image_url, project_url: item.project_url, technologies: item.technologies 
-                }))
-              }];
+                  id: item.id, 
+                  title: item.title, 
+                  description: item.description, 
+                  image_url: item.image_url, 
+                  project_url: item.project_url, 
+                  technologies: item.technologies 
+                })),
+                portfolio_skills: [],
+                portfolio_links: []
+              }] as any;
             }
           }
           return mapProfile(p);
