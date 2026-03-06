@@ -88,6 +88,7 @@ export default function Home() {
     coverLetter: ""
   });
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [userFollows, setUserFollows] = useState<string[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [userEscrows, setUserEscrows] = useState<any[]>([]);
   const [selectedJobApplicants, setSelectedJobApplicants] = useState<any[]>([]);
@@ -691,6 +692,47 @@ export default function Home() {
       console.error("Error fetching notifications:", err);
     }
   };
+  
+  const fetchFollows = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', userId);
+      
+      if (!error && data) {
+        setUserFollows(data.map(f => f.following_id));
+      }
+    } catch (err) {
+      console.error("Error fetching follows:", err);
+    }
+  };
+
+  const toggleFollow = async (targetId: string) => {
+    if (!user) return;
+    
+    const isFollowing = userFollows.includes(targetId);
+    
+    if (isFollowing) {
+      const { error } = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', targetId);
+      
+      if (!error) {
+        setUserFollows(prev => prev.filter(id => id !== targetId));
+      }
+    } else {
+      const { error } = await supabase
+        .from('follows')
+        .insert({ follower_id: user.id, following_id: targetId });
+      
+      if (!error) {
+        setUserFollows(prev => [...prev, targetId]);
+      }
+    }
+  };
 
   const markNotificationRead = async (id: string) => {
     try {
@@ -771,6 +813,7 @@ export default function Home() {
         await fetchFreelancers();
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
+        await fetchFollows(session.user.id);
         await fetchUserEscrows(session.user.id);
         await fetchPortfolioInquiries(session.user.id);
         
@@ -1123,7 +1166,9 @@ export default function Home() {
                 >
                   <Bell className="w-5 h-5" />
                   {notifications.filter(n => !n.is_read).length > 0 && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-600 text-white text-[9px] font-black rounded-full border-2 border-white px-1 shadow-sm animate-bounce">
+                      {notifications.filter(n => !n.is_read).length > 9 ? '9+' : notifications.filter(n => !n.is_read).length}
+                    </span>
                   )}
                 </button>
                 
@@ -1471,12 +1516,34 @@ export default function Home() {
                                   <span className="absolute -bottom-4 -right-2 text-2xl text-indigo-200 font-serif leading-none">"</span>
                                 </div>
                                 <div className="mt-4 flex justify-end gap-2">
+                                  <button 
+                                    onClick={async () => {
+                                      // Try to find if user exists by name/email approximation or just let them try mailto
+                                      // Professional approach: link them to messages if we can find a user
+                                      const { data: profileData } = await supabase
+                                        .from('profiles')
+                                        .select('id')
+                                        .ilike('name', `%${inquiry.sender_name}%`)
+                                        .limit(1)
+                                        .maybeSingle();
+
+                                      if (profileData) {
+                                        router.push(`/messages?with=${profileData.id}`);
+                                      } else {
+                                        window.location.href = `mailto:${inquiry.sender_email}?subject=Reply to your TaraWork inquiry`;
+                                      }
+                                    }}
+                                    className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-sm"
+                                  >
+                                    Reply to Inquiry
+                                    <ArrowUpRight className="w-3 h-3" />
+                                  </button>
                                   <a 
                                     href={`mailto:${inquiry.sender_email}`}
-                                    className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2"
+                                    className="px-4 py-2 bg-white text-slate-600 border border-slate-200 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
                                   >
-                                    Reply via Email
-                                    <ArrowUpRight className="w-3 h-3" />
+                                    Email Direct
+                                    <Mail className="w-3 h-3" />
                                   </a>
                                 </div>
                               </div>
@@ -2142,6 +2209,49 @@ export default function Home() {
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-1 space-y-6">
+                    {/* Follow/Message Interaction */}
+                    <div className="bg-slate-950 p-6 rounded-2xl border border-white/10 text-white shadow-2xl overflow-hidden relative group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-3xl -z-10 group-hover:bg-indigo-500/30 transition-all duration-700" />
+                      <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Users className="w-3 h-3" />
+                        Network Action
+                      </h4>
+                      <div className="flex flex-col gap-3">
+                        <button 
+                          onClick={() => toggleFollow(selectedFreelancer.id)}
+                          className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                            userFollows.includes(selectedFreelancer.id)
+                            ? 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/20'
+                          }`}
+                        >
+                          {userFollows.includes(selectedFreelancer.id) ? (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              Following
+                            </>
+                          ) : (
+                            <>
+                              <PlusCircle className="w-4 h-4" />
+                              Follow
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          onClick={() => {
+                            router.push(`/messages?with=${selectedFreelancer.id}`);
+                          }}
+                          className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Mail className="w-4 h-4" />
+                          Message
+                        </button>
+                        <p className="text-[9px] text-slate-500 text-center font-bold uppercase tracking-widest mt-2">
+                          Note: Mutual follows are required for networking messages.
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Top Skills</h4>
                       <div className="flex flex-wrap gap-2">

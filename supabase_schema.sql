@@ -373,11 +373,78 @@ DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notif
 CREATE POLICY "Users can update their own notifications" ON public.notifications
     FOR UPDATE USING (auth.uid() = user_id);
 
--- Add to Realtime
+-- 12. Create FOLLOWS table
+CREATE TABLE IF NOT EXISTS public.follows (
+    follower_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    following_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    PRIMARY KEY (follower_id, following_id)
+);
+
+-- Enable RLS for FOLLOWS
+ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public follows are viewable by everyone." ON public.follows;
+CREATE POLICY "Public follows are viewable by everyone." ON public.follows FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can follow others." ON public.follows;
+CREATE POLICY "Users can follow others." ON public.follows FOR INSERT WITH CHECK (auth.uid() = follower_id);
+
+DROP POLICY IF EXISTS "Users can unfollow others." ON public.follows;
+CREATE POLICY "Users can unfollow others." ON public.follows FOR DELETE USING (auth.uid() = follower_id);
+
+-- 13. Create TRIGGERS for Automatic Notifications
+
+-- Trigger for NOTIFICATIONS when a new PORTFOLIO INQUIRY is created
+CREATE OR REPLACE FUNCTION public.create_inquiry_notification() 
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.notifications (user_id, title, message, type, link)
+    VALUES (
+        NEW.freelancer_id,
+        'New Portfolio Inquiry',
+        NEW.sender_name || ' just inquired about hiring you via your portfolio!',
+        'success',
+        '/' -- Or a specific inquiries view in dashboard
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_portfolio_inquiry_created ON public.portfolio_inquiries;
+CREATE TRIGGER on_portfolio_inquiry_created
+    AFTER INSERT ON public.portfolio_inquiries
+    FOR EACH ROW EXECUTE FUNCTION public.create_inquiry_notification();
+
+-- Trigger for NOTIFICATIONS when a user gets a new FOLLOWER
+CREATE OR REPLACE FUNCTION public.create_follow_notification() 
+RETURNS TRIGGER AS $$
+DECLARE
+    follower_name TEXT;
+BEGIN
+    SELECT name INTO follower_name FROM public.profiles WHERE id = NEW.follower_id;
+    
+    INSERT INTO public.notifications (user_id, title, message, type)
+    VALUES (
+        NEW.following_id,
+        'New Follower',
+        COALESCE(follower_name, 'Someone') || ' is now following you.',
+        'info'
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_follow_created ON public.follows;
+CREATE TRIGGER on_follow_created
+    AFTER INSERT ON public.follows
+    FOR EACH ROW EXECUTE FUNCTION public.create_follow_notification();
+
+-- 14. Add to Realtime
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'notifications') THEN
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'follows') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.follows;
     END IF;
 END $$;
 

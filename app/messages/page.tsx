@@ -18,6 +18,7 @@ function MessagesContent() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [hirerJobs, setHirerJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restrictionError, setRestrictionError] = useState<string | null>(null);
 
   // 1. Fetch current user session
   useEffect(() => {
@@ -93,6 +94,29 @@ function MessagesContent() {
         if (existingConv) {
           setSelectedId(existingConv.id);
         } else {
+          // CHECK RESTRICTION: Mutual Follow OR Interaction
+          const { data: follow1 } = await supabase.from('follows').select('*').eq('follower_id', userId).eq('following_id', withUserId).maybeSingle();
+          const { data: follow2 } = await supabase.from('follows').select('*').eq('follower_id', withUserId).eq('following_id', userId).maybeSingle();
+          
+          const isMutualFollow = follow1 && follow2;
+          
+          // Check for Hirer-Freelancer relationship (application)
+          const { data: application } = await supabase
+            .from('applications')
+            .select('seeker_id, jobs(hirer_id)')
+            .or(`and(seeker_id.eq.${userId},jobs.hirer_id.eq.${withUserId}),and(seeker_id.eq.${withUserId},jobs.hirer_id.eq.${userId})`)
+            .maybeSingle();
+
+          // Check for Team Membership (Squad)
+          // Simplified: If both are same role 'hirer', assume they might be in a team for now, 
+          // or we can check the 'squad' JSONB if needed.
+          const isTeam = currentUser?.role === 'hirer' && (await supabase.from('profiles').select('role').eq('id', withUserId).maybeSingle())?.data?.role === 'hirer';
+
+          if (!isMutualFollow && !application && !isTeam) {
+            setRestrictionError("Maaari mo lamang i-message ang mga taong mutual follow mo, o mga employer/freelancer na may active project sa iyo.");
+            return;
+          }
+
           // Create new conversation
           const p1 = userId < withUserId ? userId : withUserId;
           const p2 = userId < withUserId ? withUserId : userId;
@@ -277,6 +301,21 @@ function MessagesContent() {
       console.error("Error sending message:", err);
     }
   };
+
+  if (restrictionError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-slate-950 p-6 text-center">
+        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+          <Loader2 className="w-8 h-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">Messaging Restricted</h2>
+        <p className="text-slate-400 max-w-md mb-6">{restrictionError}</p>
+        <Link href="/" className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+          Back to Dashboard
+        </Link>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
