@@ -9,38 +9,51 @@ export const revalidate = 0;
 async function fetchProfileWithFallback(query: any, identifier: string) {
   let { data: profile, error } = await query;
 
-  // Fallback if the new portfolios table doesn't exist yet or if no match
-  if (error && (error.message.includes('relation "portfolios" does not exist') || error.message.includes('Could not find the relationship'))) {
-    console.warn(`[Portfolio] "portfolios" table missing for ${identifier}, falling back to basic profile fetch`);
+  // 1. Fallback if the new portfolios table doesn't exist yet OR if column doesn't exist
+  if (error && (
+    error.message.includes('relation "portfolios" does not exist') || 
+    error.message.includes('Could not find the relationship') ||
+    error.message.includes('column "username" does not exist')
+  )) {
+    console.warn(`[Portfolio] DB mismatch for ${identifier}: ${error.message}. Falling back to basic fetch.`);
     
-    // Create a new basic query based on the original filters
+    // Create a new basic query
     const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username');
     
-    // Re-apply the same filters
+    // Re-apply filters safely
     let refinedBasicQuery;
-    if (identifier.includes('-') && identifier.length > 30) { // UUID check
+    if (identifier.includes('-') && identifier.length > 30) {
       refinedBasicQuery = basicQuery.eq('id', identifier);
-    } else if (identifier.length === 8 && /^[0-9a-f]{8}$/i.test(identifier)) { // prefix check
+    } else if (identifier.length === 8 && /^[0-9a-f]{8}$/i.test(identifier)) {
       refinedBasicQuery = basicQuery.filter('id', 'ilike', `${identifier}%`);
-    } else { // username check
-      refinedBasicQuery = basicQuery.filter('username', 'ilike', identifier);
+    } else {
+      // If we are here because 'username' column is missing, we must search by name or ID
+      // but if we don't know the name yet, we try name if it looks like one
+      refinedBasicQuery = basicQuery.or(`name.ilike.%${identifier}%,id.ilike.%${identifier}%`);
     }
     
     const { data: basicProfile } = await refinedBasicQuery.maybeSingle();
+    profile = basicProfile;
+  }
+
+  // 2. Fallback to old portfolio_items if portfolios is empty
+  if (profile && (!profile.portfolios || profile.portfolios.length === 0)) {
+    console.log(`[Portfolio] No new portfolio found for ${profile.name}, checking old table...`);
+    const { data: oldItems } = await supabaseAdmin
+      .from('portfolio_items')
+      .select('*')
+      .eq('profile_id', profile.id);
     
-    if (basicProfile) {
-      const { data: oldItems } = await supabaseAdmin.from('portfolio_items').select('*').eq('profile_id', basicProfile.id);
-      return { 
-        ...basicProfile, 
-        portfolios: oldItems ? [{ 
-          portfolio_projects: oldItems.map((item: any) => ({
-            id: item.id, title: item.title, description: item.description, 
-            image_url: item.image_url, project_url: item.project_url, technologies: item.technologies 
-          }))
-        }] : []
-      };
+    if (oldItems && oldItems.length > 0) {
+      profile.portfolios = [{ 
+        portfolio_projects: oldItems.map((item: any) => ({
+          id: item.id, title: item.title, description: item.description, 
+          image_url: item.image_url, project_url: item.project_url, technologies: item.technologies 
+        }))
+      }];
     }
   }
+
   return profile;
 }
 
@@ -136,7 +149,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       const query2 = supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate,
+          id, name, role, avatar_url, bio, hourlyRate, username,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .eq('id', username)
@@ -152,21 +165,37 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     const searchWord = alphaParts[0] || username || '';
     const flexibleSearch = searchWord.length > 6 ? searchWord.substring(0, 6) : searchWord;
     
-    const { data: profilesByName } = await supabaseAdmin
+    const { data: profilesByName, error: nameSearchError } = await supabaseAdmin
       .from('profiles')
       .select(`
-        id, name, role, avatar_url, bio, hourlyRate,
+        id, name, role, avatar_url, bio, hourlyRate, username,
         portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
       .ilike('name', `%${flexibleSearch}%`)
       .limit(20);
 
     if (profilesByName && profilesByName.length > 0) {
-      for (const p of profilesByName) {
+      for (let p of profilesByName) {
         const cleanName = p.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
         const cleanUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
         if (cleanName.includes(cleanUsername) || cleanUsername.includes(cleanName) || 
             (cleanName.length >= 4 && cleanUsername.startsWith(cleanName.substring(0, 4)))) {
+          
+          // Apply fallback logic for each candidate
+          if (!p.portfolios || p.portfolios.length === 0) {
+            const { data: oldItems } = await supabaseAdmin
+              .from('portfolio_items')
+              .select('*')
+              .eq('profile_id', p.id);
+            if (oldItems && oldItems.length > 0) {
+              p.portfolios = [{ 
+                portfolio_projects: oldItems.map((item: any) => ({
+                  id: item.id, title: item.title, description: item.description, 
+                  image_url: item.image_url, project_url: item.project_url, technologies: item.technologies 
+                }))
+              }];
+            }
+          }
           return mapProfile(p);
         }
       }
@@ -178,7 +207,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       const query4 = supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate,
+          id, name, role, avatar_url, bio, hourlyRate, username,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .filter('id', 'ilike', `${username}%`)
