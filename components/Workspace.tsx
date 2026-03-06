@@ -234,7 +234,7 @@ export default function Workspace({
       />
       {/* Workspace Header */}
       <div className="bg-slate-900 p-6 text-white">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center border border-white/10">
               <Layout className="w-5 h-5 text-white" />
@@ -244,34 +244,35 @@ export default function Workspace({
               <p className="text-slate-400 text-[10px] font-medium uppercase tracking-widest mt-0.5">Projects • Reviews • AI Notes</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button 
               onClick={() => setActiveTab("dashboard")}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-xs font-bold transition-all uppercase tracking-wider"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-xs font-bold transition-all uppercase tracking-wider"
             >
               <LayoutDashboard className="w-3.5 h-3.5 text-indigo-400" />
-              Open Full Dashboard
+              <span className="hidden xs:inline">Dashboard</span>
+              <span className="xs:hidden">Dash</span>
             </button>
             <button 
               onClick={() => setActiveCall(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 uppercase tracking-wider"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 uppercase tracking-wider"
             >
               <Video className="w-3.5 h-3.5" />
-              Start Meeting
+              Meeting
             </button>
           </div>
         </div>
 
-        <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-fit border border-white/5">
+        <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-full overflow-x-auto border border-white/5 scrollbar-hide">
           {[
-            { id: "dashboard", label: "Full Dashboard", icon: LayoutDashboard },
-            { id: "active", label: "Active Projects", icon: Clock },
-            { id: "pulse", label: "AI Pulse Board", icon: Activity },
-            { id: "warroom", label: "Project War Room", icon: Shield },
-            { id: "wellness", label: "Sustainable Performance", icon: Zap },
-            { id: "contract", label: "Manage Contract", icon: FileText },
-            { id: "reviews", label: "Project Tools", icon: Layout },
-            { id: "calls", label: "AI Meeting Notes", icon: MessageSquare },
+            { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { id: "active", label: "Projects", icon: Clock },
+            { id: "pulse", label: "Pulse", icon: Activity },
+            { id: "warroom", label: "War Room", icon: Shield },
+            { id: "wellness", label: "Wellness", icon: Zap },
+            { id: "contract", label: "Contract", icon: FileText },
+            { id: "reviews", label: "Tools", icon: Layout },
+            { id: "calls", label: "Notes", icon: MessageSquare },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -280,7 +281,7 @@ export default function Workspace({
                 if (tab.id === 'warroom') setShowWarRoom(true);
                 else setShowWarRoom(false);
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                 activeTab === tab.id ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
               }`}
             >
@@ -301,7 +302,7 @@ export default function Workspace({
               className="space-y-8"
             >
               {/* Top Stats Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                   { label: "Total Revenue", value: "$12,450", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-50" },
                   { label: "Active Projects", value: projects.length.toString(), icon: Layout, color: "text-indigo-500", bg: "bg-indigo-50" },

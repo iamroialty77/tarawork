@@ -254,20 +254,20 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] -mt-8 -mx-4 sm:-mx-10 px-4 sm:px-10 py-8">
+    <div className="min-h-screen bg-[#F8FAFC] py-8 px-4 sm:px-6 lg:px-10">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Admin Console</h1>
           <p className="text-slate-500 font-medium mt-1">Review, moderate, and manage Tara platform operations.</p>
         </div>
         
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto max-w-full">
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto w-full xl:w-auto scrollbar-hide">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as TabType)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                 activeTab === item.id 
                   ? "bg-slate-900 text-white shadow-lg" 
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"

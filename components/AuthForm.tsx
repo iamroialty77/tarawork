@@ -22,10 +22,11 @@ import {
 import { cn } from "../lib/utils";
 
 export default function AuthForm() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot_password" | "update_password">("login");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"jobseeker" | "hirer">("jobseeker");
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +44,17 @@ export default function AuthForm() {
       if (action === 'hire') {
         setMode('signup');
         setRole('hirer');
+      }
+
+      // Check for password reset mode
+      const hash = window.location.hash;
+      if (hash && hash.includes('type=recovery')) {
+        setMode('update_password');
+      }
+      
+      const modeParam = params.get('mode');
+      if (modeParam === 'update_password') {
+        setMode('update_password');
       }
     }
   }, []);
@@ -84,6 +96,28 @@ export default function AuthForm() {
     setSuccess(null);
 
     try {
+      if (mode === "forgot_password") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/callback?next=/auth?mode=update_password`,
+        });
+        if (error) throw error;
+        setSuccess("Password reset link sent! Please check your email.");
+        return;
+      }
+
+      if (mode === "update_password") {
+        if (password !== confirmPassword) {
+          setError("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        setSuccess("Password updated successfully! You can now log in.");
+        setMode("login");
+        return;
+      }
+
       if (mode === "signup") {
         const { error, data } = await supabase.auth.signUp({
           email,
@@ -167,17 +201,42 @@ export default function AuthForm() {
 
           <div className="text-center mb-8">
             <h2 className="text-2xl font-extrabold text-slate-900">
-              {mode === "login" ? "Welcome back" : "Create an account"}
+              {mode === "login" && "Welcome back"}
+              {mode === "signup" && "Create an account"}
+              {mode === "forgot_password" && "Reset Password"}
+              {mode === "update_password" && "New Password"}
             </h2>
             <p className="text-slate-500 mt-2 text-sm font-medium">
-              {mode === "login" 
-                ? "Enter your details to access your account." 
-                : "Join thousands of freelancers and clients today."}
+              {mode === "login" && "Enter your details to access your account."}
+              {mode === "signup" && "Join thousands of freelancers and clients today."}
+              {mode === "forgot_password" && "Enter your email to receive a reset link."}
+              {mode === "update_password" && "Enter your new password below."}
             </p>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
             <AnimatePresence mode="wait">
+              {(mode === "login" || mode === "signup" || mode === "forgot_password") && (
+                <motion.div
+                  key="email-field"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email Address</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                    <input
+                      type="email"
+                      placeholder="juan@example.com"
+                      required
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
               {mode === "signup" && (
                 <motion.div
                   key="signup-fields"
@@ -234,42 +293,61 @@ export default function AuthForm() {
                   </div>
                 </motion.div>
               )}
+
+              {(mode === "login" || mode === "signup" || mode === "update_password") && (
+                <motion.div
+                  key="password-fields"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5 ml-1">
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">
+                        {mode === "update_password" ? "New Password" : "Password"}
+                      </label>
+                      {mode === "login" && (
+                        <button 
+                          type="button" 
+                          onClick={() => setMode("forgot_password")}
+                          className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        required
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {mode === "update_password" && (
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Confirm New Password</label>
+                      <div className="relative group">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                        <input
+                          type="password"
+                          placeholder="••••••••"
+                          required
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
             </AnimatePresence>
-
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email Address</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                <input
-                  type="email"
-                  placeholder="juan@example.com"
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1.5 ml-1">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">Password</label>
-                {mode === "login" && (
-                  <button type="button" className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700">Forgot password?</button>
-                )}
-              </div>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all text-slate-900"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
 
             {error && (
               <div className="space-y-3">
@@ -338,7 +416,10 @@ export default function AuthForm() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  {mode === "login" ? "Sign In" : "Get Started"}
+                  {mode === "login" && "Sign In"}
+                  {mode === "signup" && "Get Started"}
+                  {mode === "forgot_password" && "Send Reset Link"}
+                  {mode === "update_password" && "Update Password"}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -409,13 +490,36 @@ export default function AuthForm() {
 
         <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
           <p className="text-sm font-medium text-slate-500">
-            {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              onClick={() => setMode(mode === "login" ? "signup" : "login")}
-              className="text-indigo-600 font-bold hover:underline"
-            >
-              {mode === "login" ? "Create one now" : "Sign in instead"}
-            </button>
+            {mode === "login" && (
+              <>
+                Don't have an account?{" "}
+                <button
+                  onClick={() => setMode("signup")}
+                  className="text-indigo-600 font-bold hover:underline"
+                >
+                  Create one now
+                </button>
+              </>
+            )}
+            {mode === "signup" && (
+              <>
+                Already have an account?{" "}
+                <button
+                  onClick={() => setMode("login")}
+                  className="text-indigo-600 font-bold hover:underline"
+                >
+                  Sign in instead
+                </button>
+              </>
+            )}
+            {(mode === "forgot_password" || mode === "update_password") && (
+              <button
+                onClick={() => setMode("login")}
+                className="text-indigo-600 font-bold hover:underline"
+              >
+                Back to Login
+              </button>
+            )}
           </p>
         </div>
       </motion.div>

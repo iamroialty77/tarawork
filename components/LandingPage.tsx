@@ -1,19 +1,31 @@
 "use client";
 
-import { Check, Brain, Users, Bell, Facebook, Twitter, Linkedin, Instagram, ChevronDown, ArrowRight, Star, ShieldCheck, Zap, Globe, Clock, Award, CheckCircle2 } from 'lucide-react';
+import { Check, Brain, Users, Bell, Facebook, Twitter, Linkedin, Instagram, ChevronDown, ArrowRight, Star, ShieldCheck, Zap, Globe, Clock, Award, CheckCircle2, Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 
 export default function LandingPage() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-transparent">
-        <div className="container mx-auto px-6 py-4">
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-blue-600/95 backdrop-blur-md shadow-lg py-2' : 'bg-transparent py-4'}`}>
+        <div className="container mx-auto px-6">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <circle cx="8" cy="8" r="3" fill="#2563eb" />
                   <circle cx="16" cy="8" r="3" fill="#2563eb" />
@@ -23,27 +35,27 @@ export default function LandingPage() {
               <span className="text-white font-bold text-xl tracking-tight">TaraWork.ph</span>
             </Link>
 
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
-              <Link href="/" className="text-white hover:text-blue-200 font-medium transition-colors">
+            {/* Navigation (Desktop) */}
+            <nav className="hidden lg:flex items-center gap-8">
+              <Link href="/" className="text-white/90 hover:text-white font-medium transition-colors">
                 Home
               </Link>
-              <div className="flex items-center gap-1 text-white hover:text-blue-200 font-medium transition-colors cursor-pointer">
-                Find Jobs <ChevronDown className="w-4 h-4" />
+              <div className="flex items-center gap-1 text-white/90 hover:text-white font-medium transition-colors cursor-pointer group">
+                Find Jobs <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform" />
               </div>
-              <Link href="/auth" className="text-white hover:text-blue-200 font-medium transition-colors">
+              <Link href="/auth" className="text-white/90 hover:text-white font-medium transition-colors">
                 Hire Talent
               </Link>
-              <Link href="/auth" className="text-white hover:text-blue-200 font-medium transition-colors">
+              <Link href="/auth" className="text-white/90 hover:text-white font-medium transition-colors">
                 Community
               </Link>
-              <Link href="/auth" className="text-white hover:text-blue-200 font-medium transition-colors">
+              <Link href="/auth" className="text-white/90 hover:text-white font-medium transition-colors">
                 Pricing
               </Link>
             </nav>
 
-            {/* Auth Buttons */}
-            <div className="flex items-center gap-3">
+            {/* Auth Buttons (Desktop) */}
+            <div className="hidden md:flex items-center gap-3">
               <Link href="/auth">
                 <button className="px-5 py-2 text-white border border-white/30 hover:bg-white/10 rounded-lg font-semibold transition-all">
                   Sign In
@@ -55,8 +67,53 @@ export default function LandingPage() {
                 </button>
               </Link>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button 
+              className="lg:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu (Overlay) */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden bg-blue-700 border-t border-white/10 overflow-hidden"
+            >
+              <div className="container mx-auto px-6 py-8 flex flex-col gap-6">
+                <Link href="/" className="text-white text-lg font-bold" onClick={() => setIsMenuOpen(false)}>Home</Link>
+                <div className="text-white text-lg font-bold flex items-center justify-between">
+                  Find Jobs <ChevronDown className="w-5 h-5" />
+                </div>
+                <Link href="/auth" className="text-white text-lg font-bold" onClick={() => setIsMenuOpen(false)}>Hire Talent</Link>
+                <Link href="/auth" className="text-white text-lg font-bold" onClick={() => setIsMenuOpen(false)}>Community</Link>
+                <Link href="/auth" className="text-white text-lg font-bold" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
+                
+                <div className="h-px bg-white/10 my-2"></div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
+                    <button className="w-full py-3 text-white border border-white/30 hover:bg-white/10 rounded-xl font-bold transition-all text-center">
+                      Sign In
+                    </button>
+                  </Link>
+                  <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
+                    <button className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 text-center">
+                      Join Now
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Hero Section */}
@@ -72,51 +129,44 @@ export default function LandingPage() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
+              className="text-center lg:text-left"
             >
-              <h1 className="text-6xl lg:text-8xl font-extrabold text-white mb-6 leading-[1.1]">
+              <h1 className="text-5xl md:text-6xl lg:text-8xl font-extrabold text-white mb-6 leading-[1.1] tracking-tight">
                 Tara, Work Together
               </h1>
-              <h2 className="text-3xl font-bold text-white/90 mb-8">
+              <h2 className="text-xl md:text-3xl font-bold text-white/90 mb-8 max-w-2xl mx-auto lg:mx-0">
                 Need an extra hand? You're in the right place.
               </h2>
-              <p className="text-xl mb-12 text-white/80 leading-relaxed max-w-xl">
+              <p className="text-lg md:text-xl mb-12 text-white/80 leading-relaxed max-w-xl mx-auto lg:mx-0">
                 Tarawork.ph connects you with skilled freelancers and virtual assistants across the Philippines. 
                 From admin help and content creation to design, tech, and more — we make it easy to find the right people, fast.
               </p>
               
-              <p className="text-lg mb-8 text-white/80 leading-relaxed max-w-xl">
-                We're all about making work feel lighter, smoother, and more collaborative. Because when we say "Tara," we mean let's do this together.
-              </p>
-
               {/* CTA Buttons */}
-              <div className="flex flex-wrap gap-4 mb-12">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-12">
                 <Link href="/auth">
-                  <button className="px-8 py-4 bg-white text-blue-600 text-lg font-bold rounded-xl transition-all shadow-xl shadow-blue-900/20 active:scale-95 flex items-center gap-2">
+                  <button className="w-full sm:w-auto px-8 py-4 bg-white text-blue-600 text-lg font-bold rounded-xl transition-all shadow-xl shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-2">
                     Join as a Freelancer
                   </button>
                 </Link>
                 <Link href="/auth">
-                  <button className="px-8 py-4 bg-white/10 border-2 border-white/20 hover:bg-white/20 text-white text-lg font-bold rounded-xl transition-all active:scale-95">
+                  <button className="w-full sm:w-auto px-8 py-4 bg-white/10 border-2 border-white/20 hover:bg-white/20 text-white text-lg font-bold rounded-xl transition-all active:scale-95">
                     Post a Job
                   </button>
                 </Link>
               </div>
 
               {/* Trust Badges */}
-              <div className="grid sm:grid-cols-2 gap-y-6 gap-x-12">
+              <div className="grid grid-cols-2 gap-y-6 gap-x-8 md:gap-x-12">
                 {[
                   "AI-Verified Talent",
                   "Smart Match Score",
                   "Secure Escrow Payments",
                   "Escrow Protection",
-                  "Built for Filipino Freelancers",
-                  "Milestone Tracker"
-                ].map((feature, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-white/90 font-semibold">{feature}</span>
+                ].map((badge, i) => (
+                  <div key={i} className="flex items-center gap-3 text-white/90">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <span className="text-sm md:text-base font-bold tracking-wide">{badge}</span>
                   </div>
                 ))}
               </div>
