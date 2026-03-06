@@ -13,10 +13,14 @@ import {
   ArrowRight,
   X,
   Send,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  Award,
+  ShieldCheck
 } from 'lucide-react';
 import { FreelancerProfile, PortfolioProject } from '@/types/portfolio';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 interface PortfolioPreviewProps {
   profile: FreelancerProfile;
@@ -119,12 +123,16 @@ const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
     <div className="space-y-6">
       <h4 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-gray-400">Social</h4>
       <div className="flex gap-4">
-        {profile.portfolio?.links.map((link) => (
-          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-black transition-colors">
-            {/* Generic icon if icon name not mapped */}
-            <ExternalLink size={20} strokeWidth={1.5} />
-          </a>
-        )) || (
+        {profile.portfolio?.links.map((link) => {
+          const Icon = link.label.toLowerCase() === 'github' ? Github : 
+                       link.label.toLowerCase() === 'linkedin' ? Linkedin : 
+                       link.label.toLowerCase() === 'mail' ? Mail : ExternalLink;
+          return (
+            <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={link.label} className="text-gray-400 hover:text-black transition-colors">
+              <Icon size={20} strokeWidth={1.5} />
+            </a>
+          );
+        }) || (
           <>
             <Github className="text-gray-400 hover:text-black cursor-pointer transition-colors" size={20} strokeWidth={1.5} />
             <Linkedin className="text-gray-400 hover:text-black cursor-pointer transition-colors" size={20} strokeWidth={1.5} />
@@ -158,24 +166,62 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    // In a real app, we would save this to a 'portfolio_inquiries' table
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    
-    // Reset form after 3 seconds and close modal
-    setTimeout(() => {
-      setIsInquiryModalOpen(false);
-      setIsSubmitted(false);
-      setFormData({ name: '', email: '', message: '' });
-    }, 3000);
+    try {
+      const { error } = await supabase
+        .from('portfolio_inquiries')
+        .insert([
+          { 
+            freelancer_id: profile.id,
+            sender_name: formData.name,
+            sender_email: formData.email,
+            message: formData.message
+          }
+        ]);
+
+      if (error) throw error;
+      
+      setIsSubmitted(true);
+      
+      // Reset form after 5 seconds and close modal
+      setTimeout(() => {
+        setIsInquiryModalOpen(false);
+        setIsSubmitted(false);
+        setFormData({ name: '', email: '', message: '' });
+      }, 5000);
+    } catch (err: any) {
+      console.error('Error sending inquiry:', err);
+      alert('Failed to send inquiry. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#1a1a1a] font-sans">
-      <div className="max-w-screen-xl mx-auto px-6 py-20 lg:py-32">
+    <div className="min-h-screen bg-white text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
+      {/* Professional Top Bar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-screen-xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-black text-sm">T</div>
+            <span className="font-bold tracking-tight text-lg">TaraWork</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Professional Network</span>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-100 text-[10px] font-black uppercase tracking-tighter">
+              <ShieldCheck size={12} className="text-blue-500" />
+              Verified Profile
+            </div>
+          </div>
+          <button 
+            onClick={handleHireMe}
+            className="bg-black text-white px-5 py-2 rounded-full text-xs font-bold hover:bg-gray-800 transition-all active:scale-95"
+          >
+            Hire {profile.name.split(' ')[0]}
+          </button>
+        </div>
+      </nav>
+
+      <div className="max-w-screen-xl mx-auto px-6 py-32 lg:py-48">
         <div className="flex flex-col lg:flex-row gap-20">
           {/* Sidebar */}
           <aside className="lg:w-1/3 shrink-0">
@@ -203,6 +249,33 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                     <p>No projects showcased yet.</p>
                   </div>
                 )}
+              </div>
+            </section>
+
+            {/* Expertise Section for more professional look */}
+            <section className="space-y-10 border-t border-gray-100 pt-20">
+              <div className="flex justify-between items-end">
+                <h2 className="text-3xl font-semibold tracking-tight text-gray-900">Expertise & Strategy</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-8 bg-gray-50 rounded-2xl space-y-4 hover:bg-white hover:shadow-xl transition-all duration-500 border border-transparent hover:border-gray-100">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <Sparkles className="w-5 h-5 text-black" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 tracking-tight">Quality-First Approach</h4>
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    I believe in building solutions that are not just functional, but scalable and maintainable for the long term. Performance and user experience are always top priorities.
+                  </p>
+                </div>
+                <div className="p-8 bg-gray-50 rounded-2xl space-y-4 hover:bg-white hover:shadow-xl transition-all duration-500 border border-transparent hover:border-gray-100">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <Award className="w-5 h-5 text-black" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 tracking-tight">Result-Driven Mindset</h4>
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    Every project is an opportunity to deliver measurable value. I focus on understanding business goals and translating them into efficient technical solutions.
+                  </p>
+                </div>
               </div>
             </section>
           </main>

@@ -71,6 +71,7 @@ export default function Home() {
   const [freelancers, setFreelancers] = useState<UserProfile[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
   const [missingTables, setMissingTables] = useState<string[]>([]);
+  const [portfolioInquiries, setPortfolioInquiries] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [freelancerSearchTerm, setFreelancerSearchTerm] = useState("");
   const [debouncedFreelancerSearchTerm, setDebouncedFreelancerSearchTerm] = useState("");
@@ -659,6 +660,22 @@ export default function Home() {
     }
   };
 
+  const fetchPortfolioInquiries = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('portfolio_inquiries')
+        .select('*')
+        .eq('freelancer_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setPortfolioInquiries(data);
+      }
+    } catch (err) {
+      console.error("Error fetching portfolio inquiries:", err);
+    }
+  };
+
   const fetchNotifications = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -755,6 +772,7 @@ export default function Home() {
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
         await fetchUserEscrows(session.user.id);
+        await fetchPortfolioInquiries(session.user.id);
         
         // Subscribe to notifications
         const notifChannel = supabase
@@ -766,6 +784,19 @@ export default function Home() {
             filter: `user_id=eq.${session.user.id}`
           }, () => {
             fetchNotifications(session.user.id);
+          })
+          .subscribe();
+
+        // Subscribe to portfolio inquiries
+        const inquiryChannel = supabase
+          .channel('inquiry-changes')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'portfolio_inquiries',
+            filter: `freelancer_id=eq.${session.user.id}`
+          }, () => {
+            fetchPortfolioInquiries(session.user.id);
           })
           .subscribe();
 
@@ -1390,6 +1421,74 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+
+                      {/* --- PORTFOLIO INQUIRIES SECTION --- */}
+                      <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                        <div className="flex justify-between items-center mb-6">
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                              <Mail className="w-5 h-5 text-indigo-600" />
+                              Portfolio Inquiries
+                            </h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Direct messages from your public portfolio</p>
+                          </div>
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                            {portfolioInquiries.length} Messages
+                          </span>
+                        </div>
+                        
+                        {portfolioInquiries.length === 0 ? (
+                          <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-slate-50 rounded-2xl">
+                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                              <Mail className="w-8 h-8" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="font-bold text-slate-900">No inquiries yet</p>
+                              <p className="text-xs text-slate-500 max-w-[200px]">Share your professional portfolio URL to start receiving inquiries from employers.</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {portfolioInquiries.slice(0, 5).map((inquiry) => (
+                              <div key={inquiry.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-indigo-100 hover:shadow-xl transition-all group">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm">
+                                      {inquiry.sender_name.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-slate-900 leading-none mb-1">{inquiry.sender_name}</h4>
+                                      <p className="text-[10px] font-medium text-slate-500">{inquiry.sender_email}</p>
+                                    </div>
+                                  </div>
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    {new Date(inquiry.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div className="bg-white p-4 rounded-xl border border-slate-100 text-sm text-slate-600 italic leading-relaxed relative">
+                                  <span className="absolute -top-2 -left-2 text-2xl text-indigo-200 font-serif leading-none">"</span>
+                                  {inquiry.message}
+                                  <span className="absolute -bottom-4 -right-2 text-2xl text-indigo-200 font-serif leading-none">"</span>
+                                </div>
+                                <div className="mt-4 flex justify-end gap-2">
+                                  <a 
+                                    href={`mailto:${inquiry.sender_email}`}
+                                    className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2"
+                                  >
+                                    Reply via Email
+                                    <ArrowUpRight className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                            {portfolioInquiries.length > 5 && (
+                              <button className="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">
+                                View all inquiries
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
