@@ -9,42 +9,47 @@ export const revalidate = 0;
 async function fetchProfileWithFallback(query: any, identifier: string) {
   let { data: profile, error } = await query;
 
-  // 1. Fallback if the new portfolios table doesn't exist yet OR if column doesn't exist
-  if (error && (
-    error.message.includes('relation "portfolios" does not exist') || 
-    error.message.includes('Could not find the relationship') ||
-    error.message.includes('column "username" does not exist')
-  )) {
-    console.warn(`[Portfolio] DB mismatch for ${identifier}: ${error.message}. Falling back to basic fetch.`);
+  if (error) {
+    console.warn(`[Portfolio] Database query error for "${identifier}":`, error.message);
     
-    // Create a new basic query
-    const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username');
+    // Check if we can do a basic fallback for critical schema errors
+    const isCritical = error.message.includes('relation') || 
+                       error.message.includes('column') || 
+                       error.message.includes('relationship');
     
-    // Re-apply filters safely
-    let refinedBasicQuery;
-    if (identifier.includes('-') && identifier.length > 30) {
-      refinedBasicQuery = basicQuery.eq('id', identifier);
-    } else if (identifier.length === 8 && /^[0-9a-f]{8}$/i.test(identifier)) {
-      refinedBasicQuery = basicQuery.filter('id', 'ilike', `${identifier}%`);
-    } else {
-      // If we are here because 'username' column is missing, we must search by name or ID
-      // but if we don't know the name yet, we try name if it looks like one
-      refinedBasicQuery = basicQuery.or(`name.ilike.%${identifier}%,id.ilike.%${identifier}%`);
+    if (isCritical || !profile) {
+      console.log(`[Portfolio] Attempting basic fallback fetch for "${identifier}"...`);
+      // Basic query without complex joins
+      const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username');
+      
+      let refinedBasicQuery;
+      // Try to match identifier in ID or username or name
+      if (identifier.includes('-') && identifier.length > 30) {
+        refinedBasicQuery = basicQuery.eq('id', identifier);
+      } else {
+        refinedBasicQuery = basicQuery.or(`username.ilike.%${identifier}%,name.ilike.%${identifier}%,id.ilike.%${identifier}%`).limit(1);
+      }
+      
+      const { data: basicProfile } = await refinedBasicQuery.maybeSingle();
+      if (basicProfile) {
+        console.log(`[Portfolio] Found profile via basic fallback: ${basicProfile.name}`);
+        profile = basicProfile;
+      }
     }
-    
-    const { data: basicProfile } = await refinedBasicQuery.maybeSingle();
-    profile = basicProfile;
   }
 
-  // 2. Fallback to old portfolio_items if portfolios is empty
+  // 2. Fallback to old portfolio_items if portfolios is empty OR if the relation didn't load
   if (profile && (!profile.portfolios || profile.portfolios.length === 0)) {
-    console.log(`[Portfolio] No new portfolio found for ${profile.name}, checking old table...`);
-    const { data: oldItems } = await supabaseAdmin
+    console.log(`[Portfolio] No "portfolios" relation data for ${profile.name} (ID: ${profile.id}), checking old portfolio_items...`);
+    const { data: oldItems, error: oldError } = await supabaseAdmin
       .from('portfolio_items')
       .select('*')
       .eq('profile_id', profile.id);
     
+    if (oldError) console.error(`[Portfolio] Error fetching old items:`, oldError.message);
+
     if (oldItems && oldItems.length > 0) {
+      console.log(`[Portfolio] Found ${oldItems.length} items in old table. Mapping to new structure.`);
       profile.portfolios = [{ 
         id: 'fallback-' + (profile.id?.toString().substring(0, 8) || '0000'),
         about_me: profile.bio || '',
@@ -52,11 +57,12 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
         theme_settings: { aesthetic: 'minimalist', primaryColor: '#000000' },
         portfolio_projects: oldItems.map((item: any) => ({
           id: item.id, 
-          title: item.title, 
-          description: item.description, 
-          image_url: item.image_url, 
-          project_url: item.project_url, 
-          technologies: item.technologies 
+          title: item.title || 'Untitled Project', 
+          description: item.description || '', 
+          image_url: item.image_url || '', 
+          project_url: item.project_url || '', 
+          technologies: Array.isArray(item.technologies) ? item.technologies : 
+                        (typeof item.technologies === 'string' ? item.technologies.split(',').map((s: string) => s.trim()) : [])
         })),
         portfolio_skills: [],
         portfolio_links: []
@@ -169,29 +175,41 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       if (profileById) return mapProfile(profileById);
     }
 
-    // 3. Robust Name Match (Fallback)
-    console.log(`[Portfolio] Step 3: Attempting name-based lookup for: "${username}"`);
+    // 3. Robust Match (Fallback) - Aggressive fuzzy search
+    console.log(`[Portfolio] Step 3: Aggressive fuzzy match for: "${username}"`);
     const alphaParts = username.match(/[a-z]{3,}/gi) || [];
     const searchWord = alphaParts[0] || username || '';
-    const flexibleSearch = searchWord.length > 6 ? searchWord.substring(0, 6) : searchWord;
+    const flexibleSearch = searchWord.length > 5 ? searchWord.substring(0, 5) : searchWord;
     
-    const { data: profilesByName, error: nameSearchError } = await supabaseAdmin
+    const { data: candidates, error: candidateError } = await supabaseAdmin
       .from('profiles')
       .select(`
         id, name, role, avatar_url, bio, hourlyRate, username,
         portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
-      .ilike('name', `%${flexibleSearch}%`)
-      .limit(20);
+      .or(`name.ilike.%${flexibleSearch}%,username.ilike.%${flexibleSearch}%`)
+      .limit(10);
 
-    if (profilesByName && profilesByName.length > 0) {
-      for (let p of profilesByName) {
+    if (candidateError) console.error('[Portfolio] Candidate search error:', candidateError.message);
+
+    if (candidates && candidates.length > 0) {
+      console.log(`[Portfolio] Analyzing ${candidates.length} candidates for a match...`);
+      for (let p of candidates) {
         const cleanName = p.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
-        const cleanUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (cleanName.includes(cleanUsername) || cleanUsername.includes(cleanName) || 
-            (cleanName.length >= 4 && cleanUsername.startsWith(cleanName.substring(0, 4)))) {
-          
-          // Apply fallback logic for each candidate
+        const cleanDbUsername = p.username?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
+        const cleanRequested = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        console.log(`[Portfolio] Comparing: req="${cleanRequested}" with db_name="${cleanName}" and db_user="${cleanDbUsername}"`);
+
+        // Check for multiple matching strategies
+        const matchByName = cleanName && (cleanRequested.includes(cleanName) || cleanName.includes(cleanRequested));
+        const matchByUser = cleanDbUsername && (cleanRequested.includes(cleanDbUsername) || cleanDbUsername.includes(cleanRequested));
+        const matchByPrefix = (cleanName.length >= 4 && cleanRequested.startsWith(cleanName.substring(0, 4))) ||
+                             (cleanDbUsername.length >= 4 && cleanRequested.startsWith(cleanDbUsername.substring(0, 4)));
+
+        if (matchByName || matchByUser || matchByPrefix) {
+          console.log(`[Portfolio] FOUND MATCH: ${p.name} (${p.id})`);
+          // Ensure we have portfolio data for the candidate
           if (!p.portfolios || p.portfolios.length === 0) {
             const { data: oldItems } = await supabaseAdmin
               .from('portfolio_items')
@@ -205,11 +223,11 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
                 theme_settings: { aesthetic: 'minimalist', primaryColor: '#000000' },
                 portfolio_projects: oldItems.map((item: any) => ({
                   id: item.id, 
-                  title: item.title, 
-                  description: item.description, 
-                  image_url: item.image_url, 
-                  project_url: item.project_url, 
-                  technologies: item.technologies 
+                  title: item.title || 'Untitled Project', 
+                  description: item.description || '', 
+                  image_url: item.image_url || '', 
+                  project_url: item.project_url || '', 
+                  technologies: Array.isArray(item.technologies) ? item.technologies : []
                 })),
                 portfolio_skills: [],
                 portfolio_links: []
