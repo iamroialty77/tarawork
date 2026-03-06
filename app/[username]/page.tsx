@@ -63,8 +63,6 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     // This makes the routing more robust.
     
     // 1. Try by username (case-insensitive)
-    // We do a safe fetch first - if 'username' column is missing, this will fail
-    // but we'll catch it and try other methods.
     const { data: profileByUsername, error: error1 } = await supabaseAdmin
       .from('profiles')
       .select(`
@@ -76,25 +74,26 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
           portfolio_links (*)
         )
       `)
-      .ilike('username', username)
+      .filter('username', 'ilike', username)
       .maybeSingle();
 
     if (profileByUsername) {
-      console.log(`Found profile by username: ${username}`);
+      console.log(`[Portfolio] Found profile by username match: ${username}`);
       return mapProfile(profileByUsername);
     }
 
     if (error1) {
-      console.error(`Supabase error fetching username "${username}":`, error1.message);
-      // If error is 'column "username" does not exist', it means DB is not ready
+      console.error(`[Portfolio] Supabase error fetching username "${username}":`, error1.message);
+      // Log extra info if column is missing
       if (error1.message.includes('column "username" does not exist')) {
-        console.warn('WARNING: "username" column is missing in "profiles" table.');
+        console.warn('CRITICAL: "username" column is missing in "profiles" table. Please run the SQL migration.');
       }
     }
 
-    // 2. Try by full UUID
+    // 2. Try by full UUID (if it looks like a UUID)
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(username);
     if (isUUID) {
+      console.log(`[Portfolio] Attempting UUID lookup for: ${username}`);
       const { data: profileById, error: error2 } = await supabaseAdmin
         .from('profiles')
         .select(`
@@ -110,14 +109,21 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
         .maybeSingle();
       
       if (profileById) {
-        console.log(`Found profile by UUID: ${username}`);
+        console.log(`[Portfolio] Found profile by UUID: ${username}`);
         return mapProfile(profileById);
       }
-      if (error2) console.error('Error fetching by UUID:', error2.message);
+      if (error2) console.error('[Portfolio] Error fetching by UUID:', error2.message);
     }
 
-    // 3. Try by name match (simplified ilike) - Fallback for users who haven't set username yet
-    // Example: If URL is /reggieambrocio and name is "Reggie Ambrocio"
+    // 3. Robust Name Match (Fallback)
+    // We try to find profiles where the name is similar to the username
+    // and then we'll verify the match in JS.
+    console.log(`[Portfolio] Attempting name-based lookup for: ${username}`);
+    // Extract words from username to search
+    // e.g. 'reggieambrocio1993' -> ['reggie', 'ambrocio']
+    const words = username.split(/[0-9_\-\.\s]+/).filter(w => w.length > 2);
+    const searchPart = words.length > 0 ? words[0] : username;
+    
     const { data: profilesByName, error: error3 } = await supabaseAdmin
       .from('profiles')
       .select(`
@@ -129,18 +135,24 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
           portfolio_links (*)
         )
       `)
-      .ilike('name', `%${username}%`)
-      .limit(1);
+      .ilike('name', `%${searchPart}%`)
+      .limit(10);
 
     if (profilesByName && profilesByName.length > 0) {
-      // Basic check: clean both and see if one contains the other
-      const cleanName = profilesByName[0].name?.toLowerCase().replace(/\s+/g, '') || '';
-      const cleanUsername = username.toLowerCase();
-      if (cleanName.includes(cleanUsername) || cleanUsername.includes(cleanName)) {
-        console.log(`Found profile by name match: ${profilesByName[0].name}`);
-        return mapProfile(profilesByName[0]);
+      for (const p of profilesByName) {
+        const cleanName = p.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
+        const cleanUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        // Match if one contains the other or if they share the first 5 chars
+        if (cleanName.includes(cleanUsername) || 
+            cleanUsername.includes(cleanName) || 
+            (cleanName.length >= 5 && cleanUsername.startsWith(cleanName.substring(0, 5)))) {
+          console.log(`[Portfolio] Found profile by fuzzy name match: ${p.name} (id: ${p.id}) for URL ${username}`);
+          return mapProfile(p);
+        }
       }
     }
+    if (error3) console.error('[Portfolio] Error fetching by name:', error3.message);
 
     // 4. Try by partial ID match (8 chars)
     if (username.length >= 8) {

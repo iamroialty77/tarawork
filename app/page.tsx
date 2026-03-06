@@ -1417,12 +1417,27 @@ export default function Home() {
                           </h3>
                           <div className="space-y-4">
                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 font-mono text-[10px] break-all flex items-center justify-between">
-                              <span className="text-slate-600">
-                                {typeof window !== 'undefined' ? `${window.location.origin}/${profile.username || profile.id || 'user'}` : `tarawork.network/${profile.username || 'username'}`}
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-slate-600">
+                                  {typeof window !== 'undefined' ? `${window.location.origin}/${profile.username || profile.id || 'user'}` : `tarawork.network/${profile.username || 'username'}`}
+                                </span>
+                                {!profile.username && (
+                                  <span className="text-[9px] text-amber-600 font-medium">⚠️ No username set. Using ID as fallback.</span>
+                                )}
+                              </div>
                               {!profile.username && (
-                                <span className="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-lg font-bold border border-amber-100">SET USERNAME</span>
+                                <span className="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-lg font-bold border border-amber-100 shrink-0">SET USERNAME</span>
                               )}
+                            </div>
+                            
+                            <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                              <h4 className="text-[9px] font-bold text-indigo-700 uppercase mb-2">Portfolio Status</h4>
+                              <div className="flex items-center gap-2">
+                                <div className={cn("w-2 h-2 rounded-full", profile.username ? "bg-emerald-500" : "bg-amber-500")}></div>
+                                <span className="text-[10px] text-slate-600">
+                                  {profile.username ? `URL Identifier: @${profile.username}` : "Using temporary ID link"}
+                                </span>
+                              </div>
                             </div>
                             <div className="flex gap-2">
                               <button 
