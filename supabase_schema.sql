@@ -326,6 +326,29 @@ BEGIN
     END IF;
 END $$;
 
+-- Table for Portfolio Inquiries (Guest Hire Me flow)
+CREATE TABLE IF NOT EXISTS public.portfolio_inquiries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    sender_name TEXT NOT NULL,
+    sender_email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'pending', -- pending, responded, archived
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Enable RLS
+ALTER TABLE public.portfolio_inquiries ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Freelancers can view their own inquiries." ON public.portfolio_inquiries;
+CREATE POLICY "Freelancers can view their own inquiries." ON public.portfolio_inquiries
+    FOR SELECT USING (auth.uid() = freelancer_id);
+
+DROP POLICY IF EXISTS "Anyone can insert an inquiry." ON public.portfolio_inquiries;
+CREATE POLICY "Anyone can insert an inquiry." ON public.portfolio_inquiries
+    FOR INSERT WITH CHECK (true);
+
 -- 11. Create NOTIFICATIONS table
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

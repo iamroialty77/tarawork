@@ -174,6 +174,7 @@ export interface Project {
 
 export interface UserProfile {
   id?: string;
+  username?: string;
   name: string;
   role: "jobseeker" | "hirer" | "admin";
   category: FreelancerCategory;

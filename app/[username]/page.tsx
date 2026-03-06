@@ -51,6 +51,12 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     };
   }
 
+  // List of reserved routes that shouldn't be treated as usernames
+  const reservedRoutes = ['auth', 'api', 'admin', 'messages', 'portfolio', 'dashboard', 'settings', 'projects'];
+  if (reservedRoutes.includes(username)) {
+    return null;
+  }
+
   try {
     // Real fetch from Supabase
     const { data: profile, error } = await supabaseAdmin

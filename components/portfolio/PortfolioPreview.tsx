@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Github, 
   Linkedin, 
@@ -10,7 +10,10 @@ import {
   Briefcase, 
   Star,
   Globe,
-  ArrowRight
+  ArrowRight,
+  X,
+  Send,
+  CheckCircle2
 } from 'lucide-react';
 import { FreelancerProfile, PortfolioProject } from '@/types/portfolio';
 import Image from 'next/image';
@@ -134,13 +137,40 @@ const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
 );
 
 export default function PortfolioPreview({ profile, isPublic = true }: PortfolioPreviewProps) {
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
+
   const handleHireMe = () => {
     if (isPublic) {
-      // Redirect to signup with referral tracking
-      window.location.href = `/auth?referring_freelancer_id=${profile.id}&action=hire`;
+      setIsInquiryModalOpen(true);
     } else {
       alert('This is a preview mode.');
     }
+  };
+
+  const handleInquirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    // In a real app, we would save this to a 'portfolio_inquiries' table
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setIsSubmitting(false);
+    setIsSubmitted(true);
+    
+    // Reset form after 3 seconds and close modal
+    setTimeout(() => {
+      setIsInquiryModalOpen(false);
+      setIsSubmitted(false);
+      setFormData({ name: '', email: '', message: '' });
+    }, 3000);
   };
 
   return (
@@ -189,6 +219,117 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
         </button>
       </div>
+
+      {/* Inquiry Modal */}
+      {isInquiryModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => !isSubmitting && setIsInquiryModalOpen(false)}
+          />
+          
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all">
+            <div className="p-8">
+              <button 
+                onClick={() => setIsInquiryModalOpen(false)}
+                className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors"
+                disabled={isSubmitting}
+              >
+                <X size={20} />
+              </button>
+
+              {isSubmitted ? (
+                <div className="py-12 flex flex-col items-center text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-2">
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900">Inquiry Sent!</h3>
+                  <p className="text-gray-500 max-w-xs">
+                    Your message has been sent to {profile.name}. They will contact you shortly.
+                  </p>
+                  <div className="pt-6">
+                    <button 
+                      onClick={() => window.location.href = `/auth?referring_freelancer_id=${profile.id}&action=signup&role=hirer`}
+                      className="text-sm font-semibold text-black underline underline-offset-4 hover:text-gray-600 transition-colors"
+                    >
+                      Want to track your hires? Sign up here.
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-gray-900">Work with {profile.name.split(' ')[0]}</h3>
+                    <p className="text-gray-500 mt-2 text-sm">
+                      Fill out this quick form and {profile.name.split(' ')[0]} will get back to you as soon as possible.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleInquirySubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-gray-400">Your Name</label>
+                      <input 
+                        required
+                        id="name"
+                        type="text" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-black transition-colors"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-gray-400">Email Address</label>
+                      <input 
+                        required
+                        id="email"
+                        type="email" 
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-black transition-colors"
+                        placeholder="john@company.com"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label htmlFor="message" className="text-xs font-semibold uppercase tracking-wider text-gray-400">Project Description</label>
+                      <textarea 
+                        required
+                        id="message"
+                        rows={4}
+                        value={formData.message}
+                        onChange={(e) => setFormData({...formData, message: e.target.value})}
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:border-black transition-colors resize-none"
+                        placeholder="Tell us about your project or what you're looking for..."
+                      />
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full flex items-center justify-center gap-2 bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all disabled:opacity-50"
+                    >
+                      {isSubmitting ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span>Send Inquiry</span>
+                          <Send size={18} />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                  
+                  <p className="text-center text-[11px] text-gray-400">
+                    By sending, you agree to our Terms of Service.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

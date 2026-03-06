@@ -38,6 +38,7 @@ import {
   Code, 
   FileText, 
   ExternalLink, 
+  Copy,
   DollarSign, 
   Lock, 
   Scale, 
@@ -1406,6 +1407,48 @@ export default function Home() {
                     />
                   </div>
                   <div className="lg:col-span-4 space-y-6">
+                    {profile.role === 'jobseeker' && (
+                      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                        <div className="relative">
+                          <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <Layout className="w-4 h-4 text-indigo-600" />
+                            Public Portfolio
+                          </h3>
+                          <div className="space-y-4">
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 font-mono text-xs break-all">
+                              {typeof window !== 'undefined' ? `${window.location.origin}/${profile.username || profile.id?.slice(0, 8) || 'user'}` : `tarawork.network/${profile.username || 'username'}`}
+                            </div>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => {
+                                  const url = `${window.location.origin}/${profile.username || profile.id?.slice(0, 8) || 'user'}`;
+                                  navigator.clipboard.writeText(url);
+                                  setToastMsg("Portfolio link copied to clipboard!");
+                                  setShowToast(true);
+                                  setTimeout(() => setShowToast(false), 3000);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                                Copy Link
+                              </button>
+                              <Link 
+                                href={`/${profile.username || profile.id?.slice(0, 8) || 'user'}`}
+                                target="_blank"
+                                className="flex items-center justify-center p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Link>
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-medium italic">
+                              Professional URL: share this with employers to showcase your work for free.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="bg-slate-900 p-6 rounded-2xl border border-white/10 shadow-xl overflow-hidden relative group">
                       {/* Background decorative elements */}
                       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-all duration-500"></div>

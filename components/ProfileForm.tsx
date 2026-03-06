@@ -195,6 +195,20 @@ export default function ProfileForm({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Portfolio Username</label>
+            <div className="flex items-center">
+              <span className="bg-slate-100 px-3 py-2 border border-r-0 border-slate-200 rounded-l-xl text-slate-500 text-sm font-medium">tarawork.network/</span>
+              <input
+                type="text"
+                placeholder="username"
+                className="flex-1 rounded-r-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-bold"
+                value={profile.username || ""}
+                onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
+              />
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1 italic">Ito ang iyong professional URL identifier.</p>
+          </div>
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Account Role</label>
             <select
