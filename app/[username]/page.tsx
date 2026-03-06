@@ -63,6 +63,8 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     // This makes the routing more robust.
     
     // 1. Try by username (case-insensitive)
+    // We do a safe fetch first - if 'username' column is missing, this will fail
+    // but we'll catch it and try other methods.
     const { data: profileByUsername, error: error1 } = await supabaseAdmin
       .from('profiles')
       .select(`
@@ -77,15 +79,18 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       .ilike('username', username)
       .maybeSingle();
 
-    if (error1) {
-      console.error('Supabase error (username fetch):', error1.message);
-      // If error is 'column "username" does not exist', the user hasn't run the SQL query
-      if (error1.message.includes('column "username" does not exist')) {
-        console.warn('CRITICAL: "username" column is missing. Please run the SQL query provided in the previous step.');
-      }
+    if (profileByUsername) {
+      console.log(`Found profile by username: ${username}`);
+      return mapProfile(profileByUsername);
     }
 
-    if (profileByUsername) return mapProfile(profileByUsername);
+    if (error1) {
+      console.error(`Supabase error fetching username "${username}":`, error1.message);
+      // If error is 'column "username" does not exist', it means DB is not ready
+      if (error1.message.includes('column "username" does not exist')) {
+        console.warn('WARNING: "username" column is missing in "profiles" table.');
+      }
+    }
 
     // 2. Try by full UUID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(username);
@@ -93,7 +98,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       const { data: profileById, error: error2 } = await supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate, username,
+          id, name, role, avatar_url, bio, hourlyRate,
           portfolios (
             id, about_me, tagline, theme_settings,
             portfolio_projects (*),
@@ -104,15 +109,45 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
         .eq('id', username)
         .maybeSingle();
       
-      if (profileById) return mapProfile(profileById);
+      if (profileById) {
+        console.log(`Found profile by UUID: ${username}`);
+        return mapProfile(profileById);
+      }
+      if (error2) console.error('Error fetching by UUID:', error2.message);
     }
 
-    // 3. Try by partial ID match (8 chars) - as used in Dashboard fallback
+    // 3. Try by name match (simplified ilike) - Fallback for users who haven't set username yet
+    // Example: If URL is /reggieambrocio and name is "Reggie Ambrocio"
+    const { data: profilesByName, error: error3 } = await supabaseAdmin
+      .from('profiles')
+      .select(`
+        id, name, role, avatar_url, bio, hourlyRate,
+        portfolios (
+          id, about_me, tagline, theme_settings,
+          portfolio_projects (*),
+          portfolio_skills (*),
+          portfolio_links (*)
+        )
+      `)
+      .ilike('name', `%${username}%`)
+      .limit(1);
+
+    if (profilesByName && profilesByName.length > 0) {
+      // Basic check: clean both and see if one contains the other
+      const cleanName = profilesByName[0].name?.toLowerCase().replace(/\s+/g, '') || '';
+      const cleanUsername = username.toLowerCase();
+      if (cleanName.includes(cleanUsername) || cleanUsername.includes(cleanName)) {
+        console.log(`Found profile by name match: ${profilesByName[0].name}`);
+        return mapProfile(profilesByName[0]);
+      }
+    }
+
+    // 4. Try by partial ID match (8 chars)
     if (username.length >= 8) {
-      const { data: profiles, error: error3 } = await supabaseAdmin
+      const { data: profiles, error: error4 } = await supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate, username,
+          id, name, role, avatar_url, bio, hourlyRate,
           portfolios (
             id, about_me, tagline, theme_settings,
             portfolio_projects (*),
@@ -123,7 +158,11 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
         .filter('id', 'ilike', `${username}%`)
         .limit(1);
 
-      if (profiles && profiles.length > 0) return mapProfile(profiles[0]);
+      if (profiles && profiles.length > 0) {
+        console.log(`Found profile by prefix: ${username}`);
+        return mapProfile(profiles[0]);
+      }
+      if (error4) console.error('Error fetching by prefix:', error4.message);
     }
 
     return null;
