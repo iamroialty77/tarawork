@@ -3,9 +3,55 @@ import { supabaseAdmin } from '@/lib/supabase_admin';
 import { FreelancerProfile } from '@/types/portfolio';
 import { notFound } from 'next/navigation';
 
-export const revalidate = 60; // Revalidate every minute
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+async function fetchProfileWithFallback(query: any, identifier: string) {
+  let { data: profile, error } = await query;
+
+  // Fallback if the new portfolios table doesn't exist yet or if no match
+  if (error && (error.message.includes('relation "portfolios" does not exist') || error.message.includes('Could not find the relationship'))) {
+    console.warn(`[Portfolio] "portfolios" table missing for ${identifier}, falling back to basic profile fetch`);
+    
+    // Create a new basic query based on the original filters
+    const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username');
+    
+    // Re-apply the same filters
+    let refinedBasicQuery;
+    if (identifier.includes('-') && identifier.length > 30) { // UUID check
+      refinedBasicQuery = basicQuery.eq('id', identifier);
+    } else if (identifier.length === 8 && /^[0-9a-f]{8}$/i.test(identifier)) { // prefix check
+      refinedBasicQuery = basicQuery.filter('id', 'ilike', `${identifier}%`);
+    } else { // username check
+      refinedBasicQuery = basicQuery.filter('username', 'ilike', identifier);
+    }
+    
+    const { data: basicProfile } = await refinedBasicQuery.maybeSingle();
+    
+    if (basicProfile) {
+      const { data: oldItems } = await supabaseAdmin.from('portfolio_items').select('*').eq('profile_id', basicProfile.id);
+      return { 
+        ...basicProfile, 
+        portfolios: oldItems ? [{ 
+          portfolio_projects: oldItems.map((item: any) => ({
+            id: item.id, title: item.title, description: item.description, 
+            image_url: item.image_url, project_url: item.project_url, technologies: item.technologies 
+          }))
+        }] : []
+      };
+    }
+  }
+  return profile;
+}
 
 async function getPortfolio(username: string): Promise<FreelancerProfile | null> {
+  console.log(`[Portfolio] Starting lookup for: "${username}"`);
+  
+  // Debug environment (safely)
+  const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.log(`[Portfolio] Env status: URL=${hasUrl}, ServiceKey=${hasKey}`);
+
   // Demo data for testing and local development
   if (username === 'johndoe' || username === 'demo') {
     return {
@@ -58,123 +104,88 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
   }
 
   try {
-    // Real fetch from Supabase
-    // We try to match by username (case-insensitive) OR full ID OR partial ID (first 8 chars)
-    // This makes the routing more robust.
-    
     // 1. Try by username (case-insensitive)
-    const { data: profileByUsername, error: error1 } = await supabaseAdmin
+    console.log(`[Portfolio] Step 1: Searching for username: "${username}"`);
+    const query1 = supabaseAdmin
       .from('profiles')
       .select(`
         id, name, role, avatar_url, bio, hourlyRate, username,
-        portfolios (
-          id, about_me, tagline, theme_settings,
-          portfolio_projects (*),
-          portfolio_skills (*),
-          portfolio_links (*)
-        )
+        portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
       .filter('username', 'ilike', username)
       .maybeSingle();
 
+    const profileByUsername = await fetchProfileWithFallback(query1, username);
+
     if (profileByUsername) {
-      console.log(`[Portfolio] Found profile by username match: ${username}`);
+      console.log(`[Portfolio] SUCCESS: Found profile by username match: ${username}`);
       return mapProfile(profileByUsername);
     }
 
-    if (error1) {
-      console.error(`[Portfolio] Supabase error fetching username "${username}":`, error1.message);
-      // Log extra info if column is missing
-      if (error1.message.includes('column "username" does not exist')) {
-        console.warn('CRITICAL: "username" column is missing in "profiles" table. Please run the SQL migration.');
-      }
-    }
+    // Diagnostic: Check if any profiles exist at all
+    const { count, error: countError } = await supabaseAdmin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+    console.log(`[Portfolio] Total profiles in database: ${count || 0}`);
+    if (countError) console.error('[Portfolio] Count error:', countError.message);
 
-    // 2. Try by full UUID (if it looks like a UUID)
+    // 2. Try by full UUID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(username);
     if (isUUID) {
-      console.log(`[Portfolio] Attempting UUID lookup for: ${username}`);
-      const { data: profileById, error: error2 } = await supabaseAdmin
+      console.log(`[Portfolio] Step 2: Attempting UUID lookup for: ${username}`);
+      const query2 = supabaseAdmin
         .from('profiles')
         .select(`
           id, name, role, avatar_url, bio, hourlyRate,
-          portfolios (
-            id, about_me, tagline, theme_settings,
-            portfolio_projects (*),
-            portfolio_skills (*),
-            portfolio_links (*)
-          )
+          portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .eq('id', username)
         .maybeSingle();
       
-      if (profileById) {
-        console.log(`[Portfolio] Found profile by UUID: ${username}`);
-        return mapProfile(profileById);
-      }
-      if (error2) console.error('[Portfolio] Error fetching by UUID:', error2.message);
+      const profileById = await fetchProfileWithFallback(query2, username);
+      if (profileById) return mapProfile(profileById);
     }
 
     // 3. Robust Name Match (Fallback)
-    // We try to find profiles where the name is similar to the username
-    // and then we'll verify the match in JS.
-    console.log(`[Portfolio] Attempting name-based lookup for: ${username}`);
-    // Extract words from username to search
-    // e.g. 'reggieambrocio1993' -> ['reggie', 'ambrocio']
-    const words = username.split(/[0-9_\-\.\s]+/).filter(w => w.length > 2);
-    const searchPart = words.length > 0 ? words[0] : username;
+    console.log(`[Portfolio] Step 3: Attempting name-based lookup for: "${username}"`);
+    const alphaParts = username.match(/[a-z]{3,}/gi) || [];
+    const searchWord = alphaParts.length > 0 ? alphaParts[0] : username;
+    const flexibleSearch = searchWord.length > 6 ? searchWord.substring(0, 6) : searchWord;
     
-    const { data: profilesByName, error: error3 } = await supabaseAdmin
+    const { data: profilesByName } = await supabaseAdmin
       .from('profiles')
       .select(`
         id, name, role, avatar_url, bio, hourlyRate,
-        portfolios (
-          id, about_me, tagline, theme_settings,
-          portfolio_projects (*),
-          portfolio_skills (*),
-          portfolio_links (*)
-        )
+        portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
-      .ilike('name', `%${searchPart}%`)
-      .limit(10);
+      .ilike('name', `%${flexibleSearch}%`)
+      .limit(20);
 
     if (profilesByName && profilesByName.length > 0) {
       for (const p of profilesByName) {
         const cleanName = p.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
         const cleanUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
-        
-        // Match if one contains the other or if they share the first 5 chars
-        if (cleanName.includes(cleanUsername) || 
-            cleanUsername.includes(cleanName) || 
-            (cleanName.length >= 5 && cleanUsername.startsWith(cleanName.substring(0, 5)))) {
-          console.log(`[Portfolio] Found profile by fuzzy name match: ${p.name} (id: ${p.id}) for URL ${username}`);
+        if (cleanName.includes(cleanUsername) || cleanUsername.includes(cleanName) || 
+            (cleanName.length >= 4 && cleanUsername.startsWith(cleanName.substring(0, 4)))) {
           return mapProfile(p);
         }
       }
     }
-    if (error3) console.error('[Portfolio] Error fetching by name:', error3.message);
 
     // 4. Try by partial ID match (8 chars)
     if (username.length >= 8) {
-      const { data: profiles, error: error4 } = await supabaseAdmin
+      console.log(`[Portfolio] Step 4: Attempting prefix lookup for: "${username}"`);
+      const query4 = supabaseAdmin
         .from('profiles')
         .select(`
           id, name, role, avatar_url, bio, hourlyRate,
-          portfolios (
-            id, about_me, tagline, theme_settings,
-            portfolio_projects (*),
-            portfolio_skills (*),
-            portfolio_links (*)
-          )
+          portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .filter('id', 'ilike', `${username}%`)
         .limit(1);
 
-      if (profiles && profiles.length > 0) {
-        console.log(`Found profile by prefix: ${username}`);
-        return mapProfile(profiles[0]);
-      }
-      if (error4) console.error('Error fetching by prefix:', error4.message);
+      const profileByPrefix = await fetchProfileWithFallback(query4, username);
+      if (profileByPrefix) return mapProfile(profileByPrefix);
     }
 
     return null;
