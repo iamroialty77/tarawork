@@ -144,7 +144,7 @@ export default function Home() {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         if (error.message.includes("relation \"profiles\" does not exist") || error.code === 'PGRST205' || error.message.includes("Could not find the table")) {
@@ -152,19 +152,62 @@ export default function Home() {
           setMissingTables(prev => [...new Set([...prev, "profiles"])]);
           setToastMsg("⚠️ Database Setup Required: The 'profiles' table is missing. Go to Admin tab for setup SQL.");
           setShowToast(true);
-          return; // Stop here to avoid further errors
+          return;
         }
         throw error;
       }
 
       if (data) {
-        // Fetch portfolio items separately
-        const { data: portfolioData } = await supabase
-          .from('portfolio_items')
-          .select('*')
-          .eq('profile_id', userId);
+        // --- SMART PORTFOLIO FETCHING ---
+        let portfolioItems: PortfolioItem[] = [];
         
-        setProfile({ ...data, portfolio: portfolioData || [] });
+        try {
+          // 1. Try fetching from new schema: portfolios -> portfolio_projects
+          const { data: pData, error: pErr } = await supabase
+            .from('portfolios')
+            .select(`
+              id,
+              portfolio_projects (*)
+            `)
+            .eq('profile_id', userId)
+            .maybeSingle();
+          
+          if (!pErr && pData && pData.portfolio_projects && pData.portfolio_projects.length > 0) {
+            // Map portfolio_projects to PortfolioItem structure for UI compatibility
+            portfolioItems = pData.portfolio_projects.map((proj: any) => ({
+              id: proj.id,
+              profile_id: userId,
+              title: proj.title,
+              description: proj.description,
+              image_url: proj.image_url,
+              project_url: proj.project_url,
+              technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
+              created_at: proj.created_at
+            }));
+          } else {
+            if (pErr) console.warn("Note: Portfolios table might be missing or empty, falling back:", pErr.message);
+            // 2. Fallback to old portfolio_items table if new one is empty or errors
+            const { data: oldData } = await supabase
+              .from('portfolio_items')
+              .select('*')
+              .eq('profile_id', userId);
+            
+            if (oldData && oldData.length > 0) {
+              portfolioItems = oldData;
+            }
+          }
+        } catch (pFetchErr) {
+          console.error("New portfolio fetch error, falling back:", pFetchErr);
+          // 3. Last resort fallback
+          const { data: lastResort } = await supabase
+            .from('portfolio_items')
+            .select('*')
+            .eq('profile_id', userId);
+          portfolioItems = lastResort || [];
+        }
+
+        setProfile({ ...data, portfolio: portfolioItems });
+        
         if (data.role === 'hirer') {
           setView('client');
         } else if (data.role === 'admin') {
@@ -235,7 +278,9 @@ export default function Home() {
       setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
       console.error("Error saving profile:", err);
-      if (err.code === 'PGRST205' || err.message?.includes("relation \"profiles\" does not exist")) {
+      if (err.code === '23505') {
+        setToastMsg("⚠️ Error: Username is already taken. Please choose another one.");
+      } else if (err.code === 'PGRST205' || err.message?.includes("relation \"profiles\" does not exist")) {
         setToastMsg("⚠️ Database Error: 'profiles' table not found. Go to Admin tab for setup instructions.");
       } else {
         setToastMsg(`Error: ${err.message || "Failed to save profile"}`);
@@ -816,13 +861,41 @@ export default function Home() {
     return <LandingPage />;
   }
 
+  const ensurePortfolioExists = async (userId: string) => {
+    // 1. Check if portfolio exists
+    const { data, error } = await supabase
+      .from('portfolios')
+      .select('id')
+      .eq('profile_id', userId)
+      .maybeSingle();
+    
+    if (data) return data.id;
+    
+    // 2. Create one if it doesn't exist
+    const { data: newPortfolio, error: createError } = await supabase
+      .from('portfolios')
+      .insert([{ 
+        profile_id: userId,
+        theme_settings: { aesthetic: "professional", primaryColor: "#4f46e5" }
+      }])
+      .select('id')
+      .single();
+    
+    if (createError) throw createError;
+    return newPortfolio.id;
+  };
+
   const addPortfolioItem = async (item: Partial<PortfolioItem>) => {
     if (!user) return;
     try {
+      // 1. Ensure a professional portfolio record exists
+      const portfolioId = await ensurePortfolioExists(user.id);
+
+      // 2. Add to the new portfolio_projects table
       const { data, error } = await supabase
-        .from('portfolio_items')
+        .from('portfolio_projects')
         .insert([{
-          profile_id: user.id,
+          portfolio_id: portfolioId,
           title: item.title,
           description: item.description,
           project_url: item.project_url,
@@ -832,17 +905,39 @@ export default function Home() {
         .select()
         .single();
 
-      if (error) throw error;
-
-      if (data) {
+      if (error) {
+        // Fallback to old table if new table is missing
+        const { data: oldData, error: oldError } = await supabase
+          .from('portfolio_items')
+          .insert([{
+            profile_id: user.id,
+            title: item.title,
+            description: item.description,
+            project_url: item.project_url,
+            technologies: item.technologies,
+            created_at: new Date().toISOString(),
+          }])
+          .select()
+          .single();
+        
+        if (oldError) throw oldError;
+        
+        if (oldData) {
+          setProfile(prev => ({
+            ...prev,
+            portfolio: [...(prev.portfolio || []), oldData]
+          }));
+        }
+      } else if (data) {
         setProfile(prev => ({
           ...prev,
-          portfolio: [...(prev.portfolio || []), data]
+          portfolio: [...(prev.portfolio || []), { ...data, profile_id: user.id }]
         }));
-        setToastMsg("Portfolio item added!");
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
       }
+
+      setToastMsg("Portfolio item added!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
       console.error("Error adding portfolio item:", err);
       setToastMsg(`Error: ${err.message}`);
@@ -852,8 +947,9 @@ export default function Home() {
 
   const updatePortfolioItem = async (item: PortfolioItem) => {
     try {
+      // Try updating in portfolio_projects first
       const { error } = await supabase
-        .from('portfolio_items')
+        .from('portfolio_projects')
         .update({
           title: item.title,
           description: item.description,
@@ -862,7 +958,20 @@ export default function Home() {
         })
         .eq('id', item.id);
 
-      if (error) throw error;
+      if (error) {
+        // Fallback to old table
+        const { error: oldError } = await supabase
+          .from('portfolio_items')
+          .update({
+            title: item.title,
+            description: item.description,
+            project_url: item.project_url,
+            technologies: item.technologies,
+          })
+          .eq('id', item.id);
+        
+        if (oldError) throw oldError;
+      }
 
       setProfile(prev => ({
         ...prev,
@@ -880,12 +989,21 @@ export default function Home() {
 
   const removePortfolioItem = async (id: string) => {
     try {
+      // Try deleting from portfolio_projects
       const { error } = await supabase
-        .from('portfolio_items')
+        .from('portfolio_projects')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        // Fallback to old table
+        const { error: oldError } = await supabase
+          .from('portfolio_items')
+          .delete()
+          .eq('id', id);
+        
+        if (oldError) throw oldError;
+      }
 
       setProfile(prev => ({
         ...prev,
@@ -1161,6 +1279,52 @@ export default function Home() {
                 <Zap className="w-full h-full text-white" />
               </div>
             </div>
+
+            {/* --- NEW PROFESSIONAL PORTFOLIO LINK CARD --- */}
+            {profile.role === 'jobseeker' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white p-5 rounded-3xl border-2 border-indigo-50/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-5 relative overflow-hidden group"
+              >
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-all duration-500"></div>
+                <div className="flex items-center gap-4 relative">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                    <Layout className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-slate-900 tracking-tight leading-none mb-1">Your Professional Portfolio is Live! 🚀</h4>
+                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest opacity-70">Share this link for frictionless hiring</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto relative">
+                  <div className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 font-mono text-xs text-indigo-700 font-black truncate min-w-[150px] shadow-inner">
+                    {profile.username || (profile.id ? profile.id.substring(0, 8) : 'user')}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const url = `${window.location.origin}/${profile.username || profile.id || 'user'}`;
+                      navigator.clipboard.writeText(url);
+                      setToastMsg("Professional portfolio URL copied! 📋");
+                      setShowToast(true);
+                      setTimeout(() => setShowToast(false), 2000);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-xs font-black rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 active:scale-95 whitespace-nowrap"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Copy Professional URL
+                  </button>
+                  <Link 
+                    href={`/${profile.username || profile.id || 'user'}`}
+                    target="_blank"
+                    className="flex items-center justify-center p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                  </Link>
+                </div>
+              </motion.div>
+            )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="md:col-span-2 lg:col-span-3 space-y-6">
