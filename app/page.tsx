@@ -1416,13 +1416,18 @@ export default function Home() {
                             Public Portfolio
                           </h3>
                           <div className="space-y-4">
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 font-mono text-xs break-all">
-                              {typeof window !== 'undefined' ? `${window.location.origin}/${profile.username || profile.id?.slice(0, 8) || 'user'}` : `tarawork.network/${profile.username || 'username'}`}
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 font-mono text-[10px] break-all flex items-center justify-between">
+                              <span className="text-slate-600">
+                                {typeof window !== 'undefined' ? `${window.location.origin}/${profile.username || profile.id || 'user'}` : `tarawork.network/${profile.username || 'username'}`}
+                              </span>
+                              {!profile.username && (
+                                <span className="text-[9px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-lg font-bold border border-amber-100">SET USERNAME</span>
+                              )}
                             </div>
                             <div className="flex gap-2">
                               <button 
                                 onClick={() => {
-                                  const url = `${window.location.origin}/${profile.username || profile.id?.slice(0, 8) || 'user'}`;
+                                  const url = `${window.location.origin}/${profile.username || profile.id || 'user'}`;
                                   navigator.clipboard.writeText(url);
                                   setToastMsg("Portfolio link copied to clipboard!");
                                   setShowToast(true);
@@ -1434,7 +1439,7 @@ export default function Home() {
                                 Copy Link
                               </button>
                               <Link 
-                                href={`/${profile.username || profile.id?.slice(0, 8) || 'user'}`}
+                                href={`/${profile.username || profile.id || 'user'}`}
                                 target="_blank"
                                 className="flex items-center justify-center p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
                               >

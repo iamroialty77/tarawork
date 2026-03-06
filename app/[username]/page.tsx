@@ -59,10 +59,14 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
 
   try {
     // Real fetch from Supabase
-    const { data: profile, error } = await supabaseAdmin
+    // We try to match by username (case-insensitive) OR full ID OR partial ID (first 8 chars)
+    // This makes the routing more robust.
+    
+    // 1. Try by username (case-insensitive)
+    const { data: profileByUsername, error: error1 } = await supabaseAdmin
       .from('profiles')
       .select(`
-        id, name, role, avatar_url, bio, hourlyRate,
+        id, name, role, avatar_url, bio, hourlyRate, username,
         portfolios (
           id, about_me, tagline, theme_settings,
           portfolio_projects (*),
@@ -70,36 +74,86 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
           portfolio_links (*)
         )
       `)
-      .eq('username', username)
+      .ilike('username', username)
       .maybeSingle();
 
-    if (error || !profile) return null;
+    if (error1) {
+      console.error('Supabase error (username fetch):', error1.message);
+      // If error is 'column "username" does not exist', the user hasn't run the SQL query
+      if (error1.message.includes('column "username" does not exist')) {
+        console.warn('CRITICAL: "username" column is missing. Please run the SQL query provided in the previous step.');
+      }
+    }
 
-    // Map database structure to our TypeScript interface
-    const portfolioData = (profile as any).portfolios?.[0];
-    
-    return {
-      id: profile.id,
-      name: profile.name || 'Anonymous',
-      role: profile.role || 'Freelancer',
-      avatar_url: profile.avatar_url,
-      bio: profile.bio,
-      hourlyRate: profile.hourlyRate,
-      portfolio: portfolioData ? {
-        id: portfolioData.id,
-        profile_id: profile.id,
-        about_me: portfolioData.about_me,
-        tagline: portfolioData.tagline,
-        theme_settings: portfolioData.theme_settings,
-        projects: portfolioData.portfolio_projects || [],
-        skills: portfolioData.portfolio_skills || [],
-        links: portfolioData.portfolio_links || [],
-      } : undefined
-    };
+    if (profileByUsername) return mapProfile(profileByUsername);
+
+    // 2. Try by full UUID
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(username);
+    if (isUUID) {
+      const { data: profileById, error: error2 } = await supabaseAdmin
+        .from('profiles')
+        .select(`
+          id, name, role, avatar_url, bio, hourlyRate, username,
+          portfolios (
+            id, about_me, tagline, theme_settings,
+            portfolio_projects (*),
+            portfolio_skills (*),
+            portfolio_links (*)
+          )
+        `)
+        .eq('id', username)
+        .maybeSingle();
+      
+      if (profileById) return mapProfile(profileById);
+    }
+
+    // 3. Try by partial ID match (8 chars) - as used in Dashboard fallback
+    if (username.length >= 8) {
+      const { data: profiles, error: error3 } = await supabaseAdmin
+        .from('profiles')
+        .select(`
+          id, name, role, avatar_url, bio, hourlyRate, username,
+          portfolios (
+            id, about_me, tagline, theme_settings,
+            portfolio_projects (*),
+            portfolio_skills (*),
+            portfolio_links (*)
+          )
+        `)
+        .filter('id', 'ilike', `${username}%`)
+        .limit(1);
+
+      if (profiles && profiles.length > 0) return mapProfile(profiles[0]);
+    }
+
+    return null;
   } catch (err) {
     console.error('Error fetching portfolio:', err);
     return null;
   }
+}
+
+// Helper to map DB profile to FreelancerProfile interface
+function mapProfile(profile: any): FreelancerProfile {
+  const portfolioData = profile.portfolios?.[0];
+  return {
+    id: profile.id,
+    name: profile.name || 'Anonymous',
+    role: profile.role || 'Freelancer',
+    avatar_url: profile.avatar_url,
+    bio: profile.bio,
+    hourlyRate: profile.hourlyRate,
+    portfolio: portfolioData ? {
+      id: portfolioData.id,
+      profile_id: profile.id,
+      about_me: portfolioData.about_me,
+      tagline: portfolioData.tagline,
+      theme_settings: portfolioData.theme_settings,
+      projects: portfolioData.portfolio_projects || [],
+      skills: portfolioData.portfolio_skills || [],
+      links: portfolioData.portfolio_links || [],
+    } : undefined
+  };
 }
 
 export default async function PortfolioPage({ params }: { params: Promise<{ username: string }> }) {
