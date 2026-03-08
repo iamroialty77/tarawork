@@ -515,20 +515,22 @@ export default function Home() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        if (error.message?.includes('interview_url') || error.message?.includes('portfolio_url')) {
-          // Fallback if interview_url or portfolio_url is missing
+        // More generic check for column-related errors (PostgREST code PGRST204)
+        if (error.code === 'PGRST204' || error.message?.includes('column')) {
+          console.warn("Schema mismatch detected, attempting fallback fetch for applications:", error.message);
+          // Fallback if some columns are missing
           // Try with only basic columns first
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('applications')
-            .select('id, job_id, freelancer_id, status, cover_letter, resume_url, created_at, profiles(*)')
+            .select('id, job_id, freelancer_id, status, created_at, profiles(*)')
             .eq('job_id', jobId)
             .order('created_at', { ascending: false });
           
           if (fallbackError) {
-            // If even that fails (maybe resume_url is missing?), try the bare minimum
+            // If even profiles join fails, try the bare minimum without join
             const { data: bareData, error: bareError } = await supabase
               .from('applications')
-              .select('id, job_id, freelancer_id, status, created_at, profiles(*)')
+              .select('id, job_id, freelancer_id, status, created_at')
               .eq('job_id', jobId)
               .order('created_at', { ascending: false });
             
@@ -613,17 +615,17 @@ export default function Home() {
       if (error) {
         if (error.code === '23505') {
           setToastMsg("You have already applied for this job!");
-        } else if (error.message?.includes('interview_url') || error.message?.includes('portfolio_url')) {
-          // Retry with minimal columns if it failed because of missing schema columns
+        } else if (error.code === 'PGRST204' || error.message?.includes('column')) {
+          console.warn("Schema mismatch detected, attempting fallback insert for applications:", error.message);
+          // Retry with absolute minimal columns if it failed because of missing schema columns
           const minimalData: any = { 
             job_id: selectedJobIdForApply,
             freelancer_id: user.id,
-            status: 'pending',
-            cover_letter: applyData.coverLetter
+            status: 'pending'
           };
           
-          // Try adding resume_url if it's there
-          if (applyData.resumeUrl) minimalData.resume_url = applyData.resumeUrl;
+          // Only add cover_letter if provided
+          if (applyData.coverLetter) minimalData.cover_letter = applyData.coverLetter;
 
           const { error: retryError } = await supabase
             .from('applications')
@@ -632,7 +634,7 @@ export default function Home() {
           if (retryError) throw retryError;
           
           setAppliedJobs(prev => ({ ...prev, [selectedJobIdForApply]: 'pending' }));
-          setToastMsg("Application submitted! (Note: Some fields skipped due to DB setup)");
+          setToastMsg("Application submitted! (Note: Some advanced fields were skipped because your database schema is not up-to-date)");
           setShowApplyModal(false);
           setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
         } else {
