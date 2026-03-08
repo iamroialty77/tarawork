@@ -39,25 +39,28 @@ export default function ProfileForm({
     onUpdate(profile);
   };
 
+  const handleFieldChange = (updates: Partial<UserProfile>) => {
+    const newProfile = { ...profile, ...updates };
+    setProfile(newProfile);
+    // Note: We don't call onUpdate here for every keystroke, 
+    // only for definitive actions or on submit
+  };
+
   const addSkill = () => {
     if (skillInput && !profile.skills.includes(skillInput)) {
-      const newProfile = { ...profile, skills: [...profile.skills, skillInput] };
-      setProfile(newProfile);
+      setProfile({ ...profile, skills: [...profile.skills, skillInput] });
       setSkillInput("");
-      onUpdate(newProfile);
     }
   };
 
   const removeSkill = (skillToRemove: string) => {
-    const newProfile = {
+    setProfile({
       ...profile,
       skills: profile.skills.filter((s) => s !== skillToRemove),
-    };
-    setProfile(newProfile);
-    onUpdate(newProfile);
+    });
   };
 
-  const addPortfolioItem = (item: Partial<PortfolioItem>) => {
+  const addPortfolioItemLocal = (item: Partial<PortfolioItem>) => {
     if (onAddPortfolio) {
       onAddPortfolio(item);
       return;
@@ -71,38 +74,32 @@ export default function ProfileForm({
       technologies: item.technologies || [],
       created_at: new Date().toISOString(),
     };
-    const newProfile = {
+    setProfile({
       ...profile,
       portfolio: [...(profile.portfolio || []), newItem],
-    };
-    setProfile(newProfile);
-    onUpdate(newProfile);
+    });
   };
 
-  const updatePortfolioItem = (item: PortfolioItem) => {
+  const updatePortfolioItemLocal = (item: PortfolioItem) => {
     if (onUpdatePortfolio) {
       onUpdatePortfolio(item);
       return;
     }
-    const newProfile = {
+    setProfile({
       ...profile,
       portfolio: (profile.portfolio || []).map((i) => (i.id === item.id ? item : i)),
-    };
-    setProfile(newProfile);
-    onUpdate(newProfile);
+    });
   };
 
-  const removePortfolioItem = (id: string) => {
+  const removePortfolioItemLocal = (id: string) => {
     if (onRemovePortfolio) {
       onRemovePortfolio(id);
       return;
     }
-    const newProfile = {
+    setProfile({
       ...profile,
       portfolio: (profile.portfolio || []).filter((item) => item.id !== id),
-    };
-    setProfile(newProfile);
-    onUpdate(newProfile);
+    });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,38 +210,38 @@ export default function ProfileForm({
           </div>
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Account Role</label>
-            <select
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-slate-50 font-bold"
-              value={profile.role}
-              onChange={(e) => setProfile({ ...profile, role: e.target.value as "freelancer" | "employer" })}
-            >
-              <option value="freelancer">freelancer (Freelancer)</option>
-              <option value="employer">employer (Client)</option>
-            </select>
+              <select
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-slate-50 font-bold"
+                value={profile.role}
+                onChange={(e) => handleFieldChange({ role: e.target.value as "freelancer" | "employer" })}
+              >
+                <option value="freelancer">freelancer (Freelancer)</option>
+                <option value="employer">employer (Client)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Full Name</label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
+                value={profile.name}
+                onChange={(e) => handleFieldChange({ name: e.target.value })}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Full Name</label>
-            <input
-              type="text"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-              value={profile.name}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            />
-          </div>
-        </div>
 
-        {profile.role === "employer" && (
-          <div>
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Company Name</label>
-            <input
-              type="text"
-              placeholder="e.g. TechCorp Solutions"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-              value={profile.companyName || ""}
-              onChange={(e) => setProfile({ ...profile, companyName: e.target.value })}
-            />
-          </div>
-        )}
+          {profile.role === "employer" && (
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Company Name</label>
+              <input
+                type="text"
+                placeholder="e.g. TechCorp Solutions"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
+                value={profile.companyName || ""}
+                onChange={(e) => handleFieldChange({ companyName: e.target.value })}
+              />
+            </div>
+          )}
 
         {profile.role === "freelancer" && (
           <div className="grid grid-cols-2 gap-4">
@@ -373,9 +370,9 @@ export default function ProfileForm({
           <div className="pt-6 border-t border-slate-100">
             <PortfolioManager
               items={profile.portfolio || []}
-              onAdd={addPortfolioItem}
-              onUpdate={updatePortfolioItem}
-              onRemove={removePortfolioItem}
+              onAdd={addPortfolioItemLocal}
+              onUpdate={updatePortfolioItemLocal}
+              onRemove={removePortfolioItemLocal}
               isOwner={true}
             />
           </div>

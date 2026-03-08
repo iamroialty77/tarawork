@@ -274,13 +274,11 @@ export default function Home() {
         'avatar_url', 'companyName', 'verifiedSkills', 'softSkills', 
         'activeProjects', 'squad', 'aiInsights', 'ranking', 'status', 
         'verification_documents', 'wellness', 'updated_at', 'username', 
-        'referring_freelancer_id'
+        'referring_freelancer_id', 'workflows'
       ];
 
       // Create a clean object with only database-compatible fields
-      const profileToSave: any = {
-        updated_at: new Date().toISOString()
-      };
+      const profileToSave: any = {};
 
       // Only copy properties that are in our dbColumns list
       Object.keys(updatedProfile).forEach(key => {
@@ -288,6 +286,9 @@ export default function Home() {
           profileToSave[key] = (updatedProfile as any)[key];
         }
       });
+      
+      // Always add updated_at
+      profileToSave.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('profiles')
@@ -296,7 +297,22 @@ export default function Home() {
           ...profileToSave,
         });
 
-      if (error) throw error;
+      if (error) {
+        // If error is about missing workflows column, try one more time without it
+        if (error.message?.includes("'workflows' column") || error.code === 'PGRST204') {
+          console.warn("Retrying profile save without workflows column...");
+          const { workflows, ...profileWithoutWorkflows } = profileToSave;
+          const { error: retryError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              ...profileWithoutWorkflows,
+            });
+          if (retryError) throw retryError;
+        } else {
+          throw error;
+        }
+      }
       
       setProfile(updatedProfile);
       if (updatedProfile.role === 'employer') {
