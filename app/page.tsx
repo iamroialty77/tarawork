@@ -268,15 +268,32 @@ export default function Home() {
     if (!user) return;
     setIsSaving(true);
     try {
-      // Remove portfolio from the profile object before saving to 'profiles' table
-      const { portfolio, ...profileToSave } = updatedProfile;
+      // List of columns that definitely exist in the profiles table base on supabase_schema.sql
+      const dbColumns = [
+        'id', 'name', 'role', 'category', 'skills', 'hourlyRate', 'bio', 
+        'avatar_url', 'companyName', 'verifiedSkills', 'softSkills', 
+        'activeProjects', 'squad', 'aiInsights', 'ranking', 'status', 
+        'verification_documents', 'wellness', 'updated_at', 'username', 
+        'referring_freelancer_id'
+      ];
+
+      // Create a clean object with only database-compatible fields
+      const profileToSave: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Only copy properties that are in our dbColumns list
+      Object.keys(updatedProfile).forEach(key => {
+        if (dbColumns.includes(key) && (updatedProfile as any)[key] !== undefined) {
+          profileToSave[key] = (updatedProfile as any)[key];
+        }
+      });
 
       const { error } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
           ...profileToSave,
-          updated_at: new Date().toISOString(),
         });
 
       if (error) throw error;
@@ -431,7 +448,13 @@ export default function Home() {
         })
         .eq('id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes("'workflows' column") || error.code === 'PGRST204') {
+          console.warn("Skipping workflows sync as column doesn't exist in DB");
+          return;
+        }
+        throw error;
+      }
     } catch (err: any) {
       console.error("Error updating workflows:", err);
       setToastMsg("Failed to sync workflows to database.");
