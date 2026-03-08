@@ -126,8 +126,19 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         .single();
 
       const jobData = {
-        ...formData,
         id: Math.random().toString(36).substr(2, 9),
+        title: formData.title,
+        description: formData.description,
+        skills: formData.skills,
+        jobType: formData.jobType,
+        duration: formData.duration,
+        paymentMethod: formData.paymentMethod,
+        budget: formData.budget,
+        milestones: formData.milestones,
+        customQuestions: formData.customQuestions,
+        deadline: formData.deadline,
+        category: formData.category,
+        energy_requirement: formData.energyRequirement,
         company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Employer",
         employer_id: user.id,
         createdAt: new Date().toISOString(),

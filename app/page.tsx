@@ -449,7 +449,13 @@ export default function Home() {
       }
 
       if (data && data.length > 0) {
-        setJobs(data);
+        const formattedJobs = data.map((job: any) => ({
+          ...job,
+          energyRequirement: job.energy_requirement || "Balanced",
+          paymentMethod: job.paymentMethod || "Flat-Rate",
+          jobType: job.jobType || "Contract"
+        }));
+        setJobs(formattedJobs);
       } else {
         setJobs([]);
       }
@@ -477,7 +483,10 @@ export default function Home() {
       if (data) {
         const formattedJobs = data.map((job: any) => ({
           ...job,
-          applicantCount: job.applications?.[0]?.count || 0
+          applicantCount: job.applications?.[0]?.count || 0,
+          energyRequirement: job.energy_requirement || "Balanced",
+          paymentMethod: job.paymentMethod || "Flat-Rate",
+          jobType: job.jobType || "Contract"
         }));
         setemployerJobs(formattedJobs);
       }
@@ -894,6 +903,19 @@ export default function Home() {
           }, () => {
             fetchEmployerJobs(session.user.id);
             fetchAppliedJobs(session.user.id);
+          })
+          .subscribe();
+
+        // Subscribe to jobs for realtime updates
+        const jobsChannel = supabase
+          .channel('jobs-changes')
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'jobs' 
+          }, () => {
+            fetchJobs();
+            fetchEmployerJobs(session.user.id);
           })
           .subscribe();
         

@@ -29,8 +29,8 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   }, [searchTerm]);
   const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | "All">("All");
   const [durationFilter, setDurationFilter] = useState<JobDuration | "All">("All");
-  const [categoryFilter, setCategoryFilter] = useState<FreelancerCategory | "All">(profile.category || "All");
-  const [useSmartMatching, setUseSmartMatching] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<FreelancerCategory | "All">("All");
+  const [useSmartMatching, setUseSmartMatching] = useState(false);
 
   const filteredJobs = useMemo(() => {
     const filtered = jobs.filter((job) => {
