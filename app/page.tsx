@@ -514,8 +514,23 @@ export default function Home() {
         .eq('job_id', jobId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setSelectedJobApplicants(data || []);
+      if (error) {
+        if (error.message?.includes('interview_url')) {
+          // Fallback if interview_url is missing
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('applications')
+            .select('id, job_id, freelancer_id, status, cover_letter, resume_url, portfolio_url, created_at, profiles(*)')
+            .eq('job_id', jobId)
+            .order('created_at', { ascending: false });
+          
+          if (fallbackError) throw fallbackError;
+          setSelectedJobApplicants(fallbackData || []);
+        } else {
+          throw error;
+        }
+      } else {
+        setSelectedJobApplicants(data || []);
+      }
       setShowApplicantsModal(true);
     } catch (err: any) {
       console.error("Error fetching applicants:", err);
@@ -565,21 +580,46 @@ export default function Home() {
 
     try {
       setIsSaving(true);
+      const insertData: any = { 
+        job_id: selectedJobIdForApply,
+        freelancer_id: user.id,
+        status: 'pending',
+        resume_url: applyData.resumeUrl,
+        portfolio_url: applyData.portfolioUrl,
+        cover_letter: applyData.coverLetter
+      };
+
+      // Only add interview_url if it's provided, to avoid schema issues if the column is missing
+      if (applyData.interviewUrl) {
+        insertData.interview_url = applyData.interviewUrl;
+      }
+
       const { error } = await supabase
         .from('applications')
-        .insert([{ 
-          job_id: selectedJobIdForApply,
-          freelancer_id: user.id,
-          status: 'pending',
-          resume_url: applyData.resumeUrl,
-          portfolio_url: applyData.portfolioUrl,
-          interview_url: applyData.interviewUrl,
-          cover_letter: applyData.coverLetter
-        }]);
+        .insert([insertData]);
 
       if (error) {
         if (error.code === '23505') {
           setToastMsg("You have already applied for this job!");
+        } else if (error.message?.includes('interview_url')) {
+          // Retry without interview_url if it failed specifically because of that column
+          const { error: retryError } = await supabase
+            .from('applications')
+            .insert([{ 
+              job_id: selectedJobIdForApply,
+              freelancer_id: user.id,
+              status: 'pending',
+              resume_url: applyData.resumeUrl,
+              portfolio_url: applyData.portfolioUrl,
+              cover_letter: applyData.coverLetter
+            }]);
+          
+          if (retryError) throw retryError;
+          
+          setAppliedJobs(prev => ({ ...prev, [selectedJobIdForApply]: 'pending' }));
+          setToastMsg("Application submitted! (Note: Interview link skipped due to DB setup)");
+          setShowApplyModal(false);
+          setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
         } else {
           throw error;
         }
