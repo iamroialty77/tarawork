@@ -144,7 +144,7 @@ export default function Home() {
   const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
   const [clientTab, setClientTab] = useState<"overview" | "post" | "postings" | "talents" | "profile">("overview");
 
-  const fetchProfile = async (userId: string, userAuth?: any) => {
+  const fetchProfile = async (userId: string, userAuth?: any, prevProfile?: UserProfile) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -164,6 +164,16 @@ export default function Home() {
       }
 
       if (data) {
+        // Normalize profile data to ensure arrays are not null/undefined
+        const normalizedData: UserProfile = {
+          ...data,
+          skills: Array.isArray(data.skills) ? data.skills : [],
+          verifiedSkills: Array.isArray(data.verifiedSkills) ? data.verifiedSkills : [],
+          softSkills: Array.isArray(data.softSkills) ? data.softSkills : (prevProfile ? prevProfile.softSkills : []),
+          activeProjects: Array.isArray(data.activeProjects) ? data.activeProjects : [],
+          workflows: Array.isArray(data.workflows) ? data.workflows : [],
+        };
+
         // --- SMART PORTFOLIO FETCHING ---
         let portfolioItems: PortfolioItem[] = [];
         
@@ -212,11 +222,11 @@ export default function Home() {
           portfolioItems = lastResort || [];
         }
 
-        setProfile({ ...data, portfolio: portfolioItems });
+        setProfile({ ...normalizedData, portfolio: portfolioItems });
         
-        if (data.role === 'employer') {
+        if (normalizedData.role === 'employer') {
           setView('client');
-        } else if (data.role === 'admin') {
+        } else if (normalizedData.role === 'admin') {
           setView('admin');
         } else {
           setView('freelancer');
@@ -817,7 +827,8 @@ export default function Home() {
         setUser(session.user);
         
         // Fetch real profile from DB
-        await fetchProfile(session.user.id, session.user);
+        const currentProfile = profile;
+        await fetchProfile(session.user.id, session.user, currentProfile);
         
         // Fetch jobs from DB
         await fetchJobs();
@@ -889,7 +900,18 @@ export default function Home() {
             table: 'profiles',
             filter: `id=eq.${session.user.id}`
           }, (payload) => {
-            setProfile(prev => ({ ...prev, ...payload.new }));
+            setProfile(prev => {
+              const newData = payload.new as any;
+              return {
+                ...prev,
+                ...newData,
+                skills: Array.isArray(newData.skills) ? newData.skills : (prev.skills || []),
+                verifiedSkills: Array.isArray(newData.verifiedSkills) ? newData.verifiedSkills : (prev.verifiedSkills || []),
+                softSkills: Array.isArray(newData.softSkills) ? newData.softSkills : (prev.softSkills || []),
+                activeProjects: Array.isArray(newData.activeProjects) ? newData.activeProjects : (prev.activeProjects || []),
+                workflows: Array.isArray(newData.workflows) ? newData.workflows : (prev.workflows || []),
+              };
+            });
           })
           .subscribe();
 
