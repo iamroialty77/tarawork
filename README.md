@@ -1,52 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TaraWork
 
-## Getting Started
+TaraWork is a Next.js marketplace app backed by Supabase.
 
-First, run the development server:
+## Workflow
+
+### 1. Clone and install
+```bash
+npm install
+```
+
+### 2. Configure environment
+Create `.env.local` in the project root:
 
 ```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+DATABASE_URL=your_postgres_connection_string
+OPENAI_API_KEY=your_openai_api_key
+```
+
+### 3. Initialize database
+1. Open Supabase SQL Editor.
+2. Run `supabase_schema.sql`.
+3. (Optional) Run `seed_test_data.sql` for sample data.
+4. Verify realtime includes: `applications`, `jobs`, `messages`.
+
+### 4. Start development
+```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+Open `http://localhost:3000`.
+
+### 5. Make and validate changes
+- Edit app code in `app/`, `components/`, `lib/`, `types/`.
+- Run lint checks:
+
+```bash
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Database Setup (Supabase)
-
-To get started with TaraWork, you need to run the following SQL commands in your Supabase SQL Editor. This will set up all necessary tables, policies, and real-time replication.
-
-### 1. Execute Schema SQL
-Copy the content of `supabase_schema.sql` and run it in your Supabase SQL Editor.
-
-### 2. Required Indexes for Performance
-Run these commands to speed up queries:
-```sql
-CREATE INDEX IF NOT EXISTS idx_applications_job_id ON public.applications(job_id);
-CREATE INDEX IF NOT EXISTS idx_applications_seeker_id ON public.applications(seeker_id);
-CREATE INDEX IF NOT EXISTS idx_jobs_hirer_id ON public.jobs(hirer_id);
+### 6. Build check before release
+```bash
+npm run build
+npm run start
 ```
 
-### 3. Verify Real-time
-Ensure that Real-time is enabled for the `applications`, `jobs`, and `messages` tables under the `supabase_realtime` publication.
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - Start local development server
+- `npm run lint` - Run ESLint
+- `npm run build` - Create production build
+- `npm run start` - Run production server
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Admin routes use `SUPABASE_SERVICE_ROLE_KEY` and must remain server-side only.
+- Resume parsing endpoint (`app/api/parse-resume/route.ts`) degrades gracefully if `OPENAI_API_KEY` is missing.

@@ -693,7 +693,29 @@ export default function Home() {
         .order('created_at', { ascending: false });
       
       if (!error && data) {
-        setPortfolioInquiries(data);
+        const sanitized = data
+          .filter(Boolean)
+          .map((inquiry: any) => {
+            const senderName =
+              typeof inquiry?.sender_name === "string" && inquiry.sender_name.trim().length > 0
+                ? inquiry.sender_name
+                : "Unknown Sender";
+            const senderEmail =
+              typeof inquiry?.sender_email === "string" && inquiry.sender_email.trim().length > 0
+                ? inquiry.sender_email
+                : "";
+            const message =
+              typeof inquiry?.message === "string" && inquiry.message.trim().length > 0
+                ? inquiry.message
+                : "No message provided.";
+            return {
+              ...inquiry,
+              sender_name: senderName,
+              sender_email: senderEmail,
+              message,
+            };
+          });
+        setPortfolioInquiries(sanitized);
       }
     } catch (err) {
       console.error("Error fetching portfolio inquiries:", err);
@@ -1607,20 +1629,34 @@ export default function Home() {
                           </div>
                         ) : (
                           <div className="space-y-4">
-                            {portfolioInquiries.slice(0, 5).map((inquiry) => (
+                            {portfolioInquiries.slice(0, 5).map((inquiry) => {
+                              const senderName =
+                                typeof inquiry?.sender_name === "string" && inquiry.sender_name.trim().length > 0
+                                  ? inquiry.sender_name
+                                  : "Unknown Sender";
+                              const senderEmail =
+                                typeof inquiry?.sender_email === "string" ? inquiry.sender_email : "";
+                              const senderInitial = senderName.slice(0, 1).toUpperCase() || "U";
+                              const inquiryDate = inquiry?.created_at ? new Date(inquiry.created_at) : null;
+                              const inquiryDateLabel =
+                                inquiryDate && !Number.isNaN(inquiryDate.getTime())
+                                  ? inquiryDate.toLocaleDateString()
+                                  : "Unknown date";
+
+                              return (
                               <div key={inquiry.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-indigo-100 hover:shadow-xl transition-all group">
                                 <div className="flex justify-between items-start mb-3">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm">
-                                      {(inquiry.sender_name || "U").charAt(0)}
+                                      {senderInitial}
                                     </div>
                                     <div>
-                                      <h4 className="font-bold text-slate-900 leading-none mb-1">{inquiry.sender_name}</h4>
-                                      <p className="text-[10px] font-medium text-slate-500">{inquiry.sender_email}</p>
+                                      <h4 className="font-bold text-slate-900 leading-none mb-1">{senderName}</h4>
+                                      <p className="text-[10px] font-medium text-slate-500">{senderEmail || "No email provided"}</p>
                                     </div>
                                   </div>
                                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                    {new Date(inquiry.created_at).toLocaleDateString()}
+                                    {inquiryDateLabel}
                                   </span>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl border border-slate-100 text-sm text-slate-600 italic leading-relaxed relative">
@@ -1636,14 +1672,14 @@ export default function Home() {
                                       const { data: profileData } = await supabase
                                         .from('profiles')
                                         .select('id')
-                                        .ilike('name', `%${inquiry.sender_name}%`)
+                                        .ilike('name', `%${senderName}%`)
                                         .limit(1)
                                         .maybeSingle();
 
                                       if (profileData) {
                                         router.push(`/messages?with=${profileData.id}`);
                                       } else {
-                                        window.location.href = `mailto:${inquiry.sender_email}?subject=Reply to your TaraWork inquiry`;
+                                        window.location.href = `mailto:${senderEmail}?subject=Reply to your TaraWork inquiry`;
                                       }
                                     }}
                                     className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-sm"
@@ -1652,7 +1688,7 @@ export default function Home() {
                                     <ArrowUpRight className="w-3 h-3" />
                                   </button>
                                   <a 
-                                    href={`mailto:${inquiry.sender_email}`}
+                                    href={`mailto:${senderEmail}`}
                                     className="px-4 py-2 bg-white text-slate-600 border border-slate-200 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
                                   >
                                     Email Direct
@@ -1660,7 +1696,7 @@ export default function Home() {
                                   </a>
                                 </div>
                               </div>
-                            ))}
+                            )})}
                             {portfolioInquiries.length > 5 && (
                               <button className="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">
                                 View all inquiries
