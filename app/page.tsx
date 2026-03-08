@@ -597,6 +597,7 @@ export default function Home() {
       const insertData: any = { 
         job_id: selectedJobIdForApply,
         freelancer_id: user.id,
+        seeker_id: user.id, // Add seeker_id for compatibility with newer/older schema
         status: 'pending',
         resume_url: applyData.resumeUrl,
         portfolio_url: applyData.portfolioUrl,
@@ -621,6 +622,7 @@ export default function Home() {
           const minimalData: any = { 
             job_id: selectedJobIdForApply,
             freelancer_id: user.id,
+            seeker_id: user.id, // Add seeker_id for compatibility
             status: 'pending'
           };
           
