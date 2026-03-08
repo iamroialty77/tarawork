@@ -66,7 +66,7 @@ export default function JobCard({
             {/* Company Logo Placeholder */}
             <div className="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-indigo-100 transition-colors">
               <span className="text-xl font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">
-                {(job.company || "J").charAt(0)}
+                {(job?.company || "J").charAt(0)}
               </span>
             </div>
             

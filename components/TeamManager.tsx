@@ -196,7 +196,7 @@ export default function TeamManager({ squad, onCreateSquad, onUpdateSquad }: Tea
             <div key={member.id} className="group flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-emerald-100 transition-all">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-500">
-                  {(member.name || "M").charAt(0)}
+                  {(member?.name || "M").charAt(0)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
