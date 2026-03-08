@@ -515,16 +515,28 @@ export default function Home() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        if (error.message?.includes('interview_url')) {
-          // Fallback if interview_url is missing
+        if (error.message?.includes('interview_url') || error.message?.includes('portfolio_url')) {
+          // Fallback if interview_url or portfolio_url is missing
+          // Try with only basic columns first
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('applications')
-            .select('id, job_id, freelancer_id, status, cover_letter, resume_url, portfolio_url, created_at, profiles(*)')
+            .select('id, job_id, freelancer_id, status, cover_letter, resume_url, created_at, profiles(*)')
             .eq('job_id', jobId)
             .order('created_at', { ascending: false });
           
-          if (fallbackError) throw fallbackError;
-          setSelectedJobApplicants(fallbackData || []);
+          if (fallbackError) {
+            // If even that fails (maybe resume_url is missing?), try the bare minimum
+            const { data: bareData, error: bareError } = await supabase
+              .from('applications')
+              .select('id, job_id, freelancer_id, status, created_at, profiles(*)')
+              .eq('job_id', jobId)
+              .order('created_at', { ascending: false });
+            
+            if (bareError) throw bareError;
+            setSelectedJobApplicants(bareData || []);
+          } else {
+            setSelectedJobApplicants(fallbackData || []);
+          }
         } else {
           throw error;
         }
@@ -601,23 +613,26 @@ export default function Home() {
       if (error) {
         if (error.code === '23505') {
           setToastMsg("You have already applied for this job!");
-        } else if (error.message?.includes('interview_url')) {
-          // Retry without interview_url if it failed specifically because of that column
+        } else if (error.message?.includes('interview_url') || error.message?.includes('portfolio_url')) {
+          // Retry with minimal columns if it failed because of missing schema columns
+          const minimalData: any = { 
+            job_id: selectedJobIdForApply,
+            freelancer_id: user.id,
+            status: 'pending',
+            cover_letter: applyData.coverLetter
+          };
+          
+          // Try adding resume_url if it's there
+          if (applyData.resumeUrl) minimalData.resume_url = applyData.resumeUrl;
+
           const { error: retryError } = await supabase
             .from('applications')
-            .insert([{ 
-              job_id: selectedJobIdForApply,
-              freelancer_id: user.id,
-              status: 'pending',
-              resume_url: applyData.resumeUrl,
-              portfolio_url: applyData.portfolioUrl,
-              cover_letter: applyData.coverLetter
-            }]);
+            .insert([minimalData]);
           
           if (retryError) throw retryError;
           
           setAppliedJobs(prev => ({ ...prev, [selectedJobIdForApply]: 'pending' }));
-          setToastMsg("Application submitted! (Note: Interview link skipped due to DB setup)");
+          setToastMsg("Application submitted! (Note: Some fields skipped due to DB setup)");
           setShowApplyModal(false);
           setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
         } else {
