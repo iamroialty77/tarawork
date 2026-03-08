@@ -374,7 +374,7 @@ export default function Workspace({
                         <div key={project.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 group">
                           <div className="flex items-center gap-4">
                             <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center font-black text-white shadow-lg", i === 0 ? "bg-indigo-600" : i === 1 ? "bg-slate-800" : "bg-purple-600")}>
-                              {project.title[0]}
+                              {(project.title || "P")[0]}
                             </div>
                             <div>
                               <h4 className="text-sm font-black text-slate-900">{project.title}</h4>

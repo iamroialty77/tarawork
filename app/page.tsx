@@ -1424,7 +1424,7 @@ export default function Home() {
                   Top Rated Freelancer
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4 leading-tight tracking-tight">
-                  Welcome back, <span className="text-indigo-400">{profile.name.split(' ')[0]}!</span>
+                  Welcome back, <span className="text-indigo-400">{(profile.name || "User").split(' ')[0]}!</span>
                 </h2>
                 <p className="text-slate-300 text-lg mb-8 opacity-90 font-medium">
                   {profile.category === "Developer" && (
@@ -1612,7 +1612,7 @@ export default function Home() {
                                 <div className="flex justify-between items-start mb-3">
                                   <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm">
-                                      {inquiry.sender_name.charAt(0)}
+                                      {(inquiry.sender_name || "U").charAt(0)}
                                     </div>
                                     <div>
                                       <h4 className="font-bold text-slate-900 leading-none mb-1">{inquiry.sender_name}</h4>
@@ -2378,7 +2378,7 @@ export default function Home() {
 
                     <div className="bg-indigo-900 p-6 rounded-2xl text-white shadow-lg">
                       <h4 className="text-sm font-bold mb-2">Quick Action</h4>
-                      <p className="text-xs text-indigo-200 mb-6 leading-relaxed">Ready to discuss your project with {selectedFreelancer.name.split(' ')[0]}?</p>
+                      <p className="text-xs text-indigo-200 mb-6 leading-relaxed">Ready to discuss your project with {(selectedFreelancer.name || "User").split(' ')[0]}?</p>
                       <Link 
                         href={`/messages?with=${selectedFreelancer.id!}`}
                         className="w-full bg-white text-indigo-600 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all uppercase tracking-widest"

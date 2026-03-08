@@ -66,7 +66,7 @@ export default function JobCard({
             {/* Company Logo Placeholder */}
             <div className="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-indigo-100 transition-colors">
               <span className="text-xl font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">
-                {job.company.charAt(0)}
+                {(job.company || "J").charAt(0)}
               </span>
             </div>
             
@@ -87,7 +87,7 @@ export default function JobCard({
                   <Link 
                     href={job.employer_id ? `/messages?with=${job.employer_id}` : "/messages"}
                     className="text-gray-400 hover:text-indigo-600 transition-colors"
-                    title={`Message ${job.company} about ${job.category} project`}
+                    title={`Message ${job.company || "Employer"} about ${job.category} project`}
                   >
                     <MessageSquare className="w-3 h-3" />
                   </Link>
@@ -178,7 +178,7 @@ export default function JobCard({
                 )}
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                <span className="hover:text-slate-900 transition-colors cursor-pointer">{job.company}</span>
+                <span className="hover:text-slate-900 transition-colors cursor-pointer">{job.company || "Employer"}</span>
                 <span className="w-1 h-1 rounded-full bg-slate-300" />
                 <span className="flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
@@ -257,7 +257,7 @@ export default function JobCard({
               <span className="hidden xs:inline">Message</span>
             </Link>
             <button 
-              onClick={() => alert(`Details for "${job.title}" at ${job.company}:\n\n${job.description}`)}
+              onClick={() => alert(`Details for "${job.title}" at ${job.company || "Employer"}:\n\n${job.description}`)}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer uppercase tracking-wider"
             >
               Details
