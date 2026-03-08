@@ -505,12 +505,27 @@ export default function Home() {
     }
   };
 
+  // Tracking missing columns to avoid future errors
+  const [missingColumns, setMissingColumns] = useState<string[]>([]);
+
   const fetchApplicants = async (jobId: string, jobTitle: string) => {
     setSelectedJobTitle(jobTitle);
     try {
+      // Build select string based on known missing columns
+      let selectString = '*';
+      if (missingColumns.length > 0) {
+        // If we know some columns are missing, we should probably just use a safe list
+        // but for now, let's try to be specific if we can or just use the fallback logic
+        selectString = 'id, job_id, freelancer_id, status, created_at, profiles(*)';
+        if (!missingColumns.includes('resume_url')) selectString += ', resume_url';
+        if (!missingColumns.includes('portfolio_url')) selectString += ', portfolio_url';
+        if (!missingColumns.includes('interview_url')) selectString += ', interview_url';
+        if (!missingColumns.includes('cover_letter')) selectString += ', cover_letter';
+      }
+
       const { data, error } = await supabase
         .from('applications')
-        .select('*, profiles(*)')
+        .select(selectString)
         .eq('job_id', jobId)
         .order('created_at', { ascending: false });
 
@@ -518,6 +533,13 @@ export default function Home() {
         // More generic check for column-related errors (PostgREST code PGRST204)
         if (error.code === 'PGRST204' || error.message?.includes('column')) {
           console.warn("Schema mismatch detected, attempting fallback fetch for applications:", error.message);
+          
+          // Identify missing column from error message if possible
+          if (error.message?.includes('portfolio_url')) setMissingColumns(prev => [...new Set([...prev, 'portfolio_url'])]);
+          if (error.message?.includes('interview_url')) setMissingColumns(prev => [...new Set([...prev, 'interview_url'])]);
+          if (error.message?.includes('resume_url')) setMissingColumns(prev => [...new Set([...prev, 'resume_url'])]);
+          if (error.message?.includes('seeker_id')) setMissingColumns(prev => [...new Set([...prev, 'seeker_id'])]);
+          
           // Fallback if some columns are missing
           // Try with only basic columns first
           const { data: fallbackData, error: fallbackError } = await supabase
@@ -597,15 +619,17 @@ export default function Home() {
       const insertData: any = { 
         job_id: selectedJobIdForApply,
         freelancer_id: user.id,
-        seeker_id: user.id, // Add seeker_id for compatibility with newer/older schema
-        status: 'pending',
-        resume_url: applyData.resumeUrl,
-        portfolio_url: applyData.portfolioUrl,
-        cover_letter: applyData.coverLetter
+        status: 'pending'
       };
 
-      // Only add interview_url if it's provided, to avoid schema issues if the column is missing
-      if (applyData.interviewUrl) {
+      // Conditionally add columns based on whether we suspect they are missing
+      if (!missingColumns.includes('seeker_id')) insertData.seeker_id = user.id;
+      if (!missingColumns.includes('resume_url')) insertData.resume_url = applyData.resumeUrl;
+      if (!missingColumns.includes('portfolio_url')) insertData.portfolio_url = applyData.portfolioUrl;
+      if (!missingColumns.includes('cover_letter')) insertData.cover_letter = applyData.coverLetter;
+
+      // Only add interview_url if it's provided and not known to be missing
+      if (applyData.interviewUrl && !missingColumns.includes('interview_url')) {
         insertData.interview_url = applyData.interviewUrl;
       }
 
@@ -618,16 +642,27 @@ export default function Home() {
           setToastMsg("You have already applied for this job!");
         } else if (error.code === 'PGRST204' || error.message?.includes('column')) {
           console.warn("Schema mismatch detected, attempting fallback insert for applications:", error.message);
-          // Retry with absolute minimal columns if it failed because of missing schema columns
+          
+          // Identify missing column from error message
+          if (error.message?.includes('portfolio_url')) setMissingColumns(prev => [...new Set([...prev, 'portfolio_url'])]);
+          if (error.message?.includes('interview_url')) setMissingColumns(prev => [...new Set([...prev, 'interview_url'])]);
+          if (error.message?.includes('resume_url')) setMissingColumns(prev => [...new Set([...prev, 'resume_url'])]);
+          if (error.message?.includes('seeker_id')) setMissingColumns(prev => [...new Set([...prev, 'seeker_id'])]);
+
+          // Retry with absolute minimal columns
           const minimalData: any = { 
             job_id: selectedJobIdForApply,
             freelancer_id: user.id,
-            seeker_id: user.id, // Add seeker_id for compatibility
             status: 'pending'
           };
           
-          // Only add cover_letter if provided
-          if (applyData.coverLetter) minimalData.cover_letter = applyData.coverLetter;
+          // Add seeker_id only if not the one causing issues
+          if (!error.message?.includes('seeker_id')) minimalData.seeker_id = user.id;
+
+          // Only add cover_letter if provided and not causing issues
+          if (applyData.coverLetter && !error.message?.includes('cover_letter')) {
+            minimalData.cover_letter = applyData.coverLetter;
+          }
 
           const { error: retryError } = await supabase
             .from('applications')
