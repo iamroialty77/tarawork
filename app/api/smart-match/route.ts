@@ -48,7 +48,7 @@ const normalizeModelMatches = (
         reason
       } satisfies SmartMatchResult;
     })
-    .filter((item): item is SmartMatchResult => !!item);
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   if (normalized.length === 0) return fallback;
 
