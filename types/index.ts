@@ -129,6 +129,7 @@ export interface SmartMatchResponse {
   provider: "gemini" | "heuristic";
   fallback?: boolean;
   error?: string;
+  errorCode?: string;
 }
 
 export interface VerifiedSkill {

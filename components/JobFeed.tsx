@@ -16,6 +16,23 @@ interface JobFeedProps {
   appliedJobs?: Record<string, string>;
 }
 
+const smartMatchErrorMessage = (errorCode?: string, fallbackError?: string) => {
+  switch (errorCode) {
+    case "missing_key":
+      return "Gemini API key missing. Add GEMINI_API_KEY in .env.local.";
+    case "invalid_key":
+      return "Invalid Gemini API key. Generate a new key and restart app.";
+    case "quota_exceeded":
+      return "Gemini free quota reached. Using local smart matching.";
+    case "provider_unavailable":
+      return "Gemini is temporarily unavailable. Using local smart matching.";
+    case "network_error":
+      return "Network issue connecting to Gemini. Using local smart matching.";
+    default:
+      return fallbackError || "Gemini unavailable, using local smart matching.";
+  }
+};
+
 export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: JobFeedProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
@@ -118,13 +135,15 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
           signal: controller.signal
         });
 
-        if (!response.ok) throw new Error(`Smart matching failed (${response.status})`);
         const data = (await response.json()) as SmartMatchResponse;
+        if (!response.ok) {
+          throw new Error(smartMatchErrorMessage(data.errorCode, data.error || `Smart matching failed (${response.status})`));
+        }
         const mapped = Object.fromEntries((data.matches || []).map((match) => [match.jobId, match]));
         setSmartMatches(mapped);
 
         if (data.fallback) {
-          setSmartMatchError("Gemini unavailable, using local smart matching.");
+          setSmartMatchError(smartMatchErrorMessage(data.errorCode, data.error));
         }
       } catch (error: unknown) {
         if (controller.signal.aborted) return;

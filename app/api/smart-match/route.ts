@@ -9,6 +9,20 @@ interface SmartMatchPayload {
 
 const MAX_JOBS_PER_REQUEST = 40;
 
+const mapGeminiError = (status: number, message: string) => {
+  const msg = message.toLowerCase();
+  if (status === 401 || status === 403 || msg.includes("api key not valid") || msg.includes("invalid api key")) {
+    return { code: "invalid_key", message: "Gemini API key is invalid or unauthorized." };
+  }
+  if (status === 429 || msg.includes("quota") || msg.includes("rate limit")) {
+    return { code: "quota_exceeded", message: "Gemini quota exceeded or rate-limited." };
+  }
+  if (status >= 500) {
+    return { code: "provider_unavailable", message: "Gemini service is temporarily unavailable." };
+  }
+  return { code: "provider_error", message: `Gemini request failed (${status}).` };
+};
+
 const cleanJsonBlock = (text: string) => {
   const fenced = text.match(/```json\s*([\s\S]*?)```/i);
   if (fenced?.[1]) return fenced[1].trim();
@@ -73,7 +87,8 @@ export async function POST(req: NextRequest) {
         matches: fallbackMatches,
         provider: "heuristic",
         fallback: true,
-        error: "GEMINI_API_KEY is missing"
+        error: "GEMINI_API_KEY is missing",
+        errorCode: "missing_key"
       };
       return NextResponse.json(response);
     }
@@ -131,11 +146,21 @@ export async function POST(req: NextRequest) {
     );
 
     if (!geminiRes.ok) {
+      let providerMessage = "";
+      try {
+        const errJson = await geminiRes.json();
+        providerMessage = String(errJson?.error?.message || "");
+      } catch {
+        providerMessage = "";
+      }
+      const mappedError = mapGeminiError(geminiRes.status, providerMessage);
+
       const response: SmartMatchResponse = {
         matches: fallbackMatches,
         provider: "heuristic",
         fallback: true,
-        error: `Gemini request failed (${geminiRes.status})`
+        error: mappedError.message,
+        errorCode: mappedError.code
       };
       return NextResponse.json(response);
     }
@@ -151,7 +176,8 @@ export async function POST(req: NextRequest) {
         matches: fallbackMatches,
         provider: "heuristic",
         fallback: true,
-        error: "Gemini returned empty response"
+        error: "Gemini returned empty response",
+        errorCode: "empty_response"
       };
       return NextResponse.json(response);
     }
@@ -175,8 +201,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(response);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unable to compute smart match";
+    const isAbort = message.toLowerCase().includes("aborted");
+    const isNetwork = message.toLowerCase().includes("fetch") || message.toLowerCase().includes("network");
     return NextResponse.json(
-      { error: message },
+      {
+        error: message,
+        matches: [],
+        provider: "heuristic",
+        fallback: true,
+        errorCode: isAbort ? "aborted" : isNetwork ? "network_error" : "internal_error"
+      },
       { status: 500 }
     );
   }
