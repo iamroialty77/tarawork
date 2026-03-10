@@ -9,15 +9,17 @@ import {
   DollarSign, 
   Heart, 
   MoreHorizontal,
+  Share2,
   ShieldCheck,
   TrendingUp,
   ExternalLink,
   Sparkles,
   MessageSquare
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn, formatRelativeTime } from "../lib/utils";
 import Link from "next/link";
+import { getJobSharePath, getJobShareUrl } from "../lib/jobShare";
 
 export interface JobCardProps {
   job: Job;
@@ -48,6 +50,36 @@ export default function JobCard({
   const [isSaved, setIsSaved] = useState(false);
   const [showMatchDetails, setShowMatchDetails] = useState(false);
   const [isApplyingLocal, setIsApplyingLocal] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+  const sharePath = getJobSharePath(job);
+  const shareUrl = getJobShareUrl(job);
+
+  useEffect(() => {
+    if (!showActionsMenu) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+        setShowActionsMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showActionsMenu]);
+
+  const handleShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareStatus("copied");
+    } catch {
+      setShareStatus("failed");
+    } finally {
+      setShowActionsMenu(false);
+      setTimeout(() => setShareStatus("idle"), 2500);
+    }
+  };
 
   return (
     <motion.div
@@ -188,7 +220,7 @@ export default function JobCard({
             </div>
           </div>
 
-          <div className="flex gap-1">
+          <div className="flex gap-1 relative">
             <button 
               onClick={() => setIsSaved(!isSaved)}
               className={cn(
@@ -198,11 +230,43 @@ export default function JobCard({
             >
               <Heart className={cn("w-5 h-5", isSaved && "fill-current")} />
             </button>
-            <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all duration-200 cursor-pointer">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
+            <div className="relative" ref={actionsMenuRef}>
+              <button
+                onClick={() => setShowActionsMenu((prev) => !prev)}
+                className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all duration-200 cursor-pointer"
+                aria-label={`More actions for ${job.title}`}
+                aria-expanded={showActionsMenu}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+              {showActionsMenu && (
+                <div className="absolute right-0 top-full mt-2 w-44 rounded-xl bg-white border border-slate-200 shadow-xl z-30 p-1.5">
+                  <button
+                    onClick={handleShareLink}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-indigo-600" />
+                    Share Link
+                  </button>
+                  <Link
+                    href={sharePath}
+                    target="_blank"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                    Open Public Post
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        {shareStatus === "copied" && (
+          <p className="text-[11px] font-semibold text-emerald-600 mb-4">Share link copied.</p>
+        )}
+        {shareStatus === "failed" && (
+          <p className="text-[11px] font-semibold text-amber-600 mb-4">Unable to copy. Try again.</p>
+        )}
 
         {/* Job Meta Info */}
         <div className="flex flex-wrap gap-y-2 gap-x-4 mb-5">

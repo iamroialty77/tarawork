@@ -83,6 +83,7 @@ export default function Home() {
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [selectedJobIdForApply, setSelectedJobIdForApply] = useState<string | null>(null);
+  const [pendingApplyJobId, setPendingApplyJobId] = useState<string | null>(null);
   const [applyData, setApplyData] = useState({
     resumeUrl: "",
     portfolioUrl: "",
@@ -143,6 +144,14 @@ export default function Home() {
 
   const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
   const [clientTab, setClientTab] = useState<"overview" | "post" | "postings" | "talents" | "profile">("overview");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const applyId = params.get("apply");
+    if (!applyId) return;
+    setFreelancerTab("jobs");
+    setPendingApplyJobId(applyId);
+  }, []);
 
   const fetchProfile = async (userId: string, userAuth?: any, prevProfile?: UserProfile) => {
     try {
@@ -643,6 +652,30 @@ export default function Home() {
     setSelectedJobIdForApply(jobId);
     setShowApplyModal(true);
   };
+
+  useEffect(() => {
+    if (!pendingApplyJobId || jobs.length === 0) return;
+
+    const selectedJob = jobs.find((job) => job.id === pendingApplyJobId);
+    if (!selectedJob) {
+      setPendingApplyJobId(null);
+      return;
+    }
+
+    setFreelancerTab("jobs");
+
+    if (profile.role !== "freelancer") {
+      setToastMsg("Only freelancer accounts can apply for jobs.");
+      setShowToast(true);
+    } else {
+      handleApply(selectedJob.id);
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("apply");
+    window.history.replaceState({}, document.title, url.toString());
+    setPendingApplyJobId(null);
+  }, [pendingApplyJobId, jobs, profile.role]);
 
   const submitApplication = async () => {
     if (!user || !selectedJobIdForApply) return;
