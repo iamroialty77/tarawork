@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCategory } from "../types";
+import type { Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCategory, SmartMatchResult, SmartMatchResponse } from "../types";
 import JobCard from "./JobCard";
 import AIAgent from "./AIAgent";
 
 import { Search, Filter, Sparkles } from "lucide-react";
 import { energyScore } from "../lib/utils";
+import { heuristicSmartMatchMany } from "../lib/smartMatch";
 
 interface JobFeedProps {
   jobs: Job[];
@@ -31,64 +32,119 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   const [durationFilter, setDurationFilter] = useState<JobDuration | "All">("All");
   const [categoryFilter, setCategoryFilter] = useState<FreelancerCategory | "All">("All");
   const [useSmartMatching, setUseSmartMatching] = useState(false);
+  const [smartMatches, setSmartMatches] = useState<Record<string, SmartMatchResult>>({});
+  const [smartMatchLoading, setSmartMatchLoading] = useState(false);
+  const [smartMatchError, setSmartMatchError] = useState<string | null>(null);
 
-  const filteredJobs = useMemo(() => {
-    const filtered = jobs.filter((job) => {
-      // 1. Smart Matching (Skills)
-      if (useSmartMatching && profile.skills.length > 0) {
-        const hasMatchingSkill = job.skills.some((skill) =>
-          profile.skills.some(
-            (userSkill) => userSkill.toLowerCase() === skill.toLowerCase()
-          )
-        );
-        if (!hasMatchingSkill) return false;
-      }
-
-      // 2. Category Filter
+  const baseFilteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      // 1. Category Filter
       if (categoryFilter !== "All" && job.category !== categoryFilter) {
         return false;
       }
 
-      // 3. Search Term
+      // 2. Search Term
       const matchesSearch =
         job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         job.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         job.skills.some(skill => skill.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
       if (!matchesSearch) return false;
 
-      // 4. Payment Method Filter
+      // 3. Payment Method Filter
       if (paymentFilter !== "All" && job.paymentMethod !== paymentFilter) {
         return false;
       }
 
-      // 5. Duration Filter
+      // 4. Duration Filter
       if (durationFilter !== "All" && job.duration !== durationFilter) {
         return false;
       }
 
       return true;
     });
+  }, [jobs, debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter]);
 
-    if (useSmartMatching) {
-      return [...filtered].sort((a, b) => {
-        const matchedA = a.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase())).length;
-        const matchedB = b.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase())).length;
-        
-        const scoreA = matchedA / Math.max(a.skills.length, 1);
-        const scoreB = matchedB / Math.max(b.skills.length, 1);
-        
-        const energyMatchA = energyScore(profile.wellness?.energyRating, a.energyRequirement);
-        const energyMatchB = energyScore(profile.wellness?.energyRating, b.energyRequirement);
-        
-        const totalA = (0.6 * scoreA) + (0.4 * energyMatchA / 100);
-        const totalB = (0.6 * scoreB) + (0.4 * energyMatchB / 100);
-        
-        return totalB - totalA;
-      });
+  useEffect(() => {
+    if (!useSmartMatching) {
+      setSmartMatchLoading(false);
+      setSmartMatchError(null);
+      return;
     }
 
-    return filtered;
-  }, [jobs, profile.skills, profile.wellness, debouncedSearchTerm, paymentFilter, durationFilter, useSmartMatching, categoryFilter]);
+    if (baseFilteredJobs.length === 0) {
+      setSmartMatches({});
+      setSmartMatchLoading(false);
+      setSmartMatchError(null);
+      return;
+    }
+
+    if (!profile.skills || profile.skills.length === 0) {
+      const fallback = heuristicSmartMatchMany(baseFilteredJobs, profile);
+      const mapped = Object.fromEntries(fallback.map((match) => [match.jobId, match]));
+      setSmartMatches(mapped);
+      setSmartMatchLoading(false);
+      setSmartMatchError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSmartMatchLoading(true);
+    setSmartMatchError(null);
+
+    const loadSmartMatches = async () => {
+      try {
+        const response = await fetch("/api/smart-match", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile: {
+              category: profile.category,
+              skills: profile.skills,
+              wellness: profile.wellness
+            },
+            jobs: baseFilteredJobs
+          }),
+          signal: controller.signal
+        });
+
+        if (!response.ok) throw new Error(`Smart matching failed (${response.status})`);
+        const data = (await response.json()) as SmartMatchResponse;
+        const mapped = Object.fromEntries((data.matches || []).map((match) => [match.jobId, match]));
+        setSmartMatches(mapped);
+
+        if (data.fallback) {
+          setSmartMatchError("Gemini unavailable, using local smart matching.");
+        }
+      } catch (error: unknown) {
+        if (controller.signal.aborted) return;
+        const fallback = heuristicSmartMatchMany(baseFilteredJobs, profile);
+        const mapped = Object.fromEntries(fallback.map((match) => [match.jobId, match]));
+        setSmartMatches(mapped);
+        setSmartMatchError(error instanceof Error ? error.message : "Smart matching failed. Using local fallback.");
+      } finally {
+        if (!controller.signal.aborted) setSmartMatchLoading(false);
+      }
+    };
+
+    loadSmartMatches();
+    return () => controller.abort();
+  }, [useSmartMatching, baseFilteredJobs, profile.category, profile.skills, profile.wellness]);
+
+  const filteredJobs = useMemo(() => {
+    if (!useSmartMatching) return baseFilteredJobs;
+
+    return [...baseFilteredJobs].sort((a, b) => {
+      const aScore = smartMatches[a.id]?.score ?? 0;
+      const bScore = smartMatches[b.id]?.score ?? 0;
+      if (bScore !== aScore) return bScore - aScore;
+
+      const eScoreA = energyScore(profile.wellness?.energyRating, a.energyRequirement);
+      const eScoreB = energyScore(profile.wellness?.energyRating, b.energyRequirement);
+      if (eScoreB !== eScoreA) return eScoreB - eScoreA;
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [baseFilteredJobs, useSmartMatching, smartMatches, profile.wellness]);
 
   return (
     <div className="space-y-6">
@@ -178,6 +234,16 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
               Skills: {profile.skills.join(", ") || "None yet"}
             </span>
+            {useSmartMatching && smartMatchLoading && (
+              <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
+                Matching with Gemini...
+              </span>
+            )}
+            {useSmartMatching && smartMatchError && (
+              <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
+                {smartMatchError}
+              </span>
+            )}
           </div>
           
           <span className="text-xs font-medium text-gray-500">
@@ -189,11 +255,16 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
       <div className="grid gap-6">
         {filteredJobs.length > 0 ? (
           filteredJobs.map((job, index) => {
-            const matchedSkills = job.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
-            const missingSkills = job.skills.filter(s => !profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
-            const matchScore = profile.skills.length > 0 
-              ? Math.round((matchedSkills.length / Math.max(job.skills.length, 1)) * 100)
-              : 0;
+            const smartMatch = smartMatches[job.id];
+            const localMatchedSkills = job.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
+            const localMissingSkills = job.skills.filter(s => !profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
+            const matchedSkills = useSmartMatching ? (smartMatch?.matchedSkills ?? localMatchedSkills) : localMatchedSkills;
+            const missingSkills = useSmartMatching ? (smartMatch?.missingSkills ?? localMissingSkills) : localMissingSkills;
+            const matchScore = useSmartMatching
+              ? (smartMatch?.score ?? 0)
+              : profile.skills.length > 0
+                ? Math.round((matchedSkills.length / Math.max(job.skills.length, 1)) * 100)
+                : 0;
             const eScore = energyScore(profile.wellness?.energyRating, job.energyRequirement);
             let sustainabilityMatch = Math.round(0.6 * matchScore + 0.4 * eScore);
             if (profile.wellness?.verifiedSustainable) sustainabilityMatch = Math.min(100, sustainabilityMatch + 5);

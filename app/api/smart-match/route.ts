@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Job, SmartMatchResponse, SmartMatchResult, UserProfile } from "@/types";
+import type { Job, SmartMatchResponse, SmartMatchResult, UserProfile } from "@/types";
 import { heuristicSmartMatchMany } from "@/lib/smartMatch";
 
 interface SmartMatchPayload {
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
 
     const geminiData = await geminiRes.json();
     const modelText = geminiData?.candidates?.[0]?.content?.parts
-      ?.map((part: any) => part?.text)
+      ?.map((part: { text?: string }) => part?.text)
       .filter(Boolean)
       .join("\n");
 
@@ -156,23 +156,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(response);
     }
 
-    let parsed: any = null;
+    let parsed: unknown = null;
     try {
       parsed = JSON.parse(cleanJsonBlock(modelText));
     } catch {
       parsed = null;
     }
 
-    const matches = normalizeModelMatches(parsed?.matches, fallbackMatches);
+    const parsedMatches = parsed && typeof parsed === "object"
+      ? (parsed as { matches?: unknown }).matches
+      : undefined;
+    const matches = normalizeModelMatches(parsedMatches, fallbackMatches);
     const response: SmartMatchResponse = {
       matches,
       provider: "gemini",
       fallback: false
     };
     return NextResponse.json(response);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unable to compute smart match";
     return NextResponse.json(
-      { error: error?.message || "Unable to compute smart match" },
+      { error: message },
       { status: 500 }
     );
   }

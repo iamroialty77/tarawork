@@ -1,4 +1,4 @@
-import { Job, SmartMatchResult, UserProfile } from "@/types";
+import type { Job, SmartMatchResult, UserProfile } from "@/types";
 import { energyScore } from "./utils";
 
 const normalizeSkill = (value: string) => value.trim().toLowerCase();
