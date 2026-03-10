@@ -116,6 +116,21 @@ export interface Job {
   sustainabilityMatchScore?: number; // 0-100: Calculated compatibility
 }
 
+export interface SmartMatchResult {
+  jobId: string;
+  score: number; // 0-100
+  matchedSkills: string[];
+  missingSkills: string[];
+  reason?: string;
+}
+
+export interface SmartMatchResponse {
+  matches: SmartMatchResult[];
+  provider: "gemini" | "heuristic";
+  fallback?: boolean;
+  error?: string;
+}
+
 export interface VerifiedSkill {
   name: string;
   score: number; // 0-100
