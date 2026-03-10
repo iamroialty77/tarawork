@@ -128,8 +128,10 @@ export async function POST(req: NextRequest) {
       `Jobs: ${JSON.stringify(compactJobs)}`
     ].join("\n");
 
+    const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
