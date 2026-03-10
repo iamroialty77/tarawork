@@ -5,7 +5,7 @@ import type { Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCate
 import JobCard from "./JobCard";
 import AIAgent from "./AIAgent";
 
-import { Search, Filter, Sparkles } from "lucide-react";
+import { Search, Filter, Sparkles, Loader2 } from "lucide-react";
 import { energyScore } from "../lib/utils";
 import { heuristicSmartMatchMany } from "../lib/smartMatch";
 
@@ -35,6 +35,17 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   const [smartMatches, setSmartMatches] = useState<Record<string, SmartMatchResult>>({});
   const [smartMatchLoading, setSmartMatchLoading] = useState(false);
   const [smartMatchError, setSmartMatchError] = useState<string | null>(null);
+
+  const handleSmartMatchingToggle = (checked: boolean) => {
+    setUseSmartMatching(checked);
+    if (checked) {
+      setSmartMatchLoading(true);
+      setSmartMatchError(null);
+      return;
+    }
+    setSmartMatchLoading(false);
+    setSmartMatchError(null);
+  };
 
   const baseFilteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -217,26 +228,27 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
 
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-3">
-            <div className="relative inline-flex items-center cursor-pointer">
+            <label htmlFor="smart-matching" className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 id="smart-matching"
                 checked={useSmartMatching}
-                onChange={(e) => setUseSmartMatching(e.target.checked)}
+                onChange={(e) => handleSmartMatchingToggle(e.target.checked)}
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-indigo-100 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-              <label htmlFor="smart-matching" className="ml-3 text-sm font-semibold text-gray-700 cursor-pointer flex items-center gap-1.5">
+              <span className="ml-3 text-sm font-semibold text-gray-700 cursor-pointer flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-indigo-500" />
                 Smart Matching
-              </label>
-            </div>
+              </span>
+            </label>
             <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
               Skills: {profile.skills.join(", ") || "None yet"}
             </span>
             {useSmartMatching && smartMatchLoading && (
-              <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
-                Matching with Gemini...
+              <span className="text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 inline-flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Gemini is matching jobs...
               </span>
             )}
             {useSmartMatching && smartMatchError && (
