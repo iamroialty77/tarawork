@@ -126,7 +126,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                     : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100 shadow-[0_10px_30px_-10px_rgba(79,70,229,0.3)]"
                 }`}
              >
-                {showPath ? "Hide Detailed Roadmap" : "Unlock Full AI Career Roadmap"}
+                {showPath ? "Hide Detailed Roadmap" : "Unlock Full AI Roadmap"}
                 {showPath ? null : <Lock className="w-4 h-4" />}
              </button>
           </div>
@@ -137,7 +137,13 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
         isOpen={showAIAgent}
         onClose={() => setShowAIAgent(false)}
         mode="career-roadmap"
-        targetData={profile}
+        targetData={{
+          profile,
+          marketContext: {
+            topDemandSkills: sortedDemand.map(([skill]) => skill),
+            missingSkills
+          }
+        }}
         onComplete={(data) => {
           setRoadmapData(data);
           setShowPath(true);

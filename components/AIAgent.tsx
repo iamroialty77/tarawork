@@ -24,6 +24,27 @@ interface AIAgentProps {
   onComplete?: (data: any) => void;
 }
 
+interface CareerRoadmapModule {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  level: "Beginner" | "Intermediate" | "Advanced" | "Expert";
+}
+
+interface CareerRoadmapApiResponse {
+  roadmapId: string;
+  status: "Unlocked";
+  nextMilestone: string;
+  summary: string;
+  insights: string[];
+  confidenceScore: number;
+  modules: CareerRoadmapModule[];
+  provider: "gemini" | "fallback";
+  fallback?: boolean;
+  error?: string;
+}
+
 export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete }: AIAgentProps) {
   const [status, setStatus] = useState<"idle" | "analyzing" | "completed">("idle");
   const [progress, setProgress] = useState(0);
@@ -92,6 +113,27 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
     }
   }, [isOpen]);
 
+  const requestCareerRoadmap = async (): Promise<CareerRoadmapApiResponse | null> => {
+    try {
+      const data = (targetData as any) || {};
+      const payload = data?.profile ? data : { profile: data };
+      const response = await fetch("/api/career-roadmap", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`Career roadmap request failed (${response.status})`);
+      }
+      return (await response.json()) as CareerRoadmapApiResponse;
+    } catch (error) {
+      console.error("Career roadmap generation failed:", error);
+      return null;
+    }
+  };
+
   const startAnalysis = () => {
     setProgress(0);
     
@@ -105,7 +147,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
         }
         if (next >= 100) {
           clearInterval(interval);
-          finishAnalysis();
+          void finishAnalysis();
           return 100;
         }
         return next;
@@ -113,7 +155,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
     }, 40);
   };
 
-  const finishAnalysis = () => {
+  const finishAnalysis = async () => {
     setStatus("completed");
     
     if (mode === "vetting") {
@@ -181,83 +223,55 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
         : "Conditional Consideration: Potential alignment detected, but requires intensive manual vetting of specific project gaps.");
 
     } else if (mode === "career-roadmap") {
-      const profile = (targetData as any) || {};
-      const category = profile.category || "Professional";
-      
-      const getModulesForCategory = (cat: string) => {
-        switch(cat) {
-          case "Developer":
-            return [
-              { id: 1, title: "Advanced Distributed Systems", description: "Mastering microservices architecture and event-driven design patterns.", duration: "4 weeks", level: "Expert" },
-              { id: 2, title: "AI Model Integration", description: "Deep dive into LLM orchestration, RAG patterns, and vector database optimization.", duration: "3 weeks", level: "Advanced" },
-              { id: 3, title: "Web3 & Smart Contract Security", description: "Analyzing vulnerability patterns in Solidity and implementing robust security audits.", duration: "4 weeks", level: "Specialist" },
-              { id: 4, title: "Cloud Native Scalability", description: "Advanced Kubernetes orchestration and multi-region deployment strategies.", duration: "3 weeks", level: "Expert" }
-            ];
-          case "Designer":
-          case "Graphic Design":
-            return [
-              { id: 1, title: "Design Systems Governance", description: "Building and scaling cross-platform design systems for enterprise-grade applications.", duration: "4 weeks", level: "Expert" },
-              { id: 2, title: "Behavioral UX Research", description: "Using cognitive psychology and data analytics to drive product design decisions.", duration: "3 weeks", level: "Advanced" },
-              { id: 3, title: "Immersive 3D Design", description: "Mastering Three.js and Spline for high-performance interactive 3D web experiences.", duration: "5 weeks", level: "Specialist" },
-              { id: 4, title: "Motion Engineering", description: "Advanced principles of interface choreography and high-fidelity prototyping.", duration: "3 weeks", level: "Expert" }
-            ];
-          case "Marketing Specialist":
-          case "Marketing":
-            return [
-              { id: 1, title: "Algorithmic Growth Hacking", description: "Leveraging AI for predictive customer acquisition and churn reduction.", duration: "4 weeks", level: "Expert" },
-              { id: 2, title: "Omni-channel Data Attribution", description: "Building complex tracking systems for multi-touch conversion analysis.", duration: "3 weeks", level: "Advanced" },
-              { id: 3, title: "Global Brand Narrative", description: "Strategic communication for cross-cultural market penetration and scaling.", duration: "4 weeks", level: "Specialist" },
-              { id: 4, title: "Performance Marketing Audit", description: "Advanced financial modeling for ROAS optimization at $1M+ monthly spend.", duration: "3 weeks", level: "Expert" }
-            ];
-          case "Virtual Assistant":
-          case "Admin/VA":
-            return [
-              { id: 1, title: "Operations Architecture", description: "Building automated workflows using Zapier, Make, and custom AI agents.", duration: "4 weeks", level: "Expert" },
-              { id: 2, title: "Executive Strategic Support", description: "High-level project management and stakeholder communication frameworks.", duration: "3 weeks", level: "Advanced" },
-              { id: 3, title: "Data Governance & CRM Mastery", description: "Architecting complex database structures for business intelligence.", duration: "4 weeks", level: "Specialist" },
-              { id: 4, title: "Cross-functional Team Lead", description: "Mastering remote leadership and organizational scaling strategies.", duration: "3 weeks", level: "Expert" }
-            ];
-          case "Writer":
-          case "Writing & Content":
-            return [
-              { id: 1, title: "Semantic SEO Strategy", description: "Advanced topic clustering and NLP-driven content optimization for search engines.", duration: "4 weeks", level: "Expert" },
-              { id: 2, title: "Brand Voice Engineering", description: "Developing comprehensive style guides and AI-assisted content pipelines.", duration: "3 weeks", level: "Advanced" },
-              { id: 3, title: "Technical Whitepaper Mastery", description: "Distilling complex technical concepts into high-authority industry reports.", duration: "5 weeks", level: "Specialist" },
-              { id: 4, title: "Ghostwriting for Executives", description: "Strategic thought-leadership development for C-suite professionals.", duration: "3 weeks", level: "Expert" }
-            ];
-          case "Data & Automation":
-            return [
-              { id: 1, title: "Data Engineering Pipelines", description: "Building scalable ETL processes and real-time data streaming architectures.", duration: "4 weeks", level: "Expert" },
-              { id: 2, title: "AI-Driven Automation", description: "Leveraging LLMs and custom agents for complex business process automation.", duration: "3 weeks", level: "Advanced" },
-              { id: 3, title: "Big Data Governance", description: "Implementing robust security, compliance, and quality controls for enterprise data.", duration: "4 weeks", level: "Specialist" },
-              { id: 4, title: "Predictive Analytics Systems", description: "Developing machine learning models for business intelligence and forecasting.", duration: "4 weeks", level: "Expert" }
-            ];
-          default:
-            return [
-              { id: 1, title: "Strategic Leadership", description: "Mastering organizational behavior and high-stakes decision making.", duration: "4 weeks", level: "Expert" },
-              { id: 2, title: "Operational Excellence", description: "Optimizing business processes for maximum efficiency and scale.", duration: "3 weeks", level: "Advanced" },
-              { id: 3, title: "High-Value Consulting", description: "Developing high-authority advisory skills for premium enterprise clients.", duration: "4 weeks", level: "Specialist" },
-              { id: 4, title: "Industry Node Mastery", description: "Deep specialization in a specific industry vertical for maximum market leverage.", duration: "3 weeks", level: "Expert" }
-            ];
-        }
-      };
+      const response = await requestCareerRoadmap();
+      const normalizedModules: CareerRoadmapModule[] = Array.isArray(response?.modules)
+        ? response.modules.map((module, index) => ({
+            id: module?.id || `module-${index + 1}`,
+            title: module?.title || `Module ${index + 1}`,
+            description: module?.description || "Skill development track",
+            duration: module?.duration || "2-3 weeks",
+            level: module?.level || "Intermediate"
+          }))
+        : [];
 
-      setFinalScore(94);
-      setInsights([
-        `Strategic Transition: Your current ${category} foundation is 85% ready for 'Architect' level responsibilities.`,
-        "Income Scaling Potential: Mastery of the proposed nodes could increase your market value by 45-60% within 6 months.",
-        "Learning Efficiency: Your verified skills in related domains allow for a 25% faster learning curve in specialized AI modules.",
-        "Strategic Position: Completing this roadmap will place you in the top 2% of global candidates for high-stakes enterprise contracts.",
-        "Market Dominance: The roadmap focuses on 'Neural Architecture' and 'Systemic Scaling'—the most in-demand competencies this quarter."
-      ]);
-      setSummary("Professional Mastery Roadmap: Your profile is optimized for a high-impact transition into senior leadership. The following path is engineered for maximum market leverage.");
-      
+      const hasModules = normalizedModules.length > 0;
+      const nextMilestone = response?.nextMilestone
+        || normalizedModules[0]?.title
+        || "Career Positioning and Goal Alignment";
+
+      const baseInsights = response?.insights?.length
+        ? response.insights
+        : [
+            "Roadmap generated from your current profile and market demand signals.",
+            "Module sequence prioritizes role readiness, portfolio quality, and service positioning.",
+            "Delivery plan balances upskilling speed with practical execution milestones."
+          ];
+
+      const providerInsight = response?.provider === "gemini"
+        ? "Gemini generated this roadmap using your current skills and career category."
+        : "Fallback roadmap used while Gemini is unavailable. Connect API key for full personalization.";
+
+      setFinalScore(response?.confidenceScore ?? 84);
+      setInsights([...baseInsights.slice(0, 5), providerInsight]);
+      setSummary(
+        response?.summary
+          || "Professional roadmap prepared to strengthen your skills and align your profile with higher-value opportunities."
+      );
+
       if (onComplete) {
         onComplete({
-          roadmapId: "RD-" + Math.random().toString(36).substr(2, 5).toUpperCase(),
+          roadmapId: response?.roadmapId || ("RD-" + Math.random().toString(36).slice(2, 7).toUpperCase()),
           status: "Unlocked",
-          nextMilestone: getModulesForCategory(category)[0].title,
-          modules: getModulesForCategory(category)
+          nextMilestone,
+          modules: hasModules ? normalizedModules : [
+            {
+              id: "module-1",
+              title: "Career Positioning and Goal Alignment",
+              description: "Define role targets, strengthen profile strategy, and align your skill plan with market demand.",
+              duration: "1-2 weeks",
+              level: "Beginner"
+            }
+          ]
         });
       }
 
