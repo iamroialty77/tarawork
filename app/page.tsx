@@ -1162,6 +1162,12 @@ export default function Home() {
     return newPortfolio.id;
   };
 
+  const reloadWholePage = () => {
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
+
   const addPortfolioItem = async (item: Partial<PortfolioItem>) => {
     if (!user) return;
     try {
@@ -1215,6 +1221,7 @@ export default function Home() {
       setToastMsg("Portfolio item added!");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
+      setTimeout(reloadWholePage, 250);
     } catch (err: any) {
       console.error("Error adding portfolio item:", err);
       setToastMsg(`Error: ${err.message}`);
@@ -1225,7 +1232,7 @@ export default function Home() {
   const updatePortfolioItem = async (item: PortfolioItem) => {
     try {
       // Try updating in portfolio_projects first
-      const { error } = await supabase
+      const { data: projectRows, error } = await supabase
         .from('portfolio_projects')
         .update({
           title: item.title,
@@ -1233,11 +1240,12 @@ export default function Home() {
           project_url: item.project_url,
           technologies: item.technologies,
         })
-        .eq('id', item.id);
+        .eq('id', item.id)
+        .select('id');
 
-      if (error) {
+      if (error || !projectRows || projectRows.length === 0) {
         // Fallback to old table
-        const { error: oldError } = await supabase
+        const { data: oldRows, error: oldError } = await supabase
           .from('portfolio_items')
           .update({
             title: item.title,
@@ -1245,9 +1253,13 @@ export default function Home() {
             project_url: item.project_url,
             technologies: item.technologies,
           })
-          .eq('id', item.id);
+          .eq('id', item.id)
+          .select('id');
         
         if (oldError) throw oldError;
+        if (!oldRows || oldRows.length === 0) {
+          throw new Error("Portfolio item was not found for update.");
+        }
       }
 
       setProfile(prev => ({
@@ -1257,6 +1269,7 @@ export default function Home() {
       setToastMsg("Portfolio item updated!");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
+      setTimeout(reloadWholePage, 250);
     } catch (err: any) {
       console.error("Error updating portfolio item:", err);
       setToastMsg(`Error: ${err.message}`);
@@ -1267,19 +1280,24 @@ export default function Home() {
   const removePortfolioItem = async (id: string) => {
     try {
       // Try deleting from portfolio_projects
-      const { error } = await supabase
+      const { data: projectRows, error } = await supabase
         .from('portfolio_projects')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
 
-      if (error) {
+      if (error || !projectRows || projectRows.length === 0) {
         // Fallback to old table
-        const { error: oldError } = await supabase
+        const { data: oldRows, error: oldError } = await supabase
           .from('portfolio_items')
           .delete()
-          .eq('id', id);
+          .eq('id', id)
+          .select('id');
         
         if (oldError) throw oldError;
+        if (!oldRows || oldRows.length === 0) {
+          throw new Error("Portfolio item was not found for delete.");
+        }
       }
 
       setProfile(prev => ({
@@ -1289,6 +1307,7 @@ export default function Home() {
       setToastMsg("Portfolio item removed.");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
+      setTimeout(reloadWholePage, 250);
     } catch (err: any) {
       console.error("Error removing portfolio item:", err);
       setToastMsg(`Error: ${err.message}`);
