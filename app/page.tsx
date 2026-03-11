@@ -125,6 +125,14 @@ export default function Home() {
         profileViews: 0,
         clientClicks: 0,
       },
+      verifiedProgram: {
+        enrolled: false,
+        annualFee: 499,
+        identityVerified: false,
+        portfolioVerified: false,
+        higherSearchRanking: false,
+        clientTrustBoost: false,
+      },
     },
   });
 
@@ -194,6 +202,14 @@ export default function Home() {
               profileViews: 0,
               clientClicks: 0,
             },
+            verifiedProgram: {
+              enrolled: false,
+              annualFee: 499,
+              identityVerified: false,
+              portfolioVerified: false,
+              higherSearchRanking: false,
+              clientTrustBoost: false,
+            },
           },
         };
 
@@ -250,6 +266,14 @@ export default function Home() {
                 profileViews: Number(premiumProfile.analytics?.profileViews || 0),
                 clientClicks: Number(premiumProfile.analytics?.clientClicks || 0),
               },
+              verifiedProgram: {
+                enrolled: !!premiumProfile.verifiedProgram?.enrolled,
+                annualFee: Number(premiumProfile.verifiedProgram?.annualFee || 499),
+                identityVerified: !!premiumProfile.verifiedProgram?.identityVerified,
+                portfolioVerified: !!premiumProfile.verifiedProgram?.portfolioVerified,
+                higherSearchRanking: !!premiumProfile.verifiedProgram?.higherSearchRanking,
+                clientTrustBoost: !!premiumProfile.verifiedProgram?.clientTrustBoost,
+              },
             };
           } else {
             if (pErr) console.warn("Note: Portfolios table might be missing or empty, falling back:", pErr.message);
@@ -298,6 +322,14 @@ export default function Home() {
             analytics: {
               profileViews: 0,
               clientClicks: 0,
+            },
+            verifiedProgram: {
+              enrolled: false,
+              annualFee: 499,
+              identityVerified: false,
+              portfolioVerified: false,
+              higherSearchRanking: false,
+              clientTrustBoost: false,
             },
           },
         };
@@ -417,6 +449,14 @@ export default function Home() {
               analytics: {
                 profileViews: Number(premiumProfile.analytics?.profileViews || 0),
                 clientClicks: Number(premiumProfile.analytics?.clientClicks || 0),
+              },
+              verifiedProgram: {
+                enrolled: !!premiumProfile.verifiedProgram?.enrolled,
+                annualFee: Number(premiumProfile.verifiedProgram?.annualFee || 499),
+                identityVerified: !!premiumProfile.verifiedProgram?.identityVerified,
+                portfolioVerified: !!premiumProfile.verifiedProgram?.portfolioVerified,
+                higherSearchRanking: !!premiumProfile.verifiedProgram?.higherSearchRanking,
+                clientTrustBoost: !!premiumProfile.verifiedProgram?.clientTrustBoost,
               },
             },
           },
@@ -2260,6 +2300,11 @@ export default function Home() {
                                     Verified Badge
                                   </span>
                                 )}
+                                {profile.premiumProfile?.verifiedProgram?.enrolled && (
+                                  <span className="rounded-full bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                                    Tara Verified
+                                  </span>
+                                )}
                                 {profile.premiumProfile?.analyticsEnabled && (
                                   <span className="rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-indigo-700">
                                     {profile.premiumProfile.analytics?.profileViews || 0} Views
@@ -2276,6 +2321,14 @@ export default function Home() {
                                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Conversion Tools</p>
                                     <p className="mt-1 text-sm font-black">{profile.premiumProfile.videoIntroUrl ? "Video Ready" : "Add Intro"}</p>
                                   </div>
+                                </div>
+                              )}
+                              {profile.premiumProfile?.verifiedProgram?.enrolled && (
+                                <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-3">
+                                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-300">Verification Benefits</p>
+                                  <p className="mt-2 text-xs leading-relaxed text-slate-300">
+                                    Identity verified, portfolio reviewed, higher search ranking enabled, and stronger client trust treatment active.
+                                  </p>
                                 </div>
                               )}
                             </div>

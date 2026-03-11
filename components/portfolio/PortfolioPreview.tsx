@@ -99,6 +99,12 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
               Verified
             </span>
           )}
+          {profile.premiumProfile?.verifiedProgram?.enrolled && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+              <ShieldCheck size={12} />
+              Tara Verified
+            </span>
+          )}
         </div>
         <p className={`font-medium ${isPro ? "text-slate-300" : "text-gray-500"}`}>{profile.role}</p>
         <div className={`flex items-center gap-2 text-sm pt-1 ${isPro ? "text-slate-400" : "text-gray-400"}`}>
@@ -311,6 +317,36 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   </div>
                 </div>
 
+                {profile.premiumProfile?.verifiedProgram?.enrolled && (
+                  <div className="mt-8 rounded-[1.75rem] border border-emerald-200 bg-white p-6">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700">Verified Freelancer Program</p>
+                        <h3 className="mt-2 text-2xl font-black text-slate-900">TaraWork trust review completed.</h3>
+                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+                          This profile passed identity verification and portfolio legitimacy review, which helps reduce fake profiles and improve client confidence.
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-emerald-600 px-5 py-4 text-white">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">Annual Program</p>
+                        <p className="mt-1 text-xl font-black">P499/year</p>
+                      </div>
+                    </div>
+                    <div className="mt-6 grid gap-3 md:grid-cols-4">
+                      {[
+                        "Verified identity",
+                        "Verified portfolio",
+                        "Higher search ranking",
+                        "Client trust boost",
+                      ].map((item) => (
+                        <div key={item} className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {profile.premiumProfile?.videoIntroUrl && (
                   <a
                     href={profile.premiumProfile.videoIntroUrl}
@@ -340,6 +376,15 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   {profile.portfolio?.projects.length || 0} Projects
                 </div>
               </div>
+
+              {profile.premiumProfile?.verifiedProgram?.enrolled && !isPro && (
+                <div className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-6">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700">Verified Freelancer Program</p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-700">
+                    Identity verified, portfolio reviewed, and trust signals boosted for better client confidence.
+                  </p>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {profile.portfolio?.projects.map((project) => (

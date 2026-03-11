@@ -203,6 +203,14 @@ export interface PremiumProfile {
   videoIntroUrl?: string;
   introHeadline?: string;
   analytics?: PremiumProfileAnalytics;
+  verifiedProgram?: {
+    enrolled: boolean;
+    annualFee?: number;
+    identityVerified?: boolean;
+    portfolioVerified?: boolean;
+    higherSearchRanking?: boolean;
+    clientTrustBoost?: boolean;
+  };
 }
 
 export interface UserProfile {

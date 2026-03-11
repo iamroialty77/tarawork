@@ -35,6 +35,14 @@ export default function ProfileForm({
       profileViews: 0,
       clientClicks: 0,
     },
+    verifiedProgram: {
+      enrolled: false,
+      annualFee: 499,
+      identityVerified: false,
+      portfolioVerified: false,
+      higherSearchRanking: false,
+      clientTrustBoost: false,
+    },
   };
   const isPro = premiumProfile.tier === "pro";
 
@@ -518,6 +526,95 @@ export default function ProfileForm({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {profile.role === "freelancer" && (
+          <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${premiumProfile.verifiedProgram?.enrolled ? "border-emerald-300 bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-900 text-white shadow-2xl shadow-emerald-900/20" : "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50"}`}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${premiumProfile.verifiedProgram?.enrolled ? "border border-white/10 bg-white/10 text-emerald-300" : "border border-emerald-200 bg-white text-emerald-700"}`}>
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {premiumProfile.verifiedProgram?.enrolled ? "Verified Program Active" : "Verified Freelancer Program"}
+                </div>
+                <h3 className={`text-xl font-black ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>Earn a TaraWork Verified badge</h3>
+                <p className={`max-w-2xl text-sm leading-relaxed ${premiumProfile.verifiedProgram?.enrolled ? "text-slate-300" : "text-slate-600"}`}>
+                  Reduce fake profiles, prove legitimacy, and increase buyer confidence with identity and portfolio verification.
+                </p>
+              </div>
+              <div className={`rounded-2xl px-4 py-3 ${premiumProfile.verifiedProgram?.enrolled ? "bg-white/10 border border-white/10" : "bg-emerald-600 text-white"}`}>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-200">Annual Fee</p>
+                <p className="mt-1 text-lg font-black">P499/year</p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {[
+                { title: "Verified identity", key: "identityVerified" as const },
+                { title: "Verified portfolio", key: "portfolioVerified" as const },
+                { title: "Higher search ranking", key: "higherSearchRanking" as const },
+                { title: "Client trust boost", key: "clientTrustBoost" as const },
+              ].map((item) => (
+                <div key={item.title} className={`rounded-2xl border p-4 ${premiumProfile.verifiedProgram?.enrolled ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`rounded-xl p-2.5 ${premiumProfile.verifiedProgram?.enrolled ? "bg-white/10" : "bg-emerald-50"}`}>
+                      <ShieldCheck className={`h-4 w-4 ${premiumProfile.verifiedProgram?.enrolled ? "text-emerald-300" : "text-emerald-700"}`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className={`text-sm font-bold ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>{item.title}</h4>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${(premiumProfile.verifiedProgram?.[item.key]) ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                          {premiumProfile.verifiedProgram?.[item.key] ? "Approved" : "Pending"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4 md:flex-row">
+              <button
+                type="button"
+                onClick={() =>
+                  handlePremiumChange({
+                    verifiedBadge: true,
+                    verifiedProgram: {
+                      enrolled: true,
+                      annualFee: 499,
+                      identityVerified: true,
+                      portfolioVerified: true,
+                      higherSearchRanking: true,
+                      clientTrustBoost: true,
+                    },
+                  })
+                }
+                className={`rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.verifiedProgram?.enrolled ? "bg-white text-slate-950" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
+              >
+                {premiumProfile.verifiedProgram?.enrolled ? "Verified Enrolled" : "Activate Verification"}
+              </button>
+              {premiumProfile.verifiedProgram?.enrolled && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handlePremiumChange({
+                      verifiedBadge: false,
+                      verifiedProgram: {
+                        enrolled: false,
+                        annualFee: 499,
+                        identityVerified: false,
+                        portfolioVerified: false,
+                        higherSearchRanking: false,
+                        clientTrustBoost: false,
+                      },
+                    })
+                  }
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-white/10"
+                >
+                  Remove Verification
+                </button>
+              )}
+            </div>
           </div>
         )}
 

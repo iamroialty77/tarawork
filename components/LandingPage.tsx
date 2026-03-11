@@ -477,6 +477,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="py-24 px-6 bg-white relative overflow-hidden">
+        <div className="absolute left-0 top-10 h-72 w-72 rounded-full bg-emerald-100 blur-3xl opacity-70"></div>
+        <div className="container mx-auto relative">
+          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] items-start">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-emerald-700">
+                <ShieldCheck className="w-4 h-4" />
+                Verified Freelancer Program
+              </div>
+              <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight text-slate-900">A trust layer that reduces fake profiles.</h2>
+              <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600">
+                Add a TaraWork Verified badge through a structured review of identity and portfolio quality. This increases credibility while helping keep the marketplace cleaner.
+              </p>
+              <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-950 p-8 text-white shadow-2xl shadow-slate-200/70">
+                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-300">Verification Fee</p>
+                <p className="mt-3 text-5xl font-black">P499<span className="text-lg text-slate-400">/year</span></p>
+                <p className="mt-3 text-sm text-slate-300">Low-friction annual fee that funds identity checks and profile quality review.</p>
+              </div>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              {[
+                { title: "Verified identity", desc: "Confirms that the freelancer behind the account is real and reviewable." },
+                { title: "Verified portfolio", desc: "Signals that showcased work has passed a basic quality and legitimacy review." },
+                { title: "Higher search ranking", desc: "Verified freelancers can be weighted higher in trust-sensitive discovery surfaces." },
+                { title: "Client trust boost", desc: "The badge reduces hesitation during shortlisting and first contact." },
+              ].map((item) => (
+                <div key={item.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-100">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-5">
+                    <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-black tracking-tight text-slate-900">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Popular Services */}
       <section className="py-24 px-6 bg-slate-50 overflow-hidden relative">
          <div className="absolute top-1/2 left-0 w-64 h-64 bg-blue-400/5 rounded-full blur-3xl"></div>
