@@ -42,9 +42,11 @@ CREATE TABLE IF NOT EXISTS public.project_tasks (
 ALTER TABLE public.project_tasks ENABLE ROW LEVEL SECURITY;
 
 -- Policies for PROJECT_TASKS
+DROP POLICY IF EXISTS "Users can view tasks for their projects." ON public.project_tasks;
 CREATE POLICY "Users can view tasks for their projects." ON public.project_tasks
     FOR SELECT USING (true); -- Simplified for demo
 
+DROP POLICY IF EXISTS "Users can manage tasks for their projects." ON public.project_tasks;
 CREATE POLICY "Users can manage tasks for their projects." ON public.project_tasks
     FOR ALL USING (true);
 
@@ -252,6 +254,13 @@ ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_name TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS attachment_type TEXT;
 ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS offer_data JSONB;
 ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS "energy_requirement" TEXT DEFAULT 'Balanced';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referring_freelancer_id UUID REFERENCES public.profiles(id);
+ALTER TABLE public.applications ADD COLUMN IF NOT EXISTS freelancer_id UUID REFERENCES public.profiles(id);
+ALTER TABLE public.portfolio_inquiries ADD COLUMN IF NOT EXISTS freelancer_id UUID REFERENCES public.profiles(id);
+ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS employer_id UUID REFERENCES public.profiles(id);
+ALTER TABLE public.escrows ADD COLUMN IF NOT EXISTS freelancer_id UUID REFERENCES public.profiles(id);
+ALTER TABLE public.escrows ADD COLUMN IF NOT EXISTS employer_id UUID REFERENCES public.profiles(id);
 
 -- 9. ENABLE REAL-TIME REPLICATION
 -- This allows the app to show new messages instantly without reloading.
@@ -409,7 +418,7 @@ BEGIN
     );
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_portfolio_inquiry_created ON public.portfolio_inquiries;
 CREATE TRIGGER on_portfolio_inquiry_created
@@ -433,7 +442,7 @@ BEGIN
     );
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_follow_created ON public.follows;
 CREATE TRIGGER on_follow_created
@@ -574,10 +583,6 @@ CREATE TABLE IF NOT EXISTS public.portfolio_links (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- Add username and referring_freelancer_id for viral feature
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referring_freelancer_id UUID REFERENCES public.profiles(id);
-
 -- Enable RLS for Portfolio tables
 ALTER TABLE public.portfolios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_projects ENABLE ROW LEVEL SECURITY;
@@ -585,21 +590,33 @@ ALTER TABLE public.portfolio_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_links ENABLE ROW LEVEL SECURITY;
 
 -- Policies for Portfolios
+DROP POLICY IF EXISTS "Portfolios are viewable by everyone." ON public.portfolios;
 CREATE POLICY "Portfolios are viewable by everyone." ON public.portfolios FOR SELECT USING (is_public = true OR auth.uid() = profile_id);
+
+DROP POLICY IF EXISTS "Users can manage their own portfolio." ON public.portfolios;
 CREATE POLICY "Users can manage their own portfolio." ON public.portfolios FOR ALL USING (auth.uid() = profile_id);
 
 -- Policies for Projects, Skills, Links
+DROP POLICY IF EXISTS "Portfolio content is viewable by everyone." ON public.portfolio_projects;
 CREATE POLICY "Portfolio content is viewable by everyone." ON public.portfolio_projects FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can manage their own projects." ON public.portfolio_projects;
 CREATE POLICY "Users can manage their own projects." ON public.portfolio_projects FOR ALL USING (
     EXISTS (SELECT 1 FROM public.portfolios WHERE id = portfolio_id AND profile_id = auth.uid())
 );
 
+DROP POLICY IF EXISTS "Portfolio skills are viewable by everyone." ON public.portfolio_skills;
 CREATE POLICY "Portfolio skills are viewable by everyone." ON public.portfolio_skills FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can manage their own skills." ON public.portfolio_skills;
 CREATE POLICY "Users can manage their own skills." ON public.portfolio_skills FOR ALL USING (
     EXISTS (SELECT 1 FROM public.portfolios WHERE id = portfolio_id AND profile_id = auth.uid())
 );
 
+DROP POLICY IF EXISTS "Portfolio links are viewable by everyone." ON public.portfolio_links;
 CREATE POLICY "Portfolio links are viewable by everyone." ON public.portfolio_links FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can manage their own links." ON public.portfolio_links;
 CREATE POLICY "Users can manage their own links." ON public.portfolio_links FOR ALL USING (
     EXISTS (SELECT 1 FROM public.portfolios WHERE id = portfolio_id AND profile_id = auth.uid())
 );
