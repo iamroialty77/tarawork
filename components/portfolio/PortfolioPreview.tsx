@@ -16,7 +16,9 @@ import {
   CheckCircle2,
   Sparkles,
   Award,
-  ShieldCheck
+  ShieldCheck,
+  PlayCircle,
+  BarChart3
 } from 'lucide-react';
 import { FreelancerProfile, PortfolioProject } from '@/types/portfolio';
 import Image from 'next/image';
@@ -89,12 +91,29 @@ const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
       </div>
       
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{profile.name}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{profile.name}</h1>
+          {profile.premiumProfile?.verifiedBadge && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
+              <ShieldCheck size={12} />
+              Verified
+            </span>
+          )}
+        </div>
         <p className="text-gray-500 font-medium">{profile.role}</p>
         <div className="flex items-center gap-2 text-sm text-gray-400 pt-1">
           <MapPin size={14} />
           <span>Remote / Freelance</span>
         </div>
+        {profile.premiumProfile?.customDomain && (
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-800">
+            <Globe size={12} />
+            {profile.premiumProfile.customDomain}
+          </div>
+        )}
+        {profile.premiumProfile?.introHeadline && (
+          <p className="text-sm leading-relaxed text-gray-600">{profile.premiumProfile.introHeadline}</p>
+        )}
       </div>
     </div>
 
@@ -188,13 +207,16 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
         setIsSubmitted(false);
         setFormData({ name: '', email: '', message: '' });
       }, 5000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error sending inquiry:', err);
       alert('Failed to send inquiry. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const analytics = profile.premiumProfile?.analytics;
+  const isPro = profile.premiumProfile?.tier === 'pro';
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
@@ -207,9 +229,9 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           </div>
           <div className="hidden md:flex items-center gap-8">
             <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Professional Network</span>
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-50 border border-gray-100 text-[10px] font-black uppercase tracking-tighter">
-              <ShieldCheck size={12} className="text-blue-500" />
-              Verified Profile
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-tighter ${isPro ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-gray-50 border-gray-100 text-gray-700"}`}>
+              {isPro ? <Star size={12} className="text-amber-500" /> : <ShieldCheck size={12} className="text-blue-500" />}
+              {isPro ? 'Freelancer Pro' : 'Verified Profile'}
             </div>
           </div>
           <button 
@@ -230,6 +252,64 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           
           {/* Main Content */}
           <main className="lg:w-2/3 space-y-20">
+            {isPro && (
+              <section className="rounded-[2rem] border border-amber-100 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-8 shadow-xl shadow-amber-100/40">
+                <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-2xl">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">
+                      <Star size={12} />
+                      Premium Profile
+                    </div>
+                    <h2 className="mt-5 text-3xl font-semibold tracking-tight text-gray-900">
+                      {profile.premiumProfile?.introHeadline || 'Professional profile built to convert serious clients.'}
+                    </h2>
+                    <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-600">
+                      Stronger credibility signals, richer portfolio storytelling, and a cleaner branded presence for inbound client interest.
+                    </p>
+                  </div>
+
+                  {profile.premiumProfile?.analyticsEnabled && (
+                    <div className="grid min-w-[280px] grid-cols-2 gap-4">
+                      <div className="rounded-2xl border border-white bg-white p-5">
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <BarChart3 size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Profile Views</span>
+                        </div>
+                        <p className="mt-3 text-3xl font-black text-gray-900">{analytics?.profileViews || 0}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white bg-white p-5">
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <ArrowRight size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Client Clicks</span>
+                        </div>
+                        <p className="mt-3 text-3xl font-black text-gray-900">{analytics?.clientClicks || 0}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {profile.premiumProfile?.videoIntroUrl && (
+                  <a
+                    href={profile.premiumProfile.videoIntroUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-8 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-950 px-6 py-5 text-white transition-all hover:bg-black"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="rounded-2xl bg-white/10 p-3">
+                        <PlayCircle size={24} className="text-amber-300" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Video Intro</p>
+                        <p className="mt-1 text-sm text-slate-300">Watch a quick introduction before you reach out.</p>
+                      </div>
+                    </div>
+                    <ExternalLink size={18} className="text-slate-400" />
+                  </a>
+                )}
+              </section>
+            )}
+
             <section className="space-y-10">
               <div className="flex justify-between items-end">
                 <h2 className="text-3xl font-semibold tracking-tight text-gray-900">Featured Projects</h2>

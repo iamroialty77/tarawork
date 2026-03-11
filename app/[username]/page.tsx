@@ -94,6 +94,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
         profile_id: 'demo-uuid',
         about_me: 'I am a passionate developer from Seoul with 5 years of experience in Next.js and Tailwind CSS. I believe in the power of minimalism and efficiency in software design.',
         tagline: 'Minimalist Engineering for Modern Web',
+        custom_domain: 'johndoe.tarawork.ph',
         projects: [
           {
             id: 'p1',
@@ -121,7 +122,38 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
           { id: 'l1', label: 'GitHub', url: 'https://github.com' },
           { id: 'l2', label: 'LinkedIn', url: 'https://linkedin.com' }
         ],
-        theme_settings: { aesthetic: 'minimalist', primaryColor: '#000000' }
+        theme_settings: {
+          aesthetic: 'minimalist',
+          primaryColor: '#000000',
+          premiumProfile: {
+            tier: 'pro',
+            verifiedBadge: true,
+            advancedPortfolio: true,
+            featuredPlacement: true,
+            analyticsEnabled: true,
+            customDomain: 'johndoe.tarawork.ph',
+            videoIntroUrl: 'https://www.loom.com/share/portfolio-demo',
+            introHeadline: 'Helping startups ship elegant, performant products.',
+            analytics: {
+              profileViews: 1284,
+              clientClicks: 91
+            }
+          }
+        }
+      },
+      premiumProfile: {
+        tier: 'pro',
+        verifiedBadge: true,
+        advancedPortfolio: true,
+        featuredPlacement: true,
+        analyticsEnabled: true,
+        customDomain: 'johndoe.tarawork.ph',
+        videoIntroUrl: 'https://www.loom.com/share/portfolio-demo',
+        introHeadline: 'Helping startups ship elegant, performant products.',
+        analytics: {
+          profileViews: 1284,
+          clientClicks: 91
+        }
       }
     };
   }
@@ -277,11 +309,13 @@ function mapProfile(profile: any): FreelancerProfile {
       profile_id: profile.id,
       about_me: portfolioData.about_me,
       tagline: portfolioData.tagline,
+      custom_domain: portfolioData.custom_domain,
       theme_settings: portfolioData.theme_settings,
       projects: portfolioData.portfolio_projects || [],
       skills: portfolioData.portfolio_skills || [],
       links: portfolioData.portfolio_links || [],
-    } : undefined
+    } : undefined,
+    premiumProfile: portfolioData?.theme_settings?.premiumProfile
   };
 }
 

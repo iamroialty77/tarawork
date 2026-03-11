@@ -1,3 +1,5 @@
+import { PremiumProfile } from "./index";
+
 export interface PortfolioProject {
   id: string;
   title: string;
@@ -27,12 +29,14 @@ export interface Portfolio {
   profile_id: string;
   about_me: string;
   tagline: string;
+  custom_domain?: string;
   projects: PortfolioProject[];
   skills: PortfolioSkill[];
   links: PortfolioLink[];
   theme_settings: {
-    aesthetic: 'minimalist' | 'modern' | 'classic';
+    aesthetic: 'minimalist' | 'modern' | 'classic' | 'professional';
     primaryColor: string;
+    premiumProfile?: PremiumProfile;
   };
 }
 
@@ -43,5 +47,6 @@ export interface FreelancerProfile {
   avatar_url?: string;
   bio?: string;
   hourlyRate?: string;
+  premiumProfile?: PremiumProfile;
   portfolio?: Portfolio;
 }

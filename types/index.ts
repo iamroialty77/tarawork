@@ -188,6 +188,23 @@ export interface Project {
   contractId?: string; // Link to Contract
 }
 
+export interface PremiumProfileAnalytics {
+  profileViews: number;
+  clientClicks: number;
+}
+
+export interface PremiumProfile {
+  tier: "free" | "pro";
+  verifiedBadge?: boolean;
+  advancedPortfolio?: boolean;
+  featuredPlacement?: boolean;
+  analyticsEnabled?: boolean;
+  customDomain?: string;
+  videoIntroUrl?: string;
+  introHeadline?: string;
+  analytics?: PremiumProfileAnalytics;
+}
+
 export interface UserProfile {
   id?: string;
   username?: string;
@@ -207,6 +224,7 @@ export interface UserProfile {
   aiInsights?: AIAnalysis;
   ranking?: number; // Leaderboard position
   portfolio?: PortfolioItem[];
+  premiumProfile?: PremiumProfile;
   wellness?: UserWellness;
 }
 

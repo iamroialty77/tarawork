@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Brain, Users, Bell, Facebook, Twitter, Linkedin, Instagram, ChevronDown, ArrowRight, Star, ShieldCheck, Zap, Globe, Clock, Award, CheckCircle2, Menu, X } from 'lucide-react';
+import { Check, Users, Facebook, Twitter, Linkedin, Instagram, ChevronDown, ArrowRight, Star, ShieldCheck, Zap, Award, CheckCircle2, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
@@ -135,7 +135,7 @@ export default function LandingPage() {
                 Tara, Work Together
               </h1>
               <h2 className="text-xl md:text-3xl font-bold text-white/90 mb-8 max-w-2xl mx-auto lg:mx-0">
-                Need an extra hand? You're in the right place.
+                Need an extra hand? You&apos;re in the right place.
               </h2>
               <p className="text-lg md:text-xl mb-12 text-white/80 leading-relaxed max-w-xl mx-auto lg:mx-0">
                 Tarawork.ph connects you with skilled freelancers and virtual assistants across the Philippines. 
@@ -382,6 +382,101 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="py-24 px-6 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent"></div>
+        <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl"></div>
+        <div className="container mx-auto relative">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-amber-300">
+              <Star className="w-4 h-4" />
+              Premium Profile
+            </div>
+            <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight">Freelancer Pro makes credibility visible.</h2>
+            <p className="mt-4 text-lg text-slate-300 max-w-2xl leading-relaxed">
+              Keep the basic profile free. Upgrade when you want stronger positioning, richer storytelling, and conversion signals that help clients trust you faster.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-start">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Free Profile</p>
+                <p className="mt-4 text-4xl font-black">P0</p>
+                <p className="mt-2 text-sm text-slate-400">For freelancers getting started.</p>
+                <div className="mt-8 space-y-4 text-sm">
+                  {[
+                    "Basic portfolio",
+                    "Skills and experience",
+                    "Contact info",
+                    "Limited media uploads",
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-3 text-slate-200">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 via-white/10 to-white/5 p-8 shadow-2xl shadow-amber-900/20">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-300">Freelancer Pro</p>
+                  <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-slate-950">Best Value</span>
+                </div>
+                <p className="mt-4 text-4xl font-black">P199-P399<span className="text-lg text-slate-300">/month</span></p>
+                <p className="mt-2 text-sm text-slate-300">For freelancers who want a profile that sells.</p>
+                <div className="mt-8 space-y-4 text-sm">
+                  {[
+                    "Verified badge",
+                    "Custom domain like roi.tarawork.ph",
+                    "Advanced portfolio sections",
+                    "Featured freelancer placement",
+                    "Analytics for views and client clicks",
+                    "Video intro section",
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-3 text-white">
+                      <Check className="w-4 h-4 text-amber-300" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Why It Works</p>
+              <h3 className="mt-4 text-3xl font-black tracking-tight">Freelancers pay for visibility when it improves conversion.</h3>
+              <div className="mt-8 space-y-5">
+                {[
+                  {
+                    title: "Higher trust at first glance",
+                    desc: "Verified badges, polished domains, and cleaner portfolio sections reduce client hesitation."
+                  },
+                  {
+                    title: "More compelling self-presentation",
+                    desc: "Video intros and advanced portfolio storytelling help freelancers explain value beyond a bio."
+                  },
+                  {
+                    title: "Clear ROI feedback loop",
+                    desc: "Analytics show whether views and client clicks are improving after the upgrade."
+                  }
+                ].map((item) => (
+                  <div key={item.title} className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <h4 className="font-bold text-white">{item.title}</h4>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-300">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+              <Link href="/auth" className="mt-8 inline-flex">
+                <button className="rounded-2xl bg-amber-400 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-300">
+                  Launch Freelancer Pro
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Popular Services */}
       <section className="py-24 px-6 bg-slate-50 overflow-hidden relative">
          <div className="absolute top-1/2 left-0 w-64 h-64 bg-blue-400/5 rounded-full blur-3xl"></div>
@@ -434,7 +529,7 @@ export default function LandingPage() {
               <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-8 shadow-xl shadow-blue-200 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">1</div>
               <h3 className="text-2xl font-bold text-slate-900 mb-4">Create Your Profile</h3>
               <p className="text-slate-600 leading-relaxed font-medium">
-                Sign up in minutes. Set up your profile and tell us what you're looking for.
+                Sign up in minutes. Set up your profile and tell us what you&apos;re looking for.
               </p>
             </div>
 
@@ -463,7 +558,7 @@ export default function LandingPage() {
          <div className="container mx-auto max-w-5xl relative z-10">
             <div className="text-center mb-20">
               <h2 className="text-4xl lg:text-5xl font-black mb-6">Your Work, <span className="text-blue-400">Protected</span></h2>
-              <p className="text-xl text-slate-400 max-w-2xl mx-auto">We've built safety into every step of the process.</p>
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto">We&apos;ve built safety into every step of the process.</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-12">

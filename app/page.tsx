@@ -119,6 +119,13 @@ export default function Home() {
     hourlyRate: "$0",
     bio: "",
     activeProjects: [],
+    premiumProfile: {
+      tier: "free",
+      analytics: {
+        profileViews: 0,
+        clientClicks: 0,
+      },
+    },
   });
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -181,6 +188,13 @@ export default function Home() {
           softSkills: Array.isArray(data.softSkills) ? data.softSkills : (prevProfile ? prevProfile.softSkills : []),
           activeProjects: Array.isArray(data.activeProjects) ? data.activeProjects : [],
           workflows: Array.isArray(data.workflows) ? data.workflows : [],
+          premiumProfile: prevProfile?.premiumProfile || {
+            tier: "free",
+            analytics: {
+              profileViews: 0,
+              clientClicks: 0,
+            },
+          },
         };
 
         // --- SMART PORTFOLIO FETCHING ---
@@ -192,23 +206,51 @@ export default function Home() {
             .from('portfolios')
             .select(`
               id,
+              about_me,
+              tagline,
+              custom_domain,
+              theme_settings,
               portfolio_projects (*)
             `)
             .eq('profile_id', userId)
             .maybeSingle();
           
-          if (!pErr && pData && pData.portfolio_projects && pData.portfolio_projects.length > 0) {
-            // Map portfolio_projects to PortfolioItem structure for UI compatibility
-            portfolioItems = pData.portfolio_projects.map((proj: any) => ({
-              id: proj.id,
-              profile_id: userId,
-              title: proj.title,
-              description: proj.description,
-              image_url: proj.image_url,
-              project_url: proj.project_url,
-              technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
-              created_at: proj.created_at
-            }));
+          if (!pErr && pData) {
+            if (Array.isArray(pData.portfolio_projects) && pData.portfolio_projects.length > 0) {
+              portfolioItems = pData.portfolio_projects.map((proj: any) => ({
+                id: proj.id,
+                profile_id: userId,
+                title: proj.title,
+                description: proj.description,
+                image_url: proj.image_url,
+                project_url: proj.project_url,
+                technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
+                created_at: proj.created_at
+              }));
+            }
+
+            const themeSettings = pData.theme_settings && typeof pData.theme_settings === "object"
+              ? pData.theme_settings
+              : {};
+            const premiumProfile = themeSettings.premiumProfile && typeof themeSettings.premiumProfile === "object"
+              ? themeSettings.premiumProfile
+              : {};
+
+            normalizedData.bio = pData.about_me || normalizedData.bio;
+            normalizedData.premiumProfile = {
+              tier: premiumProfile.tier === "pro" ? "pro" : "free",
+              verifiedBadge: premiumProfile.verifiedBadge ?? premiumProfile.tier === "pro",
+              advancedPortfolio: premiumProfile.advancedPortfolio ?? premiumProfile.tier === "pro",
+              featuredPlacement: premiumProfile.featuredPlacement ?? false,
+              analyticsEnabled: premiumProfile.analyticsEnabled ?? false,
+              customDomain: pData.custom_domain || premiumProfile.customDomain || "",
+              videoIntroUrl: premiumProfile.videoIntroUrl || "",
+              introHeadline: premiumProfile.introHeadline || pData.tagline || "",
+              analytics: {
+                profileViews: Number(premiumProfile.analytics?.profileViews || 0),
+                clientClicks: Number(premiumProfile.analytics?.clientClicks || 0),
+              },
+            };
           } else {
             if (pErr) console.warn("Note: Portfolios table might be missing or empty, falling back:", pErr.message);
             // 2. Fallback to old portfolio_items table if new one is empty or errors
@@ -251,6 +293,13 @@ export default function Home() {
           skills: [],
           hourlyRate: "$0",
           bio: "",
+          premiumProfile: {
+            tier: "free",
+            analytics: {
+              profileViews: 0,
+              clientClicks: 0,
+            },
+          },
         };
         const { error: insertError } = await supabase.from('profiles').insert([initialData]);
         if (insertError) {
@@ -320,6 +369,75 @@ export default function Home() {
           if (retryError) throw retryError;
         } else {
           throw error;
+        }
+      }
+
+      if (updatedProfile.role === "freelancer") {
+        const premiumProfile = updatedProfile.premiumProfile || {
+          tier: "free",
+          analytics: {
+            profileViews: 0,
+            clientClicks: 0,
+          },
+        };
+
+        const existingPortfolio = await supabase
+          .from("portfolios")
+          .select("id, theme_settings")
+          .eq("profile_id", user.id)
+          .maybeSingle();
+
+        if (existingPortfolio.error && existingPortfolio.error.code !== "PGRST116") {
+          throw existingPortfolio.error;
+        }
+
+        const currentThemeSettings =
+          existingPortfolio.data?.theme_settings && typeof existingPortfolio.data.theme_settings === "object"
+            ? existingPortfolio.data.theme_settings
+            : { aesthetic: "professional", primaryColor: "#4f46e5" };
+
+        const portfolioPayload = {
+          profile_id: user.id,
+          about_me: updatedProfile.bio,
+          tagline: premiumProfile.introHeadline || null,
+          custom_domain: premiumProfile.tier === "pro" ? premiumProfile.customDomain || null : null,
+          theme_settings: {
+            ...currentThemeSettings,
+            aesthetic: currentThemeSettings.aesthetic || "professional",
+            primaryColor: currentThemeSettings.primaryColor || "#4f46e5",
+            premiumProfile: {
+              tier: premiumProfile.tier,
+              verifiedBadge: premiumProfile.tier === "pro" ? premiumProfile.verifiedBadge !== false : false,
+              advancedPortfolio: premiumProfile.tier === "pro" ? premiumProfile.advancedPortfolio !== false : false,
+              featuredPlacement: premiumProfile.tier === "pro" ? !!premiumProfile.featuredPlacement : false,
+              analyticsEnabled: premiumProfile.tier === "pro" ? !!premiumProfile.analyticsEnabled : false,
+              customDomain: premiumProfile.tier === "pro" ? premiumProfile.customDomain || "" : "",
+              videoIntroUrl: premiumProfile.tier === "pro" ? premiumProfile.videoIntroUrl || "" : "",
+              introHeadline: premiumProfile.introHeadline || "",
+              analytics: {
+                profileViews: Number(premiumProfile.analytics?.profileViews || 0),
+                clientClicks: Number(premiumProfile.analytics?.clientClicks || 0),
+              },
+            },
+          },
+          updated_at: new Date().toISOString(),
+        };
+
+        if (existingPortfolio.data?.id) {
+          const { error: portfolioUpdateError } = await supabase
+            .from("portfolios")
+            .update(portfolioPayload)
+            .eq("id", existingPortfolio.data.id);
+          if (portfolioUpdateError) {
+            throw portfolioUpdateError;
+          }
+        } else {
+          const { error: portfolioInsertError } = await supabase
+            .from("portfolios")
+            .insert([portfolioPayload]);
+          if (portfolioInsertError) {
+            throw portfolioInsertError;
+          }
         }
       }
       
@@ -2083,7 +2201,11 @@ export default function Home() {
                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 font-mono text-[10px] break-all flex items-center justify-between">
                               <div className="flex flex-col gap-1">
                                 <span className="text-slate-600">
-                                  {typeof window !== 'undefined' ? `${window.location.origin}/${profile.username || profile.id || 'user'}` : `tarawork.network/${profile.username || 'username'}`}
+                                  {profile.premiumProfile?.tier === "pro" && profile.premiumProfile.customDomain
+                                    ? profile.premiumProfile.customDomain
+                                    : typeof window !== 'undefined'
+                                      ? `${window.location.origin}/${profile.username || profile.id || 'user'}`
+                                      : `tarawork.network/${profile.username || 'username'}`}
                                 </span>
                                 {!profile.username && (
                                   <span className="text-[9px] text-amber-600 font-medium">⚠️ No username set. Using ID as fallback.</span>
@@ -2102,11 +2224,31 @@ export default function Home() {
                                   {profile.username ? `URL Identifier: @${profile.username}` : "Using temporary ID link"}
                                 </span>
                               </div>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span className={cn(
+                                  "rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em]",
+                                  profile.premiumProfile?.tier === "pro" ? "bg-slate-900 text-white" : "bg-white text-slate-500 border border-slate-200"
+                                )}>
+                                  {profile.premiumProfile?.tier === "pro" ? "Freelancer Pro" : "Free Profile"}
+                                </span>
+                                {profile.premiumProfile?.verifiedBadge && (
+                                  <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                                    Verified Badge
+                                  </span>
+                                )}
+                                {profile.premiumProfile?.analyticsEnabled && (
+                                  <span className="rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-indigo-700">
+                                    {profile.premiumProfile.analytics?.profileViews || 0} Views
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <div className="flex gap-2">
                               <button 
                                 onClick={() => {
-                                  const url = `${window.location.origin}/${profile.username || profile.id || 'user'}`;
+                                  const url = profile.premiumProfile?.tier === "pro" && profile.premiumProfile.customDomain
+                                    ? `https://${profile.premiumProfile.customDomain}`
+                                    : `${window.location.origin}/${profile.username || profile.id || 'user'}`;
                                   navigator.clipboard.writeText(url);
                                   setToastMsg("Portfolio link copied to clipboard!");
                                   setShowToast(true);

@@ -2,7 +2,7 @@
 
 import { UserProfile, FreelancerCategory, PortfolioItem } from "../types";
 import { useState, useEffect, useRef } from "react";
-import { Camera, User, FileText, Sparkles, Loader2 } from "lucide-react";
+import { Camera, User, FileText, Sparkles, ShieldCheck, Globe, BarChart3, Video, Star } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
 
@@ -28,6 +28,14 @@ export default function ProfileForm({
   const [showAIAgent, setShowAIAgent] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
+
+  const premiumProfile = profile.premiumProfile || {
+    tier: "free" as const,
+    analytics: {
+      profileViews: 0,
+      clientClicks: 0,
+    },
+  };
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
@@ -122,6 +130,21 @@ export default function ProfileForm({
     // Use AI Agent for professional parsing experience
     setShowAIAgent(true);
     if (resumeInputRef.current) resumeInputRef.current.value = "";
+  };
+
+  const handlePremiumChange = (updates: Partial<typeof premiumProfile>) => {
+    setProfile({
+      ...profile,
+      premiumProfile: {
+        ...premiumProfile,
+        ...updates,
+        analytics: {
+          profileViews: premiumProfile.analytics?.profileViews || 0,
+          clientClicks: premiumProfile.analytics?.clientClicks || 0,
+          ...(updates.analytics || {}),
+        },
+      },
+    });
   };
 
   const handleAIParseComplete = (data: { 
@@ -294,6 +317,133 @@ export default function ProfileForm({
             onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
           />
         </div>
+
+        {profile.role === "freelancer" && (
+          <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6 shadow-lg shadow-amber-100/50">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-amber-700">
+                  <Star className="h-3.5 w-3.5" />
+                  Freelancer Pro
+                </div>
+                <h3 className="text-xl font-black text-slate-900">Turn your profile into a premium sales page</h3>
+                <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
+                  Keep your basic profile free, then unlock credibility signals that help clients trust you faster and click more often.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Suggested Price</p>
+                <p className="mt-1 text-lg font-black">P199-P399/mo</p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className={`rounded-2xl border p-4 ${premiumProfile.tier === "free" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em]">Free Profile</p>
+                <ul className="mt-3 space-y-2 text-sm">
+                  <li>Basic portfolio</li>
+                  <li>Skills and experience</li>
+                  <li>Contact info</li>
+                  <li>Limited media uploads</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => handlePremiumChange({ tier: "free" })}
+                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.tier === "free" ? "bg-white text-slate-900" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                >
+                  Current: Free
+                </button>
+              </div>
+
+              <div className={`rounded-2xl border p-4 ${premiumProfile.tier === "pro" ? "border-amber-300 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-xl shadow-amber-200/40" : "border-slate-200 bg-white"}`}>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Premium Profile</p>
+                <ul className="mt-3 space-y-2 text-sm">
+                  <li>Verified badge</li>
+                  <li>Custom domain</li>
+                  <li>Advanced portfolio sections</li>
+                  <li>Featured placement</li>
+                  <li>Analytics and video intro</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handlePremiumChange({
+                      tier: "pro",
+                      verifiedBadge: true,
+                      advancedPortfolio: true,
+                      featuredPlacement: true,
+                      analyticsEnabled: true,
+                    })
+                  }
+                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.tier === "pro" ? "bg-white text-slate-950" : "bg-amber-500 text-slate-950 hover:bg-amber-400"}`}
+                >
+                  {premiumProfile.tier === "pro" ? "Current: Pro" : "Switch to Pro"}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {[
+                { icon: ShieldCheck, title: "Verified badge", desc: "Adds an immediate trust signal beside your name.", enabled: !!premiumProfile.verifiedBadge },
+                { icon: Globe, title: "Custom domain", desc: "Use a cleaner branded URL like roi.tarawork.ph.", enabled: !!premiumProfile.customDomain },
+                { icon: BarChart3, title: "Analytics", desc: "Track profile views and client clicks from your page.", enabled: !!premiumProfile.analyticsEnabled },
+                { icon: Video, title: "Video intro", desc: "Let clients hear your value proposition in seconds.", enabled: !!premiumProfile.videoIntroUrl },
+              ].map((item) => (
+                <div key={item.title} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-slate-100 p-2.5">
+                      <item.icon className="h-4 w-4 text-slate-700" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900">{item.title}</h4>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${item.enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                          {item.enabled ? "On" : "Off"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.desc}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {premiumProfile.tier === "pro" && (
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Custom Domain</label>
+                  <input
+                    type="text"
+                    placeholder="roi.tarawork.ph"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
+                    value={premiumProfile.customDomain || ""}
+                    onChange={(e) => handlePremiumChange({ customDomain: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Intro Headline</label>
+                  <input
+                    type="text"
+                    placeholder="Helping founders launch polished digital products."
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
+                    value={premiumProfile.introHeadline || ""}
+                    onChange={(e) => handlePremiumChange({ introHeadline: e.target.value })}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Video Intro URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://www.loom.com/share/your-intro"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
+                    value={premiumProfile.videoIntroUrl || ""}
+                    onChange={(e) => handlePremiumChange({ videoIntroUrl: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {profile.role === "freelancer" && (
           <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 border-dashed">
