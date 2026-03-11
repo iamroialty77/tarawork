@@ -386,92 +386,55 @@ export default function LandingPage() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent"></div>
         <div className="absolute right-0 top-10 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl"></div>
         <div className="container mx-auto relative">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-amber-300">
-              <Star className="w-4 h-4" />
-              Premium Profile
+          <div className="flex items-end justify-between gap-6 flex-wrap">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-amber-300">
+                <Star className="w-4 h-4" />
+                Freelancer Pro
+              </div>
+              <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight">Premium upgrades for top freelancers.</h2>
             </div>
-            <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight">Freelancer Pro makes credibility visible.</h2>
-            <p className="mt-4 text-lg text-slate-300 max-w-2xl leading-relaxed">
-              Keep the basic profile free. Upgrade when you want stronger positioning, richer storytelling, and conversion signals that help clients trust you faster.
-            </p>
+            <Link href="/auth" className="inline-flex">
+              <button className="rounded-2xl bg-amber-400 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-300">
+                Upgrade
+              </button>
+            </Link>
           </div>
 
-          <div className="mt-14 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-start">
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Free Profile</p>
-                <p className="mt-4 text-4xl font-black">P0</p>
-                <p className="mt-2 text-sm text-slate-400">For freelancers getting started.</p>
-                <div className="mt-8 space-y-4 text-sm">
-                  {[
-                    "Basic portfolio",
-                    "Skills and experience",
-                    "Contact info",
-                    "Limited media uploads",
-                  ].map((item) => (
-                    <div key={item} className="flex items-center gap-3 text-slate-200">
-                      <Check className="w-4 h-4 text-emerald-400" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 via-white/10 to-white/5 p-8 shadow-2xl shadow-amber-900/20">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-300">Freelancer Pro</p>
-                  <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-slate-950">Best Value</span>
-                </div>
-                <p className="mt-4 text-4xl font-black">P199-P399<span className="text-lg text-slate-300">/month</span></p>
-                <p className="mt-2 text-sm text-slate-300">For freelancers who want a profile that sells.</p>
-                <div className="mt-8 space-y-4 text-sm">
-                  {[
-                    "Verified badge",
-                    "Custom domain like roi.tarawork.ph",
-                    "Advanced portfolio sections",
-                    "Featured freelancer placement",
-                    "Analytics for views and client clicks",
-                    "Video intro section",
-                  ].map((item) => (
-                    <div key={item} className="flex items-center gap-3 text-white">
-                      <Check className="w-4 h-4 text-amber-300" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
+          <div className="mt-12 grid gap-5 lg:grid-cols-3">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Free</p>
+              <p className="mt-4 text-4xl font-black">P0</p>
+              <div className="mt-6 space-y-3 text-sm text-slate-200">
+                <div>Basic portfolio</div>
+                <div>Skills</div>
+                <div>Contact info</div>
+                <div>Limited uploads</div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Why It Works</p>
-              <h3 className="mt-4 text-3xl font-black tracking-tight">Freelancers pay for visibility when it improves conversion.</h3>
-              <div className="mt-8 space-y-5">
-                {[
-                  {
-                    title: "Higher trust at first glance",
-                    desc: "Verified badges, polished domains, and cleaner portfolio sections reduce client hesitation."
-                  },
-                  {
-                    title: "More compelling self-presentation",
-                    desc: "Video intros and advanced portfolio storytelling help freelancers explain value beyond a bio."
-                  },
-                  {
-                    title: "Clear ROI feedback loop",
-                    desc: "Analytics show whether views and client clicks are improving after the upgrade."
-                  }
-                ].map((item) => (
-                  <div key={item.title} className="rounded-2xl border border-white/10 bg-black/20 p-5">
-                    <h4 className="font-bold text-white">{item.title}</h4>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-300">{item.desc}</p>
-                  </div>
-                ))}
+            <div className="rounded-3xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 via-white/10 to-white/5 p-8 shadow-2xl shadow-amber-900/20">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-300">Pro</p>
+                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-slate-950">P199-P399/mo</span>
               </div>
-              <Link href="/auth" className="mt-8 inline-flex">
-                <button className="rounded-2xl bg-amber-400 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-300">
-                  Launch Freelancer Pro
-                </button>
-              </Link>
+              <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-white">
+                <div>Verified badge</div>
+                <div>Custom domain</div>
+                <div>Featured placement</div>
+                <div>Analytics</div>
+                <div>Video intro</div>
+                <div>Advanced portfolio</div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-black/20 p-8">
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Use Case</p>
+              <div className="mt-6 space-y-3 text-sm text-slate-200">
+                <div>Better first impression</div>
+                <div>Cleaner professional link</div>
+                <div>Higher response potential</div>
+              </div>
             </div>
           </div>
         </div>
@@ -480,39 +443,31 @@ export default function LandingPage() {
       <section className="py-24 px-6 bg-white relative overflow-hidden">
         <div className="absolute left-0 top-10 h-72 w-72 rounded-full bg-emerald-100 blur-3xl opacity-70"></div>
         <div className="container mx-auto relative">
-          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] items-start">
+          <div className="flex items-end justify-between gap-6 flex-wrap">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-emerald-700">
                 <ShieldCheck className="w-4 h-4" />
-                Verified Freelancer Program
+                Tara Verified
               </div>
-              <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight text-slate-900">A trust layer that reduces fake profiles.</h2>
-              <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-600">
-                Add a TaraWork Verified badge through a structured review of identity and portfolio quality. This increases credibility while helping keep the marketplace cleaner.
-              </p>
-              <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-950 p-8 text-white shadow-2xl shadow-slate-200/70">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-300">Verification Fee</p>
-                <p className="mt-3 text-5xl font-black">P499<span className="text-lg text-slate-400">/year</span></p>
-                <p className="mt-3 text-sm text-slate-300">Low-friction annual fee that funds identity checks and profile quality review.</p>
-              </div>
+              <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight text-slate-900">Trust-first verification.</h2>
             </div>
+            <div className="rounded-3xl border border-slate-200 bg-slate-950 px-8 py-6 text-white shadow-2xl shadow-slate-200/70">
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-300">P499/year</p>
+            </div>
+          </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              {[
-                { title: "Verified identity", desc: "Confirms that the freelancer behind the account is real and reviewable." },
-                { title: "Verified portfolio", desc: "Signals that showcased work has passed a basic quality and legitimacy review." },
-                { title: "Higher search ranking", desc: "Verified freelancers can be weighted higher in trust-sensitive discovery surfaces." },
-                { title: "Client trust boost", desc: "The badge reduces hesitation during shortlisting and first contact." },
-              ].map((item) => (
-                <div key={item.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-100">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-5">
-                    <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <h3 className="text-xl font-black tracking-tight text-slate-900">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.desc}</p>
-                </div>
-              ))}
-            </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-4">
+            {[
+              "Verified identity",
+              "Verified portfolio",
+              "Higher search ranking",
+              "Client trust boost",
+            ].map((item) => (
+              <div key={item} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-100">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 mb-4" />
+                <h3 className="text-base font-black tracking-tight text-slate-900">{item}</h3>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -117,9 +117,6 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
             {profile.premiumProfile.customDomain}
           </div>
         )}
-        {profile.premiumProfile?.introHeadline && (
-          <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>{profile.premiumProfile.introHeadline}</p>
-        )}
       </div>
     </div>
 
@@ -267,7 +264,6 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           <main className="lg:w-2/3 space-y-20">
             {isPro && (
               <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white via-amber-50 to-orange-100 p-8 shadow-2xl shadow-amber-500/10">
-                <div className="absolute"></div>
                 <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-2xl">
                     <div className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">
@@ -275,10 +271,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                       Premium Profile
                     </div>
                     <h2 className="mt-5 text-3xl font-semibold tracking-tight text-gray-900">
-                      {profile.premiumProfile?.introHeadline || 'Professional profile built to convert serious clients.'}
+                      {profile.premiumProfile?.introHeadline || 'Professional profile'}
                     </h2>
                     <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-600">
-                      Stronger credibility signals, richer portfolio storytelling, and a cleaner branded presence for inbound client interest.
+                      Verified, branded, client-ready.
                     </p>
                   </div>
 
@@ -303,10 +299,6 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 </div>
 
                 <div className="mt-8 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-950 p-5 text-white">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Premium Signals</p>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-300">Verified badge, stronger headline, domain branding, and a sharper client-first layout.</p>
-                  </div>
                   <div className="rounded-2xl bg-white p-5 text-slate-900">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Custom Domain</p>
                     <p className="mt-3 text-lg font-black">{profile.premiumProfile?.customDomain || 'roi.tarawork.ph'}</p>
@@ -319,20 +311,8 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
 
                 {profile.premiumProfile?.verifiedProgram?.enrolled && (
                   <div className="mt-8 rounded-[1.75rem] border border-emerald-200 bg-white p-6">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700">Verified Freelancer Program</p>
-                        <h3 className="mt-2 text-2xl font-black text-slate-900">TaraWork trust review completed.</h3>
-                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-                          This profile passed identity verification and portfolio legitimacy review, which helps reduce fake profiles and improve client confidence.
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-emerald-600 px-5 py-4 text-white">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">Annual Program</p>
-                        <p className="mt-1 text-xl font-black">P499/year</p>
-                      </div>
-                    </div>
-                    <div className="mt-6 grid gap-3 md:grid-cols-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700">Tara Verified</p>
+                    <div className="mt-5 grid gap-3 md:grid-cols-4">
                       {[
                         "Verified identity",
                         "Verified portfolio",
@@ -380,9 +360,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
               {profile.premiumProfile?.verifiedProgram?.enrolled && !isPro && (
                 <div className="rounded-[1.75rem] border border-emerald-200 bg-emerald-50 p-6">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-700">Verified Freelancer Program</p>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-700">
-                    Identity verified, portfolio reviewed, and trust signals boosted for better client confidence.
-                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-700">Identity verified. Portfolio reviewed.</p>
                 </div>
               )}
               

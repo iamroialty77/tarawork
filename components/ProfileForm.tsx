@@ -335,10 +335,7 @@ export default function ProfileForm({
                   <Star className="h-3.5 w-3.5" />
                   {isPro ? "Freelancer Pro Active" : "Freelancer Pro"}
                 </div>
-                <h3 className={`text-xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>Turn your profile into a premium sales page</h3>
-                <p className={`max-w-2xl text-sm leading-relaxed ${isPro ? "text-slate-300" : "text-slate-600"}`}>
-                  Keep your basic profile free, then unlock credibility signals that help clients trust you faster and click more often.
-                </p>
+                <h3 className={`text-xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>Profile upgrade</h3>
               </div>
               <div className={`rounded-2xl px-4 py-3 ${isPro ? "bg-white/10 border border-white/10" : "bg-slate-950 text-white"}`}>
                 <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "text-slate-300" : "text-amber-300"}`}>Suggested Price</p>
@@ -391,69 +388,38 @@ export default function ProfileForm({
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-6 grid gap-3 md:grid-cols-4">
               {[
-                { icon: ShieldCheck, title: "Verified badge", desc: "Adds an immediate trust signal beside your name.", enabled: !!premiumProfile.verifiedBadge },
-                { icon: Globe, title: "Custom domain", desc: "Use a cleaner branded URL like roi.tarawork.ph.", enabled: !!premiumProfile.customDomain },
-                { icon: BarChart3, title: "Analytics", desc: "Track profile views and client clicks from your page.", enabled: !!premiumProfile.analyticsEnabled },
-                { icon: Video, title: "Video intro", desc: "Let clients hear your value proposition in seconds.", enabled: !!premiumProfile.videoIntroUrl },
+                { icon: ShieldCheck, title: "Badge", enabled: !!premiumProfile.verifiedBadge },
+                { icon: Globe, title: "Domain", enabled: !!premiumProfile.customDomain },
+                { icon: BarChart3, title: "Analytics", enabled: !!premiumProfile.analyticsEnabled },
+                { icon: Video, title: "Video", enabled: !!premiumProfile.videoIntroUrl },
               ].map((item) => (
-                <div key={item.title} className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl bg-slate-100 p-2.5">
-                      <item.icon className="h-4 w-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-slate-900">{item.title}</h4>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${item.enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                          {item.enabled ? "On" : "Off"}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.desc}</p>
-                    </div>
+                <div key={item.title} className={`rounded-2xl border px-4 py-4 ${isPro ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
+                  <item.icon className={`h-4 w-4 mb-3 ${isPro ? "text-amber-300" : "text-slate-700"}`} />
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className={`text-sm font-bold ${isPro ? "text-white" : "text-slate-900"}`}>{item.title}</h4>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${item.enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                      {item.enabled ? "On" : "Off"}
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
 
             {isPro && (
-              <div className="mt-6 rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Live Pro Preview</p>
-                    <h4 className="mt-3 text-2xl font-black text-white">
-                      {premiumProfile.introHeadline || "Position yourself like a top freelancer clients can trust immediately."}
-                    </h4>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
-                      Verified visual identity, richer portfolio narrative, and measurable demand signals in one profile.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-slate-900">
-                    <div className="rounded-2xl bg-white p-4">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Profile Views</p>
-                      <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.profileViews || 0}</p>
-                    </div>
-                    <div className="rounded-2xl bg-white p-4">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Client Clicks</p>
-                      <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.clientClicks || 0}</p>
-                    </div>
-                  </div>
+              <div className="mt-6 grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-white p-4 text-slate-900">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Views</p>
+                  <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.profileViews || 0}</p>
                 </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Domain</p>
-                    <p className="mt-2 text-sm font-bold text-white">{premiumProfile.customDomain || "roi.tarawork.ph"}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Badge</p>
-                    <p className="mt-2 text-sm font-bold text-white">{premiumProfile.verifiedBadge ? "Verified Professional" : "Not enabled"}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Video Intro</p>
-                    <p className="mt-2 text-sm font-bold text-white">{premiumProfile.videoIntroUrl ? "Ready for client viewing" : "Add a Loom intro to complete the page"}</p>
-                  </div>
+                <div className="rounded-2xl bg-white p-4 text-slate-900">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clicks</p>
+                  <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.clientClicks || 0}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Domain</p>
+                  <p className="mt-2 text-sm font-bold truncate">{premiumProfile.customDomain || "roi.tarawork.ph"}</p>
                 </div>
               </div>
             )}
@@ -537,10 +503,7 @@ export default function ProfileForm({
                   <ShieldCheck className="h-3.5 w-3.5" />
                   {premiumProfile.verifiedProgram?.enrolled ? "Verified Program Active" : "Verified Freelancer Program"}
                 </div>
-                <h3 className={`text-xl font-black ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>Earn a TaraWork Verified badge</h3>
-                <p className={`max-w-2xl text-sm leading-relaxed ${premiumProfile.verifiedProgram?.enrolled ? "text-slate-300" : "text-slate-600"}`}>
-                  Reduce fake profiles, prove legitimacy, and increase buyer confidence with identity and portfolio verification.
-                </p>
+                <h3 className={`text-xl font-black ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>Verification</h3>
               </div>
               <div className={`rounded-2xl px-4 py-3 ${premiumProfile.verifiedProgram?.enrolled ? "bg-white/10 border border-white/10" : "bg-emerald-600 text-white"}`}>
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-200">Annual Fee</p>
@@ -548,7 +511,7 @@ export default function ProfileForm({
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-6 grid gap-3 md:grid-cols-4">
               {[
                 { title: "Verified identity", key: "identityVerified" as const },
                 { title: "Verified portfolio", key: "portfolioVerified" as const },
@@ -556,19 +519,8 @@ export default function ProfileForm({
                 { title: "Client trust boost", key: "clientTrustBoost" as const },
               ].map((item) => (
                 <div key={item.title} className={`rounded-2xl border p-4 ${premiumProfile.verifiedProgram?.enrolled ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`rounded-xl p-2.5 ${premiumProfile.verifiedProgram?.enrolled ? "bg-white/10" : "bg-emerald-50"}`}>
-                      <ShieldCheck className={`h-4 w-4 ${premiumProfile.verifiedProgram?.enrolled ? "text-emerald-300" : "text-emerald-700"}`} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className={`text-sm font-bold ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>{item.title}</h4>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${(premiumProfile.verifiedProgram?.[item.key]) ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                          {premiumProfile.verifiedProgram?.[item.key] ? "Approved" : "Pending"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <ShieldCheck className={`h-4 w-4 mb-3 ${premiumProfile.verifiedProgram?.enrolled ? "text-emerald-300" : "text-emerald-700"}`} />
+                  <h4 className={`text-sm font-bold ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>{item.title}</h4>
                 </div>
               ))}
             </div>
