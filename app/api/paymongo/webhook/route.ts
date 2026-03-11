@@ -108,6 +108,22 @@ function resolveAction(eventType: string): PremiumAction {
   return "ignore";
 }
 
+function resolveProStatusFromEvent(eventType: string): "inactive" | "active" | "past_due" | "cancelled" {
+  if (eventType === "checkout_session.payment.paid" || eventType === "subscription.invoice.paid") {
+    return "active";
+  }
+
+  if (eventType === "subscription.past_due") {
+    return "past_due";
+  }
+
+  if (eventType === "subscription.cancelled") {
+    return "cancelled";
+  }
+
+  return "inactive";
+}
+
 async function getCheckoutSessionById(checkoutId: string): Promise<CheckoutSessionRecord | null> {
   const { data, error } = await supabaseAdmin
     .from("paymongo_checkout_sessions")
@@ -155,7 +171,7 @@ async function updateCheckoutSessionStatus(checkoutId: string, status: string) {
   }
 }
 
-async function activatePurchase(userId: string, productType: ProductType) {
+async function activatePurchase(userId: string, productType: ProductType, eventType: string) {
   const { data: existingPortfolio, error: fetchError } = await supabaseAdmin
     .from("portfolios")
     .select("id, theme_settings")
@@ -196,6 +212,13 @@ async function activatePurchase(userId: string, productType: ProductType) {
             portfolioVerified: !!currentPremiumProfile.verifiedProgram?.portfolioVerified,
             higherSearchRanking: !!currentPremiumProfile.verifiedProgram?.higherSearchRanking,
             clientTrustBoost: !!currentPremiumProfile.verifiedProgram?.clientTrustBoost,
+          },
+          billing: {
+            ...toObject(currentPremiumProfile.billing),
+            proStatus: "active",
+            proLocked: true,
+            proLastEvent: eventType,
+            proUpdatedAt: new Date().toISOString(),
           },
         }
       : {
@@ -240,7 +263,7 @@ async function activatePurchase(userId: string, productType: ProductType) {
   }
 }
 
-async function deactivatePurchase(userId: string, productType: ProductType) {
+async function deactivatePurchase(userId: string, productType: ProductType, eventType: string) {
   const { data: existingPortfolio, error: fetchError } = await supabaseAdmin
     .from("portfolios")
     .select("id, theme_settings")
@@ -284,6 +307,13 @@ async function deactivatePurchase(userId: string, productType: ProductType) {
           featuredPlacement: false,
           analyticsEnabled: false,
           customDomain: "",
+          billing: {
+            ...toObject(currentPremiumProfile.billing),
+            proStatus: resolveProStatusFromEvent(eventType),
+            proLocked: false,
+            proLastEvent: eventType,
+            proUpdatedAt: new Date().toISOString(),
+          },
         }
       : {
           ...currentPremiumProfile,
@@ -446,9 +476,9 @@ export async function POST(req: Request) {
     }
 
     if (action === "activate") {
-      await activatePurchase(userId, productType);
+      await activatePurchase(userId, productType, eventType);
     } else if (action === "deactivate") {
-      await deactivatePurchase(userId, productType);
+      await deactivatePurchase(userId, productType, eventType);
     }
 
     if (resourceId && eventType.startsWith("checkout_session.payment.")) {

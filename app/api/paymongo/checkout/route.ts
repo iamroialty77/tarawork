@@ -15,6 +15,10 @@ type CheckoutRequestBody = {
   name?: string;
 };
 
+function toObject(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as CheckoutRequestBody;
@@ -26,6 +30,34 @@ export async function POST(req: Request) {
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId." }, { status: 400 });
+    }
+
+    if (productType === "pro") {
+      const { data: existingPortfolio, error: existingPortfolioError } = await supabaseAdmin
+        .from("portfolios")
+        .select("theme_settings")
+        .eq("profile_id", userId)
+        .maybeSingle();
+
+      if (existingPortfolioError && existingPortfolioError.code !== "PGRST116") {
+        throw existingPortfolioError;
+      }
+
+      const themeSettings = toObject(existingPortfolio?.theme_settings);
+      const premiumProfile = toObject(themeSettings.premiumProfile);
+      const billing = toObject(premiumProfile.billing);
+      const proStatus = billing.proStatus;
+      const isAlreadyPaidPro =
+        premiumProfile.tier === "pro" &&
+        billing.proLocked === true &&
+        proStatus === "active";
+
+      if (isAlreadyPaidPro) {
+        return NextResponse.json(
+          { error: "Your Premium Profile subscription is already active." },
+          { status: 409 },
+        );
+      }
     }
 
     const product = getPaymongoProduct(productType);

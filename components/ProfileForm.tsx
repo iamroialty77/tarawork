@@ -8,9 +8,6 @@ import {
   FileText,
   Sparkles,
   ShieldCheck,
-  Globe,
-  BarChart3,
-  Video,
   Star,
   FolderKanban,
   Crown,
@@ -19,6 +16,7 @@ import {
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
+import { getPremiumProfileDomain } from "../lib/profileUrl";
 
 interface ProfileFormProps {
   initialProfile: UserProfile;
@@ -64,6 +62,8 @@ export default function ProfileForm({
   };
   const isPro = premiumProfile.tier === "pro";
   const isFreelancer = profile.role === "freelancer";
+  const proLockedByBilling = !!premiumProfile.billing?.proLocked && premiumProfile.tier === "pro";
+  const autoPremiumDomain = getPremiumProfileDomain(profile.username, profile.id);
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
@@ -295,7 +295,21 @@ export default function ProfileForm({
                 {isFreelancer ? "Freelancer profile" : "Client profile"}
               </div>
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-950">{profile.name || "Set your profile"}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-950">{profile.name || "Set your profile"}</h2>
+                  {premiumProfile.verifiedBadge && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Verified
+                    </span>
+                  )}
+                  {isPro && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">
+                      <Star className="h-3.5 w-3.5" />
+                      Pro
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">
                   Mas malinis na editor na hiwalay ang bawat group ng details para hindi crowded.
                 </p>
@@ -576,10 +590,15 @@ export default function ProfileForm({
                 </ul>
                 <button
                   type="button"
-                  onClick={() => handlePremiumChange({ tier: "free" })}
-                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.tier === "free" ? "bg-white text-slate-900" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                  onClick={() => {
+                    if (!proLockedByBilling) {
+                      handlePremiumChange({ tier: "free" });
+                    }
+                  }}
+                  disabled={proLockedByBilling}
+                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.tier === "free" ? "bg-white text-slate-900" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
                 >
-                  Current: Free
+                  {proLockedByBilling ? "Managed by Billing" : "Current: Free"}
                 </button>
               </div>
 
@@ -607,25 +626,6 @@ export default function ProfileForm({
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-4">
-              {[
-                { icon: ShieldCheck, title: "Badge", enabled: !!premiumProfile.verifiedBadge },
-                { icon: Globe, title: "Domain", enabled: !!premiumProfile.customDomain },
-                { icon: BarChart3, title: "Analytics", enabled: !!premiumProfile.analyticsEnabled },
-                { icon: Video, title: "Video", enabled: !!premiumProfile.videoIntroUrl },
-              ].map((item) => (
-                <div key={item.title} className={`rounded-2xl border px-4 py-4 ${isPro ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
-                  <item.icon className={`h-4 w-4 mb-3 ${isPro ? "text-amber-300" : "text-slate-700"}`} />
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className={`text-sm font-bold ${isPro ? "text-white" : "text-slate-900"}`}>{item.title}</h4>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${item.enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                      {item.enabled ? "On" : "Off"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
             {isPro && (
               <div className="mt-6 grid grid-cols-3 gap-3">
                 <div className="rounded-2xl bg-white p-4 text-slate-900">
@@ -638,7 +638,7 @@ export default function ProfileForm({
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Domain</p>
-                  <p className="mt-2 text-sm font-bold truncate">{premiumProfile.customDomain || "roi.tarawork.ph"}</p>
+                  <p className="mt-2 text-sm font-bold truncate">{autoPremiumDomain}</p>
                 </div>
               </div>
             )}
@@ -646,13 +646,13 @@ export default function ProfileForm({
             {premiumProfile.tier === "pro" && (
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className={`mb-1 block text-xs font-black uppercase tracking-widest ${isPro ? "text-slate-400" : "text-slate-400"}`}>Custom Domain</label>
+                  <label className={`mb-1 block text-xs font-black uppercase tracking-widest ${isPro ? "text-slate-400" : "text-slate-400"}`}>Premium Domain (Auto)</label>
                   <input
                     type="text"
                     placeholder="roi.tarawork.ph"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
-                    value={premiumProfile.customDomain || ""}
-                    onChange={(e) => handlePremiumChange({ customDomain: e.target.value })}
+                    value={autoPremiumDomain}
+                    readOnly
                   />
                 </div>
                 <div>
@@ -715,6 +715,11 @@ export default function ProfileForm({
             {premiumProfile.tier !== "pro" && (
               <p className="mt-6 text-sm text-slate-600">
                 Pro activation now happens after a successful PayMongo payment and webhook confirmation.
+              </p>
+            )}
+            {proLockedByBilling && (
+              <p className="mt-3 text-sm text-amber-200">
+                Your Pro status is billing-managed. Downgrade happens from subscription cancellation/failure events, not manual toggle.
               </p>
             )}
           </div>

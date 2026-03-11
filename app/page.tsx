@@ -59,6 +59,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
 import LandingPage from "../components/LandingPage";
+import { buildPublicProfileUrl, getPremiumProfileDomain } from "../lib/profileUrl";
 
 export default function Home() {
   const router = useRouter();
@@ -292,9 +293,23 @@ export default function Home() {
               advancedPortfolio: premiumProfile.advancedPortfolio ?? premiumProfile.tier === "pro",
               featuredPlacement: premiumProfile.featuredPlacement ?? false,
               analyticsEnabled: premiumProfile.analyticsEnabled ?? false,
-              customDomain: pData.custom_domain || premiumProfile.customDomain || "",
+              customDomain:
+                premiumProfile.tier === "pro"
+                  ? pData.custom_domain || premiumProfile.customDomain || getPremiumProfileDomain(normalizedData.username, normalizedData.id)
+                  : "",
               videoIntroUrl: premiumProfile.videoIntroUrl || "",
               introHeadline: premiumProfile.introHeadline || pData.tagline || "",
+              billing: {
+                proStatus:
+                  premiumProfile.billing?.proStatus === "active" ||
+                  premiumProfile.billing?.proStatus === "past_due" ||
+                  premiumProfile.billing?.proStatus === "cancelled"
+                    ? premiumProfile.billing.proStatus
+                    : "inactive",
+                proLocked: !!premiumProfile.billing?.proLocked,
+                proLastEvent: premiumProfile.billing?.proLastEvent || "",
+                proUpdatedAt: premiumProfile.billing?.proUpdatedAt || "",
+              },
               analytics: {
                 profileViews: Number(premiumProfile.analytics?.profileViews || 0),
                 clientClicks: Number(premiumProfile.analytics?.clientClicks || 0),
@@ -391,6 +406,8 @@ export default function Home() {
     if (!user) return;
     setIsSaving(true);
     try {
+      let nextProfile = updatedProfile;
+
       // List of columns that definitely exist in the profiles table base on supabase_schema.sql
       const dbColumns = [
         'id', 'name', 'role', 'category', 'skills', 'hourlyRate', 'bio', 
@@ -404,9 +421,9 @@ export default function Home() {
       const profileToSave: any = {};
 
       // Only copy properties that are in our dbColumns list
-      Object.keys(updatedProfile).forEach(key => {
-        if (dbColumns.includes(key) && (updatedProfile as any)[key] !== undefined) {
-          profileToSave[key] = (updatedProfile as any)[key];
+      Object.keys(nextProfile).forEach(key => {
+        if (dbColumns.includes(key) && (nextProfile as any)[key] !== undefined) {
+          profileToSave[key] = (nextProfile as any)[key];
         }
       });
       
@@ -437,8 +454,8 @@ export default function Home() {
         }
       }
 
-      if (updatedProfile.role === "freelancer") {
-        const premiumProfile = updatedProfile.premiumProfile || {
+      if (nextProfile.role === "freelancer") {
+        const premiumProfile = nextProfile.premiumProfile || {
           tier: "free",
           analytics: {
             profileViews: 0,
@@ -460,25 +477,48 @@ export default function Home() {
           existingPortfolio.data?.theme_settings && typeof existingPortfolio.data.theme_settings === "object"
             ? existingPortfolio.data.theme_settings
             : { aesthetic: "professional", primaryColor: "#4f46e5" };
+        const currentPremiumProfile =
+          currentThemeSettings.premiumProfile && typeof currentThemeSettings.premiumProfile === "object"
+            ? currentThemeSettings.premiumProfile
+            : {};
+        const isBillingLockedPro =
+          currentPremiumProfile.tier === "pro" && !!currentPremiumProfile.billing?.proLocked;
+        const requestedTier = premiumProfile.tier === "pro" ? "pro" : "free";
+        const finalTier = isBillingLockedPro && requestedTier === "free" ? "pro" : requestedTier;
+        const resolvedCustomDomain =
+          finalTier === "pro" ? getPremiumProfileDomain(nextProfile.username, nextProfile.id || user.id) : "";
+        const normalizedBilling = {
+          proStatus:
+            currentPremiumProfile.billing?.proStatus === "active" ||
+            currentPremiumProfile.billing?.proStatus === "past_due" ||
+            currentPremiumProfile.billing?.proStatus === "cancelled"
+              ? currentPremiumProfile.billing.proStatus
+              : "inactive",
+          proLocked: !!currentPremiumProfile.billing?.proLocked,
+          proLastEvent: currentPremiumProfile.billing?.proLastEvent || "",
+          proUpdatedAt: currentPremiumProfile.billing?.proUpdatedAt || "",
+        };
 
         const portfolioPayload = {
           profile_id: user.id,
-          about_me: updatedProfile.bio,
+          about_me: nextProfile.bio,
           tagline: premiumProfile.introHeadline || null,
-          custom_domain: premiumProfile.tier === "pro" ? premiumProfile.customDomain || null : null,
+          custom_domain: finalTier === "pro" ? resolvedCustomDomain : null,
           theme_settings: {
             ...currentThemeSettings,
             aesthetic: currentThemeSettings.aesthetic || "professional",
             primaryColor: currentThemeSettings.primaryColor || "#4f46e5",
             premiumProfile: {
-              tier: premiumProfile.tier,
-              verifiedBadge: premiumProfile.tier === "pro" ? premiumProfile.verifiedBadge !== false : false,
-              advancedPortfolio: premiumProfile.tier === "pro" ? premiumProfile.advancedPortfolio !== false : false,
-              featuredPlacement: premiumProfile.tier === "pro" ? !!premiumProfile.featuredPlacement : false,
-              analyticsEnabled: premiumProfile.tier === "pro" ? !!premiumProfile.analyticsEnabled : false,
-              customDomain: premiumProfile.tier === "pro" ? premiumProfile.customDomain || "" : "",
-              videoIntroUrl: premiumProfile.tier === "pro" ? premiumProfile.videoIntroUrl || "" : "",
+              ...currentPremiumProfile,
+              tier: finalTier,
+              verifiedBadge: finalTier === "pro" ? premiumProfile.verifiedBadge !== false : false,
+              advancedPortfolio: finalTier === "pro" ? premiumProfile.advancedPortfolio !== false : false,
+              featuredPlacement: finalTier === "pro" ? !!premiumProfile.featuredPlacement : false,
+              analyticsEnabled: finalTier === "pro" ? !!premiumProfile.analyticsEnabled : false,
+              customDomain: resolvedCustomDomain,
+              videoIntroUrl: finalTier === "pro" ? premiumProfile.videoIntroUrl || "" : "",
               introHeadline: premiumProfile.introHeadline || "",
+              billing: normalizedBilling,
               analytics: {
                 profileViews: Number(premiumProfile.analytics?.profileViews || 0),
                 clientClicks: Number(premiumProfile.analytics?.clientClicks || 0),
@@ -495,6 +535,17 @@ export default function Home() {
           },
           updated_at: new Date().toISOString(),
         };
+
+        if (isBillingLockedPro && requestedTier === "free") {
+          nextProfile = {
+            ...nextProfile,
+            premiumProfile: {
+              ...(nextProfile.premiumProfile || {}),
+              ...portfolioPayload.theme_settings.premiumProfile,
+              tier: "pro",
+            },
+          };
+        }
 
         if (existingPortfolio.data?.id) {
           const { error: portfolioUpdateError } = await supabase
@@ -514,10 +565,10 @@ export default function Home() {
         }
       }
       
-      setProfile(updatedProfile);
-      if (updatedProfile.role === 'employer') {
+      setProfile(nextProfile);
+      if (nextProfile.role === 'employer') {
         setView('client');
-      } else if (updatedProfile.role === 'admin') {
+      } else if (nextProfile.role === 'admin') {
         setView('admin');
       } else {
         setView('freelancer');
@@ -1887,11 +1938,21 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto relative">
                   <div className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 font-mono text-xs text-indigo-700 font-black truncate min-w-[150px] shadow-inner">
-                    {profile.username || (profile.id ? profile.id.substring(0, 8) : 'user')}
+                    {buildPublicProfileUrl({
+                      tier: profile.premiumProfile?.tier || "free",
+                      username: profile.username,
+                      id: profile.id,
+                      customDomain: profile.premiumProfile?.customDomain,
+                    })}
                   </div>
                   <button 
                     onClick={() => {
-                      const url = `${window.location.origin}/${profile.username || profile.id || 'user'}`;
+                      const url = buildPublicProfileUrl({
+                        tier: profile.premiumProfile?.tier || "free",
+                        username: profile.username,
+                        id: profile.id,
+                        customDomain: profile.premiumProfile?.customDomain,
+                      });
                       navigator.clipboard.writeText(url);
                       setToastMsg("Professional portfolio URL copied! 📋");
                       setShowToast(true);
@@ -1903,7 +1964,12 @@ export default function Home() {
                     Copy Professional URL
                   </button>
                   <Link 
-                    href={`/${profile.username || profile.id || 'user'}`}
+                    href={buildPublicProfileUrl({
+                      tier: profile.premiumProfile?.tier || "free",
+                      username: profile.username,
+                      id: profile.id,
+                      customDomain: profile.premiumProfile?.customDomain,
+                    })}
                     target="_blank"
                     className="flex items-center justify-center p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
                   >
@@ -2290,11 +2356,12 @@ export default function Home() {
                             )}>
                               <div className="flex flex-col gap-1">
                                 <span className={cn(profile.premiumProfile?.tier === "pro" ? "text-white" : "text-slate-600")}>
-                                  {profile.premiumProfile?.tier === "pro" && profile.premiumProfile.customDomain
-                                    ? profile.premiumProfile.customDomain
-                                    : typeof window !== 'undefined'
-                                      ? `${window.location.origin}/${profile.username || profile.id || 'user'}`
-                                      : `tarawork.network/${profile.username || 'username'}`}
+                                  {buildPublicProfileUrl({
+                                    tier: profile.premiumProfile?.tier || "free",
+                                    username: profile.username,
+                                    id: profile.id,
+                                    customDomain: profile.premiumProfile?.customDomain,
+                                  })}
                                 </span>
                                 {!profile.username && (
                                   <span className="text-[9px] text-amber-600 font-medium">⚠️ No username set. Using ID as fallback.</span>
@@ -2365,23 +2432,15 @@ export default function Home() {
                                 </div>
                               )}
                             </div>
-                            {profile.premiumProfile?.tier === "pro" && (
-                              <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 p-4">
-                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-300">Freelancer Pro Impact</p>
-                                <h4 className="mt-2 text-base font-black text-white">
-                                  {profile.premiumProfile.introHeadline || "Premium portfolio experience is now active."}
-                                </h4>
-                                <p className="mt-2 text-xs leading-relaxed text-slate-300">
-                                  Clients will see a stronger hero section, premium badge treatment, analytics proof, and video intro prompts on your public page.
-                                </p>
-                              </div>
-                            )}
                             <div className="flex gap-2">
                               <button 
                                 onClick={() => {
-                                  const url = profile.premiumProfile?.tier === "pro" && profile.premiumProfile.customDomain
-                                    ? `https://${profile.premiumProfile.customDomain}`
-                                    : `${window.location.origin}/${profile.username || profile.id || 'user'}`;
+                                  const url = buildPublicProfileUrl({
+                                    tier: profile.premiumProfile?.tier || "free",
+                                    username: profile.username,
+                                    id: profile.id,
+                                    customDomain: profile.premiumProfile?.customDomain,
+                                  });
                                   navigator.clipboard.writeText(url);
                                   setToastMsg("Portfolio link copied to clipboard!");
                                   setShowToast(true);
@@ -2393,7 +2452,12 @@ export default function Home() {
                                 Copy Link
                               </button>
                               <Link 
-                                href={`/${profile.username || profile.id || 'user'}`}
+                                href={buildPublicProfileUrl({
+                                  tier: profile.premiumProfile?.tier || "free",
+                                  username: profile.username,
+                                  id: profile.id,
+                                  customDomain: profile.premiumProfile?.customDomain,
+                                })}
                                 target="_blank"
                                 className="flex items-center justify-center p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
                               >

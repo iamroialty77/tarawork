@@ -203,6 +203,12 @@ export interface PremiumProfile {
   videoIntroUrl?: string;
   introHeadline?: string;
   analytics?: PremiumProfileAnalytics;
+  billing?: {
+    proStatus?: "inactive" | "active" | "past_due" | "cancelled";
+    proLocked?: boolean;
+    proLastEvent?: string;
+    proUpdatedAt?: string;
+  };
   verifiedProgram?: {
     enrolled: boolean;
     annualFee?: number;
