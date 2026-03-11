@@ -6,6 +6,7 @@ import {
   getPaymongoProduct,
   type PaymongoProductType,
 } from "../../../../lib/paymongo";
+import { supabaseAdmin } from "../../../../lib/supabase_admin";
 
 type CheckoutRequestBody = {
   productType?: PaymongoProductType;
@@ -75,6 +76,31 @@ export async function POST(req: Request) {
         "PayMongo checkout creation failed.";
 
       return NextResponse.json({ error: message }, { status: 502 });
+    }
+
+    const checkoutId = paymongoPayload?.data?.id as string | undefined;
+
+    if (checkoutId) {
+      const { error } = await supabaseAdmin.from("paymongo_checkout_sessions").upsert(
+        [
+          {
+            checkout_id: checkoutId,
+            user_id: userId,
+            product_type: productType,
+            status: "pending",
+            livemode: !!paymongoPayload?.data?.attributes?.livemode,
+            amount: product.amount,
+            currency: "PHP",
+            email: email || null,
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: "checkout_id" },
+      );
+
+      if (error && error.code !== "PGRST205" && error.code !== "42P01") {
+        return NextResponse.json({ error: `Checkout saved but mapping failed: ${error.message}` }, { status: 500 });
+      }
     }
 
     return NextResponse.json({

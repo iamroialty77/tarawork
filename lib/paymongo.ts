@@ -99,6 +99,10 @@ export function verifyPaymongoSignature({
     return false;
   }
 
+  if (computedSignature.length !== expectedSignature.length) {
+    return false;
+  }
+
   return crypto.timingSafeEqual(
     Buffer.from(computedSignature),
     Buffer.from(expectedSignature),
