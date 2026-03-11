@@ -29,8 +29,8 @@ interface PortfolioPreviewProps {
   isPublic?: boolean;
 }
 
-const ProjectCard = ({ project }: { project: PortfolioProject }) => (
-  <div className="group bg-white border border-gray-100 p-6 transition-all duration-300 hover:shadow-sm hover:border-gray-200">
+const ProjectCard = ({ project, isPro = false }: { project: PortfolioProject; isPro?: boolean }) => (
+  <div className={`group p-6 transition-all duration-300 ${isPro ? "bg-white border border-amber-100 rounded-[1.75rem] shadow-lg shadow-amber-100/30 hover:-translate-y-1 hover:shadow-2xl" : "bg-white border border-gray-100 hover:shadow-sm hover:border-gray-200"}`}>
     <div className="relative aspect-video mb-6 overflow-hidden bg-gray-50 rounded-sm">
       {project.image_url ? (
         <Image 
@@ -54,7 +54,7 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
       
       <div className="flex flex-wrap gap-2 pt-2">
         {project.technologies.map((tech) => (
-          <span key={tech} className="text-[10px] uppercase tracking-wider text-gray-400 border border-gray-100 px-2 py-0.5">
+          <span key={tech} className={`text-[10px] uppercase tracking-wider px-2 py-0.5 ${isPro ? "text-amber-800 border border-amber-100 bg-amber-50 rounded-full" : "text-gray-400 border border-gray-100"}`}>
             {tech}
           </span>
         ))}
@@ -78,10 +78,10 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
   </div>
 );
 
-const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
-  <div className="space-y-12">
+const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro?: boolean }) => (
+  <div className={`space-y-12 ${isPro ? "rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-sm" : ""}`}>
     <div className="space-y-6">
-      <div className="relative w-24 h-24 overflow-hidden rounded-full border border-gray-100">
+      <div className={`relative w-24 h-24 overflow-hidden rounded-full ${isPro ? "border-4 border-white/20 shadow-2xl shadow-amber-400/20" : "border border-gray-100"}`}>
         <Image 
           src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'} 
           alt={profile.name} 
@@ -92,7 +92,7 @@ const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
       
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{profile.name}</h1>
+          <h1 className={`text-2xl font-semibold tracking-tight ${isPro ? "text-white" : "text-gray-900"}`}>{profile.name}</h1>
           {profile.premiumProfile?.verifiedBadge && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
               <ShieldCheck size={12} />
@@ -100,8 +100,8 @@ const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
             </span>
           )}
         </div>
-        <p className="text-gray-500 font-medium">{profile.role}</p>
-        <div className="flex items-center gap-2 text-sm text-gray-400 pt-1">
+        <p className={`font-medium ${isPro ? "text-slate-300" : "text-gray-500"}`}>{profile.role}</p>
+        <div className={`flex items-center gap-2 text-sm pt-1 ${isPro ? "text-slate-400" : "text-gray-400"}`}>
           <MapPin size={14} />
           <span>Remote / Freelance</span>
         </div>
@@ -112,27 +112,27 @@ const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
           </div>
         )}
         {profile.premiumProfile?.introHeadline && (
-          <p className="text-sm leading-relaxed text-gray-600">{profile.premiumProfile.introHeadline}</p>
+          <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>{profile.premiumProfile.introHeadline}</p>
         )}
       </div>
     </div>
 
     <div className="space-y-6">
-      <h4 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-gray-400">About</h4>
-      <p className="text-sm leading-relaxed text-gray-600">
+      <h4 className={`text-[11px] uppercase tracking-[0.2em] font-semibold ${isPro ? "text-slate-400" : "text-gray-400"}`}>About</h4>
+      <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>
         {profile.portfolio?.about_me || profile.bio || "No bio available."}
       </p>
     </div>
 
     <div className="space-y-6">
-      <h4 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-gray-400">Skills</h4>
+      <h4 className={`text-[11px] uppercase tracking-[0.2em] font-semibold ${isPro ? "text-slate-400" : "text-gray-400"}`}>Skills</h4>
       <div className="flex flex-wrap gap-2">
         {profile.portfolio?.skills.map((skill) => (
-          <span key={skill.id} className="text-xs bg-gray-50 text-gray-600 px-3 py-1 border border-gray-100">
+          <span key={skill.id} className={`text-xs px-3 py-1 ${isPro ? "bg-white/10 text-white border border-white/10 rounded-full" : "bg-gray-50 text-gray-600 border border-gray-100"}`}>
             {skill.name}
           </span>
         )) || profile.bio?.split(',').map(s => (
-          <span key={s} className="text-xs bg-gray-50 text-gray-600 px-3 py-1 border border-gray-100">
+          <span key={s} className={`text-xs px-3 py-1 ${isPro ? "bg-white/10 text-white border border-white/10 rounded-full" : "bg-gray-50 text-gray-600 border border-gray-100"}`}>
             {s.trim()}
           </span>
         ))}
@@ -140,14 +140,14 @@ const Sidebar = ({ profile }: { profile: FreelancerProfile }) => (
     </div>
 
     <div className="space-y-6">
-      <h4 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-gray-400">Social</h4>
+      <h4 className={`text-[11px] uppercase tracking-[0.2em] font-semibold ${isPro ? "text-slate-400" : "text-gray-400"}`}>Social</h4>
       <div className="flex gap-4">
         {profile.portfolio?.links.map((link) => {
           const Icon = link.label.toLowerCase() === 'github' ? Github : 
                        link.label.toLowerCase() === 'linkedin' ? Linkedin : 
                        link.label.toLowerCase() === 'mail' ? Mail : ExternalLink;
           return (
-            <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={link.label} className="text-gray-400 hover:text-black transition-colors">
+            <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={link.label} className={isPro ? "text-slate-400 hover:text-white transition-colors" : "text-gray-400 hover:text-black transition-colors"}>
               <Icon size={20} strokeWidth={1.5} />
             </a>
           );
@@ -217,18 +217,25 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
 
   const analytics = profile.premiumProfile?.analytics;
   const isPro = profile.premiumProfile?.tier === 'pro';
+  const pageShellClass = isPro
+    ? "min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#111827_35%,#0b1220_100%)] text-white font-sans selection:bg-amber-300 selection:text-slate-950"
+    : "min-h-screen bg-white text-[#1a1a1a] font-sans selection:bg-black selection:text-white";
+  const navClass = isPro
+    ? "fixed top-0 left-0 right-0 z-50 bg-slate-950/75 backdrop-blur-md border-b border-white/10"
+    : "fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100";
+  const containerClass = isPro ? "max-w-screen-xl mx-auto px-6 py-32 lg:py-40" : "max-w-screen-xl mx-auto px-6 py-32 lg:py-48";
 
   return (
-    <div className="min-h-screen bg-white text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
+    <div className={pageShellClass}>
       {/* Professional Top Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <nav className={navClass}>
         <div className="max-w-screen-xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-black text-sm">T</div>
-            <span className="font-bold tracking-tight text-lg">TaraWork</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${isPro ? "bg-amber-300 text-slate-950" : "bg-black text-white"}`}>T</div>
+            <span className={`font-bold tracking-tight text-lg ${isPro ? "text-white" : ""}`}>TaraWork</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
-            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Professional Network</span>
+            <span className={`text-xs font-bold uppercase tracking-widest ${isPro ? "text-slate-400" : "text-gray-400"}`}>Professional Network</span>
             <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-tighter ${isPro ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-gray-50 border-gray-100 text-gray-700"}`}>
               {isPro ? <Star size={12} className="text-amber-500" /> : <ShieldCheck size={12} className="text-blue-500" />}
               {isPro ? 'Freelancer Pro' : 'Verified Profile'}
@@ -236,24 +243,25 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           </div>
           <button 
             onClick={handleHireMe}
-            className="bg-black text-white px-5 py-2 rounded-full text-xs font-bold hover:bg-gray-800 transition-all active:scale-95"
+            className={`px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 ${isPro ? "bg-amber-300 text-slate-950 hover:bg-amber-200" : "bg-black text-white hover:bg-gray-800"}`}
           >
             Hire {profile.name.split(' ')[0]}
           </button>
         </div>
       </nav>
 
-      <div className="max-w-screen-xl mx-auto px-6 py-32 lg:py-48">
+      <div className={containerClass}>
         <div className="flex flex-col lg:flex-row gap-20">
           {/* Sidebar */}
           <aside className="lg:w-1/3 shrink-0">
-            <Sidebar profile={profile} />
+            <Sidebar profile={profile} isPro={isPro} />
           </aside>
           
           {/* Main Content */}
           <main className="lg:w-2/3 space-y-20">
             {isPro && (
-              <section className="rounded-[2rem] border border-amber-100 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-8 shadow-xl shadow-amber-100/40">
+              <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white via-amber-50 to-orange-100 p-8 shadow-2xl shadow-amber-500/10">
+                <div className="absolute"></div>
                 <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-2xl">
                     <div className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">
@@ -288,6 +296,21 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   )}
                 </div>
 
+                <div className="mt-8 grid gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl bg-slate-950 p-5 text-white">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300">Premium Signals</p>
+                    <p className="mt-3 text-sm leading-relaxed text-slate-300">Verified badge, stronger headline, domain branding, and a sharper client-first layout.</p>
+                  </div>
+                  <div className="rounded-2xl bg-white p-5 text-slate-900">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Custom Domain</p>
+                    <p className="mt-3 text-lg font-black">{profile.premiumProfile?.customDomain || 'roi.tarawork.ph'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-white p-5 text-slate-900">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Featured Placement</p>
+                    <p className="mt-3 text-lg font-black">{profile.premiumProfile?.featuredPlacement ? 'Priority eligible' : 'Standard visibility'}</p>
+                  </div>
+                </div>
+
                 {profile.premiumProfile?.videoIntroUrl && (
                   <a
                     href={profile.premiumProfile.videoIntroUrl}
@@ -312,19 +335,19 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
 
             <section className="space-y-10">
               <div className="flex justify-between items-end">
-                <h2 className="text-3xl font-semibold tracking-tight text-gray-900">Featured Projects</h2>
-                <div className="text-gray-400 text-sm font-medium">
+                <h2 className={`text-3xl font-semibold tracking-tight ${isPro ? "text-white" : "text-gray-900"}`}>Featured Projects</h2>
+                <div className={`text-sm font-medium ${isPro ? "text-slate-400" : "text-gray-400"}`}>
                   {profile.portfolio?.projects.length || 0} Projects
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {profile.portfolio?.projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
+                  <ProjectCard key={project.id} project={project} isPro={isPro} />
                 ))}
                 
                 {(!profile.portfolio?.projects || profile.portfolio.projects.length === 0) && (
-                  <div className="col-span-full py-20 border-2 border-dashed border-gray-100 rounded-sm flex flex-col items-center justify-center text-gray-400">
+                  <div className={`col-span-full py-20 border-2 border-dashed flex flex-col items-center justify-center ${isPro ? "border-white/10 rounded-[1.75rem] text-slate-400 bg-white/5" : "border-gray-100 rounded-sm text-gray-400"}`}>
                     <Briefcase size={40} strokeWidth={1} className="mb-4" />
                     <p>No projects showcased yet.</p>
                   </div>
@@ -333,26 +356,26 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             </section>
 
             {/* Expertise Section for more professional look */}
-            <section className="space-y-10 border-t border-gray-100 pt-20">
+            <section className={`space-y-10 pt-20 ${isPro ? "border-t border-white/10" : "border-t border-gray-100"}`}>
               <div className="flex justify-between items-end">
-                <h2 className="text-3xl font-semibold tracking-tight text-gray-900">Expertise & Strategy</h2>
+                <h2 className={`text-3xl font-semibold tracking-tight ${isPro ? "text-white" : "text-gray-900"}`}>Expertise & Strategy</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-8 bg-gray-50 rounded-2xl space-y-4 hover:bg-white hover:shadow-xl transition-all duration-500 border border-transparent hover:border-gray-100">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                    <Sparkles className="w-5 h-5 text-black" />
+                <div className={`p-8 rounded-2xl space-y-4 transition-all duration-500 border ${isPro ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-gray-50 border-transparent hover:bg-white hover:shadow-xl hover:border-gray-100"}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isPro ? "bg-white/10" : "bg-white"}`}>
+                    <Sparkles className={`w-5 h-5 ${isPro ? "text-amber-300" : "text-black"}`} />
                   </div>
-                  <h4 className="font-bold text-gray-900 tracking-tight">Quality-First Approach</h4>
-                  <p className="text-sm text-gray-500 leading-relaxed">
+                  <h4 className={`font-bold tracking-tight ${isPro ? "text-white" : "text-gray-900"}`}>Quality-First Approach</h4>
+                  <p className={`text-sm leading-relaxed ${isPro ? "text-slate-300" : "text-gray-500"}`}>
                     I believe in building solutions that are not just functional, but scalable and maintainable for the long term. Performance and user experience are always top priorities.
                   </p>
                 </div>
-                <div className="p-8 bg-gray-50 rounded-2xl space-y-4 hover:bg-white hover:shadow-xl transition-all duration-500 border border-transparent hover:border-gray-100">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                    <Award className="w-5 h-5 text-black" />
+                <div className={`p-8 rounded-2xl space-y-4 transition-all duration-500 border ${isPro ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-gray-50 border-transparent hover:bg-white hover:shadow-xl hover:border-gray-100"}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isPro ? "bg-white/10" : "bg-white"}`}>
+                    <Award className={`w-5 h-5 ${isPro ? "text-amber-300" : "text-black"}`} />
                   </div>
-                  <h4 className="font-bold text-gray-900 tracking-tight">Result-Driven Mindset</h4>
-                  <p className="text-sm text-gray-500 leading-relaxed">
+                  <h4 className={`font-bold tracking-tight ${isPro ? "text-white" : "text-gray-900"}`}>Result-Driven Mindset</h4>
+                  <p className={`text-sm leading-relaxed ${isPro ? "text-slate-300" : "text-gray-500"}`}>
                     Every project is an opportunity to deliver measurable value. I focus on understanding business goals and translating them into efficient technical solutions.
                   </p>
                 </div>
@@ -366,7 +389,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       <div className="fixed bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none">
         <button 
           onClick={handleHireMe}
-          className="pointer-events-auto flex items-center gap-3 bg-black text-white px-8 py-4 rounded-full shadow-2xl hover:bg-gray-900 transition-all duration-300 transform hover:scale-105 group"
+          className={`pointer-events-auto flex items-center gap-3 px-8 py-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 group ${isPro ? "bg-amber-300 text-slate-950 hover:bg-amber-200" : "bg-black text-white hover:bg-gray-900"}`}
         >
           <span className="font-semibold tracking-wide">Hire {profile.name.split(' ')[0]}</span>
           <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />

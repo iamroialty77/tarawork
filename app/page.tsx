@@ -2190,17 +2190,33 @@ export default function Home() {
                   </div>
                   <div className="lg:col-span-4 space-y-6">
                     {profile.role === 'freelancer' && (
-                      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                      <div className={cn(
+                        "p-6 rounded-[1.75rem] border shadow-sm relative overflow-hidden group transition-all",
+                        profile.premiumProfile?.tier === "pro"
+                          ? "bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 border-slate-800 shadow-2xl shadow-slate-900/20"
+                          : "bg-white border-slate-200"
+                      )}>
+                        <div className={cn(
+                          "absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2",
+                          profile.premiumProfile?.tier === "pro" ? "bg-amber-400/20" : "bg-indigo-50"
+                        )}></div>
                         <div className="relative">
-                          <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <Layout className="w-4 h-4 text-indigo-600" />
+                          <h3 className={cn(
+                            "text-[10px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2",
+                            profile.premiumProfile?.tier === "pro" ? "text-slate-400" : "text-slate-400"
+                          )}>
+                            <Layout className={cn("w-4 h-4", profile.premiumProfile?.tier === "pro" ? "text-amber-300" : "text-indigo-600")} />
                             Public Portfolio
                           </h3>
                           <div className="space-y-4">
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 font-mono text-[10px] break-all flex items-center justify-between">
+                            <div className={cn(
+                              "p-3 rounded-xl font-mono text-[10px] break-all flex items-center justify-between border",
+                              profile.premiumProfile?.tier === "pro"
+                                ? "bg-white/5 border-white/10 text-white"
+                                : "bg-slate-50 border-slate-100"
+                            )}>
                               <div className="flex flex-col gap-1">
-                                <span className="text-slate-600">
+                                <span className={cn(profile.premiumProfile?.tier === "pro" ? "text-white" : "text-slate-600")}>
                                   {profile.premiumProfile?.tier === "pro" && profile.premiumProfile.customDomain
                                     ? profile.premiumProfile.customDomain
                                     : typeof window !== 'undefined'
@@ -2216,11 +2232,19 @@ export default function Home() {
                               )}
                             </div>
                             
-                            <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                              <h4 className="text-[9px] font-bold text-indigo-700 uppercase mb-2">Portfolio Status</h4>
+                            <div className={cn(
+                              "p-4 rounded-xl border",
+                              profile.premiumProfile?.tier === "pro"
+                                ? "bg-white/5 border-white/10"
+                                : "bg-indigo-50/50 border-indigo-100"
+                            )}>
+                              <h4 className={cn(
+                                "text-[9px] font-bold uppercase mb-2",
+                                profile.premiumProfile?.tier === "pro" ? "text-amber-300" : "text-indigo-700"
+                              )}>Portfolio Status</h4>
                               <div className="flex items-center gap-2">
                                 <div className={cn("w-2 h-2 rounded-full", profile.username ? "bg-emerald-500" : "bg-amber-500")}></div>
-                                <span className="text-[10px] text-slate-600">
+                                <span className={cn("text-[10px]", profile.premiumProfile?.tier === "pro" ? "text-slate-300" : "text-slate-600")}>
                                   {profile.username ? `URL Identifier: @${profile.username}` : "Using temporary ID link"}
                                 </span>
                               </div>
@@ -2242,7 +2266,30 @@ export default function Home() {
                                   </span>
                                 )}
                               </div>
+                              {profile.premiumProfile?.tier === "pro" && (
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                  <div className="rounded-2xl bg-white px-3 py-3 text-slate-900">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Client Clicks</p>
+                                    <p className="mt-1 text-lg font-black">{profile.premiumProfile.analytics?.clientClicks || 0}</p>
+                                  </div>
+                                  <div className="rounded-2xl bg-white/10 px-3 py-3 text-white border border-white/10">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Conversion Tools</p>
+                                    <p className="mt-1 text-sm font-black">{profile.premiumProfile.videoIntroUrl ? "Video Ready" : "Add Intro"}</p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
+                            {profile.premiumProfile?.tier === "pro" && (
+                              <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 p-4">
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-300">Freelancer Pro Impact</p>
+                                <h4 className="mt-2 text-base font-black text-white">
+                                  {profile.premiumProfile.introHeadline || "Premium portfolio experience is now active."}
+                                </h4>
+                                <p className="mt-2 text-xs leading-relaxed text-slate-300">
+                                  Clients will see a stronger hero section, premium badge treatment, analytics proof, and video intro prompts on your public page.
+                                </p>
+                              </div>
+                            )}
                             <div className="flex gap-2">
                               <button 
                                 onClick={() => {

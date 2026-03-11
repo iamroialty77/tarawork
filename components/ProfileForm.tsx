@@ -36,6 +36,7 @@ export default function ProfileForm({
       clientClicks: 0,
     },
   };
+  const isPro = premiumProfile.tier === "pro";
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
@@ -319,20 +320,20 @@ export default function ProfileForm({
         </div>
 
         {profile.role === "freelancer" && (
-          <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6 shadow-lg shadow-amber-100/50">
+          <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${isPro ? "border-slate-900 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-2xl shadow-slate-900/20" : "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-lg shadow-amber-100/50"}`}>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-amber-700">
+                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "border border-white/10 bg-white/10 text-amber-300" : "border border-amber-200 bg-white text-amber-700"}`}>
                   <Star className="h-3.5 w-3.5" />
-                  Freelancer Pro
+                  {isPro ? "Freelancer Pro Active" : "Freelancer Pro"}
                 </div>
-                <h3 className="text-xl font-black text-slate-900">Turn your profile into a premium sales page</h3>
-                <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
+                <h3 className={`text-xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>Turn your profile into a premium sales page</h3>
+                <p className={`max-w-2xl text-sm leading-relaxed ${isPro ? "text-slate-300" : "text-slate-600"}`}>
                   Keep your basic profile free, then unlock credibility signals that help clients trust you faster and click more often.
                 </p>
               </div>
-              <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Suggested Price</p>
+              <div className={`rounded-2xl px-4 py-3 ${isPro ? "bg-white/10 border border-white/10" : "bg-slate-950 text-white"}`}>
+                <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "text-slate-300" : "text-amber-300"}`}>Suggested Price</p>
                 <p className="mt-1 text-lg font-black">P199-P399/mo</p>
               </div>
             </div>
@@ -408,10 +409,51 @@ export default function ProfileForm({
               ))}
             </div>
 
+            {isPro && (
+              <div className="mt-6 rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Live Pro Preview</p>
+                    <h4 className="mt-3 text-2xl font-black text-white">
+                      {premiumProfile.introHeadline || "Position yourself like a top freelancer clients can trust immediately."}
+                    </h4>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300">
+                      Verified visual identity, richer portfolio narrative, and measurable demand signals in one profile.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-slate-900">
+                    <div className="rounded-2xl bg-white p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Profile Views</p>
+                      <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.profileViews || 0}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Client Clicks</p>
+                      <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.clientClicks || 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Domain</p>
+                    <p className="mt-2 text-sm font-bold text-white">{premiumProfile.customDomain || "roi.tarawork.ph"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Badge</p>
+                    <p className="mt-2 text-sm font-bold text-white">{premiumProfile.verifiedBadge ? "Verified Professional" : "Not enabled"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Video Intro</p>
+                    <p className="mt-2 text-sm font-bold text-white">{premiumProfile.videoIntroUrl ? "Ready for client viewing" : "Add a Loom intro to complete the page"}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {premiumProfile.tier === "pro" && (
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Custom Domain</label>
+                  <label className={`mb-1 block text-xs font-black uppercase tracking-widest ${isPro ? "text-slate-400" : "text-slate-400"}`}>Custom Domain</label>
                   <input
                     type="text"
                     placeholder="roi.tarawork.ph"
@@ -438,6 +480,26 @@ export default function ProfileForm({
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
                     value={premiumProfile.videoIntroUrl || ""}
                     onChange={(e) => handlePremiumChange({ videoIntroUrl: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Profile Views</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
+                    value={premiumProfile.analytics?.profileViews || 0}
+                    onChange={(e) => handlePremiumChange({ analytics: { profileViews: Number(e.target.value || 0) } })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Client Clicks</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
+                    value={premiumProfile.analytics?.clientClicks || 0}
+                    onChange={(e) => handlePremiumChange({ analytics: { clientClicks: Number(e.target.value || 0) } })}
                   />
                 </div>
               </div>
