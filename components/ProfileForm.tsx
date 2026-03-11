@@ -489,7 +489,14 @@ export default function ProfileForm({
                     min="0"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
                     value={premiumProfile.analytics?.profileViews || 0}
-                    onChange={(e) => handlePremiumChange({ analytics: { profileViews: Number(e.target.value || 0) } })}
+                    onChange={(e) =>
+                      handlePremiumChange({
+                        analytics: {
+                          profileViews: Number(e.target.value || 0),
+                          clientClicks: premiumProfile.analytics?.clientClicks || 0,
+                        },
+                      })
+                    }
                   />
                 </div>
                 <div>
@@ -499,7 +506,14 @@ export default function ProfileForm({
                     min="0"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
                     value={premiumProfile.analytics?.clientClicks || 0}
-                    onChange={(e) => handlePremiumChange({ analytics: { clientClicks: Number(e.target.value || 0) } })}
+                    onChange={(e) =>
+                      handlePremiumChange({
+                        analytics: {
+                          profileViews: premiumProfile.analytics?.profileViews || 0,
+                          clientClicks: Number(e.target.value || 0),
+                        },
+                      })
+                    }
                   />
                 </div>
               </div>
