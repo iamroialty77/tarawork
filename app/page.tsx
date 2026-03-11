@@ -152,6 +152,39 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const product = params.get("product");
+
+    if (!paymentStatus) {
+      return;
+    }
+
+    if (paymentStatus === "success") {
+      setToastMsg(
+        product === "verification"
+          ? "Payment received. Verification will activate after PayMongo webhook confirmation."
+          : "Payment received. Freelancer Pro will activate after PayMongo webhook confirmation.",
+      );
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    }
+
+    if (paymentStatus === "cancelled") {
+      setToastMsg("Payment was cancelled.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+    }
+
+    const cleanedParams = new URLSearchParams(window.location.search);
+    cleanedParams.delete("payment");
+    cleanedParams.delete("product");
+    const nextQuery = cleanedParams.toString();
+    const newUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+    window.history.replaceState({}, document.title, newUrl);
+  }, []);
+
   const [isSaving, setIsSaving] = useState(false);
 
   const [isVetting, setIsVetting] = useState(false);

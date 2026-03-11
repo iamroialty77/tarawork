@@ -43,6 +43,7 @@ export default function ProfileForm({
   const [skillInput, setSkillInput] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
+  const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
@@ -178,6 +179,43 @@ export default function ProfileForm({
         },
       },
     });
+  };
+
+  const startCheckout = async (productType: "pro" | "verification") => {
+    if (!profile.id) {
+      window.alert("Save your profile first so the payment can be linked to your account.");
+      return;
+    }
+
+    setCheckoutLoading(productType);
+
+    try {
+      const response = await fetch("/api/paymongo/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productType,
+          userId: profile.id,
+          email: undefined,
+          name: profile.name,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || !payload.checkoutUrl) {
+        throw new Error(payload.error || "Unable to start checkout.");
+      }
+
+      window.location.href = payload.checkoutUrl;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to start checkout.";
+      window.alert(message);
+    } finally {
+      setCheckoutLoading(null);
+    }
   };
 
   const handleAIParseComplete = (data: { 
@@ -556,18 +594,15 @@ export default function ProfileForm({
                 </ul>
                 <button
                   type="button"
-                  onClick={() =>
-                    handlePremiumChange({
-                      tier: "pro",
-                      verifiedBadge: true,
-                      advancedPortfolio: true,
-                      featuredPlacement: true,
-                      analyticsEnabled: true,
-                    })
-                  }
-                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.tier === "pro" ? "bg-white text-slate-950" : "bg-amber-500 text-slate-950 hover:bg-amber-400"}`}
+                  onClick={() => {
+                    if (premiumProfile.tier !== "pro") {
+                      void startCheckout("pro");
+                    }
+                  }}
+                  disabled={premiumProfile.tier === "pro" || checkoutLoading === "pro"}
+                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.tier === "pro" ? "bg-white text-slate-950" : "bg-amber-500 text-slate-950 hover:bg-amber-400"}`}
                 >
-                  {premiumProfile.tier === "pro" ? "Current: Pro" : "Switch to Pro"}
+                  {premiumProfile.tier === "pro" ? "Current: Pro" : checkoutLoading === "pro" ? "Redirecting..." : "Pay with PayMongo"}
                 </button>
               </div>
             </div>
@@ -676,6 +711,12 @@ export default function ProfileForm({
                 </div>
               </div>
             )}
+
+            {premiumProfile.tier !== "pro" && (
+              <p className="mt-6 text-sm text-slate-600">
+                Pro activation now happens after a successful PayMongo payment and webhook confirmation.
+              </p>
+            )}
           </div>
         )}
 
@@ -712,45 +753,22 @@ export default function ProfileForm({
             <div className="mt-6 flex flex-col gap-4 md:flex-row">
               <button
                 type="button"
-                onClick={() =>
-                  handlePremiumChange({
-                    verifiedBadge: true,
-                    verifiedProgram: {
-                      enrolled: true,
-                      annualFee: 499,
-                      identityVerified: true,
-                      portfolioVerified: true,
-                      higherSearchRanking: true,
-                      clientTrustBoost: true,
-                    },
-                  })
-                }
-                className={`rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.verifiedProgram?.enrolled ? "bg-white text-slate-950" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
-              >
-                {premiumProfile.verifiedProgram?.enrolled ? "Verified Enrolled" : "Activate Verification"}
-              </button>
-              {premiumProfile.verifiedProgram?.enrolled && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    handlePremiumChange({
-                      verifiedBadge: false,
-                      verifiedProgram: {
-                        enrolled: false,
-                        annualFee: 499,
-                        identityVerified: false,
-                        portfolioVerified: false,
-                        higherSearchRanking: false,
-                        clientTrustBoost: false,
-                      },
-                    })
+                onClick={() => {
+                  if (!premiumProfile.verifiedProgram?.enrolled) {
+                    void startCheckout("verification");
                   }
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-white/10"
-                >
-                  Remove Verification
-                </button>
-              )}
+                }}
+                disabled={!!premiumProfile.verifiedProgram?.enrolled || checkoutLoading === "verification"}
+                className={`rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.verifiedProgram?.enrolled ? "bg-white text-slate-950" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
+              >
+                {premiumProfile.verifiedProgram?.enrolled ? "Verified Enrolled" : checkoutLoading === "verification" ? "Redirecting..." : "Pay for Verification"}
+              </button>
             </div>
+            {!premiumProfile.verifiedProgram?.enrolled && (
+              <p className="text-sm text-slate-600">
+                Verification status is updated only after PayMongo confirms payment through your webhook endpoint.
+              </p>
+            )}
           </div>
         )}
 
