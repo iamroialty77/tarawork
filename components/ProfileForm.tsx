@@ -2,7 +2,21 @@
 
 import { UserProfile, FreelancerCategory, PortfolioItem } from "../types";
 import { useState, useEffect, useRef } from "react";
-import { Camera, User, FileText, Sparkles, ShieldCheck, Globe, BarChart3, Video, Star } from "lucide-react";
+import {
+  Camera,
+  User,
+  FileText,
+  Sparkles,
+  ShieldCheck,
+  Globe,
+  BarChart3,
+  Video,
+  Star,
+  FolderKanban,
+  Crown,
+  Briefcase,
+  Settings2,
+} from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
 
@@ -15,6 +29,8 @@ interface ProfileFormProps {
   isSaving?: boolean;
 }
 
+type TabKey = "basics" | "professional" | "premium" | "portfolio";
+
 export default function ProfileForm({ 
   initialProfile, 
   onUpdate, 
@@ -26,6 +42,7 @@ export default function ProfileForm({
   const [profile, setProfile] = useState(initialProfile);
   const [skillInput, setSkillInput] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,11 +62,18 @@ export default function ProfileForm({
     },
   };
   const isPro = premiumProfile.tier === "pro";
+  const isFreelancer = profile.role === "freelancer";
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
     setProfile(initialProfile);
   }, [initialProfile]);
+
+  useEffect(() => {
+    if (!isFreelancer && (activeTab === "premium" || activeTab === "portfolio")) {
+      setActiveTab("professional");
+    }
+  }, [activeTab, isFreelancer]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,148 +210,308 @@ export default function ProfileForm({
     setShowAIAgent(false);
   };
 
+  const tabs: Array<{ key: TabKey; label: string; icon: typeof User }> = isFreelancer
+    ? [
+        { key: "basics", label: "Basics", icon: User },
+        { key: "professional", label: "Professional", icon: Briefcase },
+        { key: "premium", label: "Premium", icon: Crown },
+        { key: "portfolio", label: "Portfolio", icon: FolderKanban },
+      ]
+    : [
+        { key: "basics", label: "Basics", icon: User },
+        { key: "professional", label: "Company", icon: Settings2 },
+      ];
+
+  const inputClassName =
+    "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100";
+  const labelClassName =
+    "mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500";
+
   return (
-    <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50">
-      <div className="flex flex-col items-center mb-8">
-        <div className="relative group">
-          <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-1 shadow-lg group-hover:shadow-indigo-200 transition-all overflow-hidden">
-            {profile.avatar_url ? (
-              <img 
-                src={profile.avatar_url} 
-                alt="Profile" 
-                className="w-full h-full object-cover rounded-2xl"
-              />
-            ) : (
-              <div className="w-full h-full bg-slate-50 rounded-2xl flex items-center justify-center">
-                <User className="w-10 h-10 text-slate-300" />
+    <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
+      <div className="rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="relative shrink-0">
+              <div className="h-20 w-20 overflow-hidden rounded-3xl bg-gradient-to-tr from-indigo-500 to-sky-500 p-1 shadow-lg">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Profile" className="h-full w-full rounded-[1.15rem] object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center rounded-[1.15rem] bg-white">
+                    <User className="h-8 w-8 text-slate-300" />
+                  </div>
+                )}
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-md transition-all hover:scale-105 hover:text-indigo-600"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {isFreelancer ? "Freelancer profile" : "Client profile"}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-slate-950">{profile.name || "Set your profile"}</h2>
+                <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">
+                  Mas malinis na editor na hiwalay ang bawat group ng details para hindi crowded.
+                </p>
+              </div>
+            </div>
           </div>
-          <button 
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-xl shadow-lg border border-slate-100 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:scale-110 transition-all cursor-pointer"
-          >
-            <Camera className="w-5 h-5" />
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept="image/*"
-            onChange={handleImageUpload}
-          />
+
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Profile URL</p>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-800">
+                {(typeof window !== "undefined" ? window.location.host : "tarawork.network")}/{profile.username || "username"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Status</p>
+              <p className="mt-2 text-sm font-semibold text-slate-800">
+                {isSaving ? "Saving..." : isFreelancer ? "Open to work" : "Ready to hire"}
+              </p>
+            </div>
+          </div>
         </div>
-        <h2 className="text-xl font-bold mt-4 text-slate-900">{profile.name || "Set your profile"}</h2>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{profile.role === "freelancer" ? "Freelancer" : "employer"}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Portfolio Username</label>
-            <div className="flex items-center">
-              <span className="bg-slate-100 px-3 py-2 border border-r-0 border-slate-200 rounded-l-xl text-slate-500 text-sm font-medium">
-                {typeof window !== 'undefined' ? window.location.host : 'tarawork.network'}/
-              </span>
-              <input
-                type="text"
-                placeholder="username"
-                className="flex-1 rounded-r-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-bold"
-                value={profile.username || ""}
-                onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1 italic">This is your professional URL identifier.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Account Role</label>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 bg-slate-50 font-bold"
-                value={profile.role}
-                onChange={(e) => handleFieldChange({ role: e.target.value as "freelancer" | "employer" })}
-              >
-                <option value="freelancer">freelancer (Freelancer)</option>
-                <option value="employer">employer (Client)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Full Name</label>
-              <input
-                type="text"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-                value={profile.name}
-                onChange={(e) => handleFieldChange({ name: e.target.value })}
-              />
-            </div>
-          </div>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                isActive
+                  ? "bg-slate-900 text-white shadow-lg shadow-slate-900/15"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-          {profile.role === "employer" && (
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Company Name</label>
-              <input
-                type="text"
-                placeholder="e.g. TechCorp Solutions"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-                value={profile.companyName || ""}
-                onChange={(e) => handleFieldChange({ companyName: e.target.value })}
-              />
+      <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+        {activeTab === "basics" && (
+          <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+            <div className="mb-5">
+              <h3 className="text-lg font-bold text-slate-950">Basic information</h3>
+              <p className="text-sm text-slate-500">Core details na unang makikita sa profile mo.</p>
             </div>
-          )}
 
-        {profile.role === "freelancer" && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-                value={profile.category}
-                onChange={(e) => setProfile({ ...profile, category: e.target.value as FreelancerCategory })}
-              >
-                <option value="General">General</option>
-                <option value="Developer">Developer</option>
-                <option value="Designer">Designer</option>
-                <option value="Graphic Design">Graphic Design</option>
-                <option value="Writer">Writer</option>
-                <option value="Marketing Specialist">Marketing Specialist</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Virtual Assistant">Virtual Assistant</option>
-                <option value="Admin/VA">Admin/VA</option>
-                <option value="Customer Support">Customer Support</option>
-                <option value="Sales">Sales</option>
-                <option value="Project Management">Project Management</option>
-                <option value="QA/Testing">QA/Testing</option>
-                <option value="Data Entry">Data Entry</option>
-                <option value="Finance/Accounting">Finance/Accounting</option>
-                <option value="IT & Networking">IT & Networking</option>
-                <option value="Writing & Content">Writing & Content</option>
-                <option value="Data & Automation">Data & Automation</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Hourly Rate</label>
-              <input
-                type="text"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-                value={profile.hourlyRate}
-                onChange={(e) => setProfile({ ...profile, hourlyRate: e.target.value })}
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className={labelClassName}>Portfolio Username</label>
+                <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <span className="border-r border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    {typeof window !== "undefined" ? window.location.host : "tarawork.network"}/
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="username"
+                    className="min-w-0 flex-1 px-4 py-3 text-sm text-slate-900 outline-none"
+                    value={profile.username || ""}
+                    onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClassName}>Account Role</label>
+                <select
+                  className={inputClassName}
+                  value={profile.role}
+                  onChange={(e) => handleFieldChange({ role: e.target.value as "freelancer" | "employer" })}
+                >
+                  <option value="freelancer">Freelancer</option>
+                  <option value="employer">Client</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={labelClassName}>Full Name</label>
+                <input
+                  type="text"
+                  className={inputClassName}
+                  value={profile.name}
+                  onChange={(e) => handleFieldChange({ name: e.target.value })}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className={labelClassName}>Short Bio</label>
+                <textarea
+                  className={inputClassName}
+                  rows={4}
+                  value={profile.bio}
+                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                />
+              </div>
             </div>
           </div>
         )}
 
-        <div>
-          <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Short Bio</label>
-          <textarea
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-            rows={3}
-            value={profile.bio}
-            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-          />
-        </div>
+        {activeTab === "professional" && (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+              <div className="mb-5">
+                <h3 className="text-lg font-bold text-slate-950">{isFreelancer ? "Professional details" : "Company details"}</h3>
+                <p className="text-sm text-slate-500">
+                  {isFreelancer
+                    ? "Skills, category, at work identity na mas important sa hiring."
+                    : "Impormasyon ng business para mas credible at presentable tingnan."}
+                </p>
+              </div>
 
-        {profile.role === "freelancer" && (
+              {profile.role === "employer" ? (
+                <div>
+                  <label className={labelClassName}>Company Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. TechCorp Solutions"
+                    className={inputClassName}
+                    value={profile.companyName || ""}
+                    onChange={(e) => handleFieldChange({ companyName: e.target.value })}
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={labelClassName}>Category</label>
+                    <select
+                      className={inputClassName}
+                      value={profile.category}
+                      onChange={(e) => setProfile({ ...profile, category: e.target.value as FreelancerCategory })}
+                    >
+                      <option value="General">General</option>
+                      <option value="Developer">Developer</option>
+                      <option value="Designer">Designer</option>
+                      <option value="Graphic Design">Graphic Design</option>
+                      <option value="Writer">Writer</option>
+                      <option value="Marketing Specialist">Marketing Specialist</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Virtual Assistant">Virtual Assistant</option>
+                      <option value="Admin/VA">Admin/VA</option>
+                      <option value="Customer Support">Customer Support</option>
+                      <option value="Sales">Sales</option>
+                      <option value="Project Management">Project Management</option>
+                      <option value="QA/Testing">QA/Testing</option>
+                      <option value="Data Entry">Data Entry</option>
+                      <option value="Finance/Accounting">Finance/Accounting</option>
+                      <option value="IT & Networking">IT & Networking</option>
+                      <option value="Writing & Content">Writing & Content</option>
+                      <option value="Data & Automation">Data & Automation</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClassName}>Hourly Rate</label>
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      value={profile.hourlyRate}
+                      onChange={(e) => setProfile({ ...profile, hourlyRate: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {isFreelancer && (
+              <>
+                <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-slate-950">AI Resume Parser</h4>
+                        <p className="text-sm text-slate-600">Upload PDF para auto-fill ang profile at skills mo.</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => resumeInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-700"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Upload PDF
+                    </button>
+                  </div>
+                  <input
+                    type="file"
+                    ref={resumeInputRef}
+                    className="hidden"
+                    accept=".pdf"
+                    onChange={handleResumeUpload}
+                  />
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                  <div className="mb-4">
+                    <h4 className="text-base font-bold text-slate-950">Skills</h4>
+                    <p className="text-sm text-slate-500">Panatilihing concise at relevant ang listahan.</p>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      value={skillInput}
+                      onChange={(e) => setSkillInput(e.target.value)}
+                      placeholder="e.g. React"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addSkill();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addSkill}
+                      className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black"
+                    >
+                      Add Skill
+                    </button>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {profile.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700"
+                      >
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(skill)}
+                          className="text-indigo-400 transition-colors hover:text-indigo-700"
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "premium" && isFreelancer && (
           <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${isPro ? "border-slate-900 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-2xl shadow-slate-900/20" : "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-lg shadow-amber-100/50"}`}>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
@@ -495,7 +679,7 @@ export default function ProfileForm({
           </div>
         )}
 
-        {profile.role === "freelancer" && (
+        {activeTab === "premium" && isFreelancer && (
           <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${premiumProfile.verifiedProgram?.enrolled ? "border-emerald-300 bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-900 text-white shadow-2xl shadow-emerald-900/20" : "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50"}`}>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
@@ -570,79 +754,12 @@ export default function ProfileForm({
           </div>
         )}
 
-        {profile.role === "freelancer" && (
-          <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 border-dashed">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">AI Resume Parser</h4>
-                  <p className="text-xs text-indigo-600/70 font-medium">Upload PDF to auto-fill your profile</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => resumeInputRef.current?.click()}
-                className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 flex items-center gap-2"
-              >
-                <FileText className="w-3 h-3" />
-                Upload PDF
-              </button>
+        {activeTab === "portfolio" && isFreelancer && (
+          <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+            <div className="mb-5">
+              <h3 className="text-lg font-bold text-slate-950">Portfolio</h3>
+              <p className="text-sm text-slate-500">Projects at work samples sa hiwalay na panel para mas malinis ang page.</p>
             </div>
-            <input
-              type="file"
-              ref={resumeInputRef}
-              className="hidden"
-              accept=".pdf"
-              onChange={handleResumeUpload}
-            />
-          </div>
-        )}
-
-        {profile.role === "freelancer" && (
-          <div>
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Skills</label>
-            <div className="flex gap-2 mt-1">
-              <input
-                type="text"
-                className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900"
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                placeholder="e.g. React"
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSkill())}
-              />
-              <button
-                type="button"
-                onClick={addSkill}
-                className="bg-slate-900 text-white px-4 py-2 rounded-xl hover:bg-black font-bold text-xs"
-              >
-                Add
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {profile.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100"
-                >
-                  {skill}
-                  <button
-                    type="button"
-                    onClick={() => removeSkill(skill)}
-                    className="text-indigo-400 hover:text-indigo-600"
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {profile.role === "freelancer" && (
-          <div className="pt-6 border-t border-slate-100">
             <PortfolioManager
               items={profile.portfolio || []}
               onAdd={addPortfolioItemLocal}
