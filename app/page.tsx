@@ -52,6 +52,7 @@ import {
   Medal,
   Verified,
   Trophy,
+  Coins,
   Menu,
   X
 } from "lucide-react";
@@ -140,6 +141,8 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUpgradePlans, setShowUpgradePlans] = useState(false);
   const [planCheckoutLoading, setPlanCheckoutLoading] = useState<"pro" | "credit_topup" | null>(null);
+  const [headerCreditBalance, setHeaderCreditBalance] = useState(0);
+  const [headerCreditsLoading, setHeaderCreditsLoading] = useState(false);
 
   useEffect(() => {
     // Handle email confirmation success message
@@ -189,6 +192,31 @@ export default function Home() {
     const newUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
     window.history.replaceState({}, document.title, newUrl);
   }, []);
+
+  useEffect(() => {
+    const userId = user?.id || profile.id;
+    if (!userId || profile.role !== "freelancer") return;
+
+    let mounted = true;
+    const loadHeaderCredits = async () => {
+      setHeaderCreditsLoading(true);
+      try {
+        const response = await fetch(`/api/credits/balance?userId=${encodeURIComponent(userId)}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error || "Unable to load credits.");
+        if (mounted) setHeaderCreditBalance(Number(payload?.balance || 0));
+      } catch {
+        if (mounted) setHeaderCreditBalance(0);
+      } finally {
+        if (mounted) setHeaderCreditsLoading(false);
+      }
+    };
+
+    void loadHeaderCredits();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id, profile.id, profile.role, profile.premiumProfile?.tier]);
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -417,8 +445,8 @@ export default function Home() {
         else setView('freelancer');
       }
     } catch (err: any) {
-      if (err.code !== 'PGRST205') {
-        console.error("Error fetching profile:", err);
+      if (err?.code !== 'PGRST205') {
+        console.warn("Profile fetch issue:", err);
       }
     }
   };
@@ -786,7 +814,7 @@ export default function Home() {
           setMissingTables(prev => [...new Set([...prev, "jobs"])]);
           console.warn("Table 'jobs' not found. Please run the SQL setup script.");
         } else if (error.code !== 'PGRST116') {
-          console.error("Error fetching jobs:", error);
+          console.warn("Jobs fetch issue:", error);
         }
         return;
       }
@@ -803,8 +831,8 @@ export default function Home() {
         setJobs([]);
       }
     } catch (err: any) {
-      if (err.code !== 'PGRST205') {
-        console.error("Error fetching jobs:", err);
+      if (err?.code !== 'PGRST205') {
+        console.warn("Jobs fetch issue:", err);
       }
     }
   };
@@ -819,7 +847,7 @@ export default function Home() {
         .order('createdAt', { ascending: false });
 
       if (error) {
-        console.error("Error fetching employer jobs:", error);
+        console.warn("Employer jobs fetch issue:", error);
         return;
       }
 
@@ -834,7 +862,7 @@ export default function Home() {
         setemployerJobs(formattedJobs);
       }
     } catch (err) {
-      console.error("Unexpected error fetching employer jobs:", err);
+      console.warn("Unexpected employer jobs fetch issue:", err);
     }
   };
 
@@ -1154,7 +1182,7 @@ export default function Home() {
         .limit(10);
 
       if (error) {
-        console.error("Error fetching freelancers:", error);
+        console.warn("Freelancer list fetch issue:", error);
         return;
       }
 
@@ -1166,7 +1194,7 @@ export default function Home() {
         setFreelancers(formatted);
       }
     } catch (err) {
-      console.error("Unexpected error fetching freelancers:", err);
+      console.warn("Unexpected freelancer list fetch issue:", err);
     }
   };
 
@@ -1725,6 +1753,15 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-4">
+              {profile.role === "freelancer" && (
+                <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 sm:px-3.5 py-1.5 shadow-sm">
+                  <Coins className="h-4 w-4 text-amber-600" />
+                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Credit Wallet</span>
+                  <span className="rounded-lg bg-white px-2 py-0.5 text-xs font-black text-slate-900 border border-amber-100">
+                    {headerCreditsLoading ? "..." : headerCreditBalance}
+                  </span>
+                </div>
+              )}
               <button 
                 className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}

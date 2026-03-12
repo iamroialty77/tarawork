@@ -10,15 +10,13 @@ import {
   ShieldCheck,
   Star,
   FolderKanban,
-  Crown,
   Briefcase,
+  BarChart3,
   Settings2,
-  CircleHelp,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
 import { getPremiumProfileDomain } from "../lib/profileUrl";
-import { PREMIUM_CREDIT_COSTS, PREMIUM_MONTHLY_CREDITS } from "../lib/creditConfig";
 
 interface ProfileFormProps {
   initialProfile: UserProfile;
@@ -46,8 +44,6 @@ export default function ProfileForm({
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | "credit_topup" | null>(null);
-  const [creditBalance, setCreditBalance] = useState(0);
-  const [creditLoading, setCreditLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,32 +85,6 @@ export default function ProfileForm({
       setActiveTab("professional");
     }
   }, [activeTab, isFreelancer]);
-
-  useEffect(() => {
-    if (!profile.id || !isFreelancer) return;
-
-    let mounted = true;
-
-    const loadCredits = async () => {
-      setCreditLoading(true);
-      try {
-        const response = await fetch(`/api/credits/balance?userId=${encodeURIComponent(profile.id as string)}`);
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload?.error || "Unable to load credits.");
-        if (mounted) setCreditBalance(Number(payload?.balance || 0));
-      } catch {
-        if (mounted) setCreditBalance(0);
-      } finally {
-        if (mounted) setCreditLoading(false);
-      }
-    };
-
-    void loadCredits();
-
-    return () => {
-      mounted = false;
-    };
-  }, [profile.id, isFreelancer, isPro]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,7 +262,7 @@ export default function ProfileForm({
     ? [
         { key: "basics", label: "Basics", icon: User },
         { key: "professional", label: "Professional", icon: Briefcase },
-        { key: "premium", label: "Premium", icon: Crown },
+        { key: "premium", label: "Analytics", icon: BarChart3 },
         { key: "portfolio", label: "Portfolio", icon: FolderKanban },
       ]
     : [
@@ -609,7 +579,7 @@ export default function ProfileForm({
               <div className="space-y-2">
                 <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "border border-white/10 bg-white/10 text-amber-300" : "border border-amber-200 bg-white text-amber-700"}`}>
                   <Star className="h-3.5 w-3.5" />
-                  {isPro ? "Freelancer Pro Active" : "Freelancer Pro"}
+                  {isPro ? "Analytic Professional Board" : "Freelancer Pro"}
                 </div>
                 <h3 className={`text-xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>Profile upgrade</h3>
               </div>
@@ -686,45 +656,6 @@ export default function ProfileForm({
                 </div>
               </div>
             )}
-
-            <div className={isPro ? "mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-white" : "mt-4 rounded-2xl border border-slate-200 bg-white p-4"}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isPro ? "text-slate-300" : "text-slate-500"}`}>Premium Credits</p>
-                    <div className="relative group">
-                      <CircleHelp className={`w-4 h-4 cursor-help ${isPro ? "text-slate-400" : "text-slate-500"}`} />
-                      <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-52 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 shadow-xl group-hover:block">
-                        <p>Smart Match: 1</p>
-                        <p>Roadmap: 2</p>
-                        <p>Interview Summary: 2</p>
-                        <p>Portfolio AI: 1</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className={`mt-1 text-2xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>
-                    {creditLoading ? "..." : creditBalance}
-                  </p>
-                  <p className={`text-xs ${isPro ? "text-slate-400" : "text-slate-500"}`}>
-                    {PREMIUM_MONTHLY_CREDITS} credits monthly for active Pro
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenUpgradePlans?.();
-                  }}
-                  disabled={!isPro}
-                  className="w-full rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {!isPro
-                    ? "Top-up requires active Pro"
-                    : "Top-up Credits (+10)"}
-                </button>
-              </div>
-            </div>
 
             {premiumProfile.tier === "pro" && (
               <div className="mt-6 grid gap-4 md:grid-cols-2">
