@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-export type PaymongoProductType = "pro" | "verification";
+export type PaymongoProductType = "pro" | "verification" | "credit_topup";
 
 type CheckoutProduct = {
   amount: number;
@@ -18,6 +18,11 @@ const checkoutProducts: Record<PaymongoProductType, CheckoutProduct> = {
     amount: 49900,
     description: "Tara Verified Freelancer annual program",
     name: "Tara Verified Freelancer",
+  },
+  credit_topup: {
+    amount: 14900,
+    description: "Tara Premium Credits top-up (+10 credits)",
+    name: "Tara Credits Top-up",
   },
 };
 

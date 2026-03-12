@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as CheckoutRequestBody;
     const { productType, userId, email, name } = body;
 
-    if (!productType || (productType !== "pro" && productType !== "verification")) {
+    if (!productType || (productType !== "pro" && productType !== "verification" && productType !== "credit_topup")) {
       return NextResponse.json({ error: "Invalid product type." }, { status: 400 });
     }
 
@@ -47,15 +47,41 @@ export async function POST(req: Request) {
       const premiumProfile = toObject(themeSettings.premiumProfile);
       const billing = toObject(premiumProfile.billing);
       const proStatus = billing.proStatus;
+      const proExpiresAt = typeof billing.proExpiresAt === "string" ? new Date(billing.proExpiresAt) : null;
+      const hasValidExpiry = !!proExpiresAt && !Number.isNaN(proExpiresAt.getTime());
+      const isUnexpired = hasValidExpiry && proExpiresAt.getTime() > Date.now();
       const isAlreadyPaidPro =
         premiumProfile.tier === "pro" &&
         billing.proLocked === true &&
-        proStatus === "active";
+        proStatus === "active" &&
+        isUnexpired;
 
       if (isAlreadyPaidPro) {
         return NextResponse.json(
           { error: "Your Premium Profile subscription is already active." },
           { status: 409 },
+        );
+      }
+    }
+
+    if (productType === "credit_topup") {
+      const { data: existingPortfolio, error: existingPortfolioError } = await supabaseAdmin
+        .from("portfolios")
+        .select("theme_settings")
+        .eq("profile_id", userId)
+        .maybeSingle();
+
+      if (existingPortfolioError && existingPortfolioError.code !== "PGRST116") {
+        throw existingPortfolioError;
+      }
+
+      const themeSettings = toObject(existingPortfolio?.theme_settings);
+      const premiumProfile = toObject(themeSettings.premiumProfile);
+
+      if (premiumProfile.tier !== "pro") {
+        return NextResponse.json(
+          { error: "Credit top-up is available only for Pro accounts." },
+          { status: 403 },
         );
       }
     }

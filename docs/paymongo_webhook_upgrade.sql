@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.paymongo_checkout_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     checkout_id TEXT NOT NULL UNIQUE,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-    product_type TEXT NOT NULL CHECK (product_type IN ('pro', 'verification')),
+    product_type TEXT NOT NULL CHECK (product_type IN ('pro', 'verification', 'credit_topup')),
     status TEXT NOT NULL DEFAULT 'pending',
     livemode BOOLEAN DEFAULT false,
     amount INTEGER,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.paymongo_events (
     event_type TEXT NOT NULL,
     resource_id TEXT,
     user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    product_type TEXT CHECK (product_type IN ('pro', 'verification')),
+    product_type TEXT CHECK (product_type IN ('pro', 'verification', 'credit_topup')),
     livemode BOOLEAN DEFAULT false,
     processed BOOLEAN DEFAULT false,
     processing_error TEXT,
@@ -35,3 +35,15 @@ CREATE INDEX IF NOT EXISTS idx_paymongo_events_received_at ON public.paymongo_ev
 
 ALTER TABLE public.paymongo_checkout_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.paymongo_events ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE public.paymongo_checkout_sessions
+    DROP CONSTRAINT IF EXISTS paymongo_checkout_sessions_product_type_check;
+ALTER TABLE public.paymongo_checkout_sessions
+    ADD CONSTRAINT paymongo_checkout_sessions_product_type_check
+    CHECK (product_type IN ('pro', 'verification', 'credit_topup'));
+
+ALTER TABLE public.paymongo_events
+    DROP CONSTRAINT IF EXISTS paymongo_events_product_type_check;
+ALTER TABLE public.paymongo_events
+    ADD CONSTRAINT paymongo_events_product_type_check
+    CHECK (product_type IN ('pro', 'verification', 'credit_topup'));

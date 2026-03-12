@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { UserProfile } from "@/types";
+import { consumePremiumCredits } from "@/lib/credits";
 
 interface CareerRoadmapPayload {
   profile?: UserProfile;
+  userId?: string;
   marketContext?: {
     topDemandSkills?: string[];
     missingSkills?: string[];
@@ -29,6 +31,10 @@ interface CareerRoadmapResponse {
   fallback?: boolean;
   error?: string;
   errorCode?: string;
+  credits?: {
+    spent: number;
+    remaining: number;
+  };
 }
 
 const cleanJsonBlock = (text: string) => {
@@ -137,18 +143,18 @@ const normalizeRoadmap = (
     ? input.modules
         .map((item, index) => {
           if (!item || typeof item !== "object") return null;
-          const module = item as Record<string, unknown>;
-          const title = typeof module.title === "string" ? module.title.trim() : "";
-          const description = typeof module.description === "string" ? module.description.trim() : "";
-          const duration = typeof module.duration === "string" ? module.duration.trim() : "";
+          const moduleData = item as Record<string, unknown>;
+          const title = typeof moduleData.title === "string" ? moduleData.title.trim() : "";
+          const description = typeof moduleData.description === "string" ? moduleData.description.trim() : "";
+          const duration = typeof moduleData.duration === "string" ? moduleData.duration.trim() : "";
           if (!title || !description || !duration) return null;
 
           return {
-            id: typeof module.id === "string" && module.id.trim() ? module.id.trim() : `module-${index + 1}`,
+            id: typeof moduleData.id === "string" && moduleData.id.trim() ? moduleData.id.trim() : `module-${index + 1}`,
             title,
             description,
             duration,
-            level: safeLevel(module.level)
+            level: safeLevel(moduleData.level)
           } satisfies RoadmapModule;
         })
         .filter((module): module is RoadmapModule => module !== null)
@@ -190,6 +196,36 @@ export async function POST(req: NextRequest) {
     if (!profile) {
       return NextResponse.json({ error: "Invalid payload: profile is required." }, { status: 400 });
     }
+    const userId = body.userId || profile.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Missing userId.", errorCode: "missing_user_id" },
+        { status: 400 },
+      );
+    }
+    const creditSpend = await consumePremiumCredits({
+      userId,
+      action: "career_roadmap",
+      metadata: { profileCategory: profile.category || "General" },
+    });
+
+    if (!creditSpend.ok) {
+      const statusCode =
+        creditSpend.code === "not_premium"
+          ? 403
+          : creditSpend.code === "insufficient_credits"
+            ? 402
+            : 500;
+      return NextResponse.json(
+        {
+          error: creditSpend.message,
+          errorCode: creditSpend.code,
+          requiredCredits: creditSpend.cost,
+          remainingCredits: creditSpend.balance ?? 0,
+        },
+        { status: statusCode },
+      );
+    }
 
     const fallback = generateFallbackRoadmap(profile, body.marketContext);
     const apiKey = process.env.GEMINI_API_KEY;
@@ -197,7 +233,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ...fallback,
         error: "GEMINI_API_KEY is missing",
-        errorCode: "missing_key"
+        errorCode: "missing_key",
+        credits: {
+          spent: creditSpend.cost,
+          remaining: creditSpend.balance,
+        },
       });
     }
 
@@ -272,7 +312,13 @@ export async function POST(req: NextRequest) {
         providerMessage = "";
       }
       const mappedError = mapGeminiError(geminiRes.status, providerMessage);
-      return NextResponse.json(generateFallbackRoadmap(profile, body.marketContext, mappedError));
+      return NextResponse.json({
+        ...generateFallbackRoadmap(profile, body.marketContext, mappedError),
+        credits: {
+          spent: creditSpend.cost,
+          remaining: creditSpend.balance,
+        },
+      });
     }
 
     const geminiData = await geminiRes.json();
@@ -282,10 +328,16 @@ export async function POST(req: NextRequest) {
       .join("\n");
 
     if (!modelText || typeof modelText !== "string") {
-      return NextResponse.json(generateFallbackRoadmap(profile, body.marketContext, {
-        message: "Gemini returned empty response",
-        code: "empty_response"
-      }));
+      return NextResponse.json({
+        ...generateFallbackRoadmap(profile, body.marketContext, {
+          message: "Gemini returned empty response",
+          code: "empty_response"
+        }),
+        credits: {
+          spent: creditSpend.cost,
+          remaining: creditSpend.balance,
+        },
+      });
     }
 
     let parsed: unknown = null;
@@ -296,7 +348,13 @@ export async function POST(req: NextRequest) {
     }
 
     const roadmap = normalizeRoadmap(parsed, fallback);
-    return NextResponse.json(roadmap);
+    return NextResponse.json({
+      ...roadmap,
+      credits: {
+        spent: creditSpend.cost,
+        remaining: creditSpend.balance,
+      },
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unable to generate roadmap";
     return NextResponse.json(

@@ -130,6 +130,10 @@ export interface SmartMatchResponse {
   fallback?: boolean;
   error?: string;
   errorCode?: string;
+  credits?: {
+    spent: number;
+    remaining: number;
+  };
 }
 
 export interface VerifiedSkill {
@@ -208,6 +212,8 @@ export interface PremiumProfile {
     proLocked?: boolean;
     proLastEvent?: string;
     proUpdatedAt?: string;
+    proActivatedAt?: string;
+    proExpiresAt?: string;
   };
   verifiedProgram?: {
     enrolled: boolean;
@@ -239,6 +245,7 @@ export interface UserProfile {
   ranking?: number; // Leaderboard position
   portfolio?: PortfolioItem[];
   premiumProfile?: PremiumProfile;
+  creditBalance?: number;
   wellness?: UserWellness;
 }
 

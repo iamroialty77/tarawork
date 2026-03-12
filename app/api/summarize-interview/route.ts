@@ -2,13 +2,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { supabase } from '@/lib/supabase';
+import { consumePremiumCredits } from '@/lib/credits';
 
 export async function POST(req: NextRequest) {
   try {
-    const { transcript, projectId, participants } = await req.json();
+    const { transcript, projectId, participants, userId } = await req.json();
 
     if (!transcript) {
       return NextResponse.json({ error: 'No transcript provided' }, { status: 400 });
+    }
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing userId.' }, { status: 400 });
+    }
+
+    const creditSpend = await consumePremiumCredits({
+      userId,
+      action: "interview_summary",
+      metadata: { projectId: projectId || null },
+    });
+
+    if (!creditSpend.ok) {
+      const statusCode =
+        creditSpend.code === "not_premium"
+          ? 403
+          : creditSpend.code === "insufficient_credits"
+            ? 402
+            : 500;
+      return NextResponse.json(
+        {
+          error: creditSpend.message,
+          errorCode: creditSpend.code,
+          requiredCredits: creditSpend.cost,
+          remainingCredits: creditSpend.balance ?? 0,
+        },
+        { status: statusCode },
+      );
     }
 
     const { text: summary } = await generateText({
@@ -31,9 +59,13 @@ export async function POST(req: NextRequest) {
 
     if (logError) console.error('Error logging to audit logs:', logError);
 
-    return NextResponse.json({ summary });
-  } catch (error: any) {
+    return NextResponse.json({
+      summary,
+      credits: { spent: creditSpend.cost, remaining: creditSpend.balance },
+    });
+  } catch (error: unknown) {
     console.error('Error summarizing interview:', error);
-    return NextResponse.json({ error: error.message || 'Failed to summarize' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to summarize';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -13,14 +13,17 @@ import {
   Crown,
   Briefcase,
   Settings2,
+  CircleHelp,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
 import { getPremiumProfileDomain } from "../lib/profileUrl";
+import { PREMIUM_CREDIT_COSTS, PREMIUM_MONTHLY_CREDITS } from "../lib/creditConfig";
 
 interface ProfileFormProps {
   initialProfile: UserProfile;
   onUpdate: (profile: UserProfile) => void;
+  onOpenUpgradePlans?: () => void;
   onAddPortfolio?: (item: Partial<PortfolioItem>) => void;
   onUpdatePortfolio?: (item: PortfolioItem) => void;
   onRemovePortfolio?: (id: string) => void;
@@ -32,6 +35,7 @@ type TabKey = "basics" | "professional" | "premium" | "portfolio";
 export default function ProfileForm({ 
   initialProfile, 
   onUpdate, 
+  onOpenUpgradePlans,
   onAddPortfolio,
   onUpdatePortfolio,
   onRemovePortfolio,
@@ -41,7 +45,9 @@ export default function ProfileForm({
   const [skillInput, setSkillInput] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
-  const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | "credit_topup" | null>(null);
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [creditLoading, setCreditLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,6 +69,14 @@ export default function ProfileForm({
   const isPro = premiumProfile.tier === "pro";
   const isFreelancer = profile.role === "freelancer";
   const proLockedByBilling = !!premiumProfile.billing?.proLocked && premiumProfile.tier === "pro";
+  const proExpiryDate = premiumProfile.billing?.proExpiresAt ? new Date(premiumProfile.billing.proExpiresAt) : null;
+  const hasValidProExpiry = !!proExpiryDate && !Number.isNaN(proExpiryDate.getTime());
+  const premiumDaysLeft = hasValidProExpiry && proExpiryDate
+    ? Math.max(0, Math.ceil((proExpiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const premiumExpiryLabel = hasValidProExpiry && proExpiryDate
+    ? proExpiryDate.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
+    : null;
   const autoPremiumDomain = getPremiumProfileDomain(profile.username, profile.id);
 
   // Sync internal state when prop changes (after fetch)
@@ -75,6 +89,32 @@ export default function ProfileForm({
       setActiveTab("professional");
     }
   }, [activeTab, isFreelancer]);
+
+  useEffect(() => {
+    if (!profile.id || !isFreelancer) return;
+
+    let mounted = true;
+
+    const loadCredits = async () => {
+      setCreditLoading(true);
+      try {
+        const response = await fetch(`/api/credits/balance?userId=${encodeURIComponent(profile.id as string)}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error || "Unable to load credits.");
+        if (mounted) setCreditBalance(Number(payload?.balance || 0));
+      } catch {
+        if (mounted) setCreditBalance(0);
+      } finally {
+        if (mounted) setCreditLoading(false);
+      }
+    };
+
+    void loadCredits();
+
+    return () => {
+      mounted = false;
+    };
+  }, [profile.id, isFreelancer, isPro]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,7 +221,7 @@ export default function ProfileForm({
     });
   };
 
-  const startCheckout = async (productType: "pro" | "verification") => {
+  const startCheckout = async (productType: "pro" | "verification" | "credit_topup") => {
     if (!profile.id) {
       window.alert("Save your profile first so the payment can be linked to your account.");
       return;
@@ -321,7 +361,7 @@ export default function ProfileForm({
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Profile URL</p>
               <p className="mt-2 truncate text-sm font-semibold text-slate-800">
-                {(typeof window !== "undefined" ? window.location.host : "tarawork.network")}/{profile.username || "username"}
+                {(typeof window !== "undefined" ? window.location.host : "www.tarawork.online")}/{isPro ? `@${profile.username || "username"}` : profile.username || "username"}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
@@ -579,28 +619,30 @@ export default function ProfileForm({
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className={`rounded-2xl border p-4 ${premiumProfile.tier === "free" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em]">Free Profile</p>
-                <ul className="mt-3 space-y-2 text-sm">
-                  <li>Basic portfolio</li>
-                  <li>Skills and experience</li>
-                  <li>Contact info</li>
-                  <li>Limited media uploads</li>
-                </ul>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!proLockedByBilling) {
-                      handlePremiumChange({ tier: "free" });
-                    }
-                  }}
-                  disabled={proLockedByBilling}
-                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.tier === "free" ? "bg-white text-slate-900" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
-                >
-                  {proLockedByBilling ? "Managed by Billing" : "Current: Free"}
-                </button>
-              </div>
+            <div className={`mt-6 grid gap-4 ${isPro ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
+              {!isPro && (
+                <div className={`rounded-2xl border p-4 ${premiumProfile.tier === "free" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em]">Free Profile</p>
+                  <ul className="mt-3 space-y-2 text-sm">
+                    <li>Basic portfolio</li>
+                    <li>Skills and experience</li>
+                    <li>Contact info</li>
+                    <li>Limited media uploads</li>
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!proLockedByBilling) {
+                        handlePremiumChange({ tier: "free" });
+                      }
+                    }}
+                    disabled={proLockedByBilling}
+                    className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.tier === "free" ? "bg-white text-slate-900" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                  >
+                    {proLockedByBilling ? "Managed by Billing" : "Current: Free"}
+                  </button>
+                </div>
+              )}
 
               <div className={`rounded-2xl border p-4 ${premiumProfile.tier === "pro" ? "border-amber-300 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-xl shadow-amber-200/40" : "border-slate-200 bg-white"}`}>
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Premium Profile</p>
@@ -614,15 +656,17 @@ export default function ProfileForm({
                 <button
                   type="button"
                   onClick={() => {
-                    if (premiumProfile.tier !== "pro") {
-                      void startCheckout("pro");
-                    }
+                    onOpenUpgradePlans?.();
                   }}
-                  disabled={premiumProfile.tier === "pro" || checkoutLoading === "pro"}
-                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.tier === "pro" ? "bg-white text-slate-950" : "bg-amber-500 text-slate-950 hover:bg-amber-400"}`}
+                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.tier === "pro" ? "bg-white text-slate-950" : "bg-amber-500 text-slate-950 hover:bg-amber-400"}`}
                 >
-                  {premiumProfile.tier === "pro" ? "Current: Pro" : checkoutLoading === "pro" ? "Redirecting..." : "Pay with PayMongo"}
+                  {premiumProfile.tier === "pro" ? "Current: Pro" : "Open Upgrade Plans"}
                 </button>
+                {isPro && premiumExpiryLabel && (
+                  <p className="mt-3 text-xs font-semibold text-amber-200">
+                    Active until {premiumExpiryLabel}{premiumDaysLeft !== null ? ` (${premiumDaysLeft} day${premiumDaysLeft === 1 ? "" : "s"} left)` : ""}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -643,13 +687,52 @@ export default function ProfileForm({
               </div>
             )}
 
+            <div className={isPro ? "mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-white" : "mt-4 rounded-2xl border border-slate-200 bg-white p-4"}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isPro ? "text-slate-300" : "text-slate-500"}`}>Premium Credits</p>
+                    <div className="relative group">
+                      <CircleHelp className={`w-4 h-4 cursor-help ${isPro ? "text-slate-400" : "text-slate-500"}`} />
+                      <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-52 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 shadow-xl group-hover:block">
+                        <p>Smart Match: 1</p>
+                        <p>Roadmap: 2</p>
+                        <p>Interview Summary: 2</p>
+                        <p>Portfolio AI: 1</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className={`mt-1 text-2xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>
+                    {creditLoading ? "..." : creditBalance}
+                  </p>
+                  <p className={`text-xs ${isPro ? "text-slate-400" : "text-slate-500"}`}>
+                    {PREMIUM_MONTHLY_CREDITS} credits monthly for active Pro
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenUpgradePlans?.();
+                  }}
+                  disabled={!isPro}
+                  className="w-full rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {!isPro
+                    ? "Top-up requires active Pro"
+                    : "Top-up Credits (+10)"}
+                </button>
+              </div>
+            </div>
+
             {premiumProfile.tier === "pro" && (
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className={`mb-1 block text-xs font-black uppercase tracking-widest ${isPro ? "text-slate-400" : "text-slate-400"}`}>Premium Domain (Auto)</label>
+                  <label className={`mb-1 block text-xs font-black uppercase tracking-widest ${isPro ? "text-slate-400" : "text-slate-400"}`}>Premium URL (Auto)</label>
                   <input
                     type="text"
-                    placeholder="roi.tarawork.ph"
+                    placeholder="https://www.tarawork.online/@roi"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
                     value={autoPremiumDomain}
                     readOnly
@@ -714,12 +797,12 @@ export default function ProfileForm({
 
             {premiumProfile.tier !== "pro" && (
               <p className="mt-6 text-sm text-slate-600">
-                Pro activation now happens after a successful PayMongo payment and webhook confirmation.
+                Premium Profile is activated after successful PayMongo payment, valid for 30 days, then automatically returns to Free Profile on expiry.
               </p>
             )}
             {proLockedByBilling && (
               <p className="mt-3 text-sm text-amber-200">
-                Your Pro status is billing-managed. Downgrade happens from subscription cancellation/failure events, not manual toggle.
+                Your Pro status is billing-managed. Downgrade happens automatically on expiry (30 days) or billing cancellation/failure events.
               </p>
             )}
           </div>

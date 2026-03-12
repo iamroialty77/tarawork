@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabase_admin";
 import { verifyPaymongoSignature } from "../../../../lib/paymongo";
+import { grantPremiumMonthlyCredits, grantTopupCredits } from "../../../../lib/credits";
 
-type ProductType = "pro" | "verification";
+type ProductType = "pro" | "verification" | "credit_topup";
 type PremiumAction = "activate" | "deactivate" | "ignore";
+const PREMIUM_SUBSCRIPTION_DAYS = 30;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 type WebhookPayload = {
   data?: {
@@ -41,7 +44,25 @@ function readString(value: unknown): string | undefined {
 }
 
 function parseProductType(value: unknown): ProductType | undefined {
-  return value === "pro" || value === "verification" ? value : undefined;
+  return value === "pro" || value === "verification" || value === "credit_topup" ? value : undefined;
+}
+
+function readDate(value: unknown): Date | null {
+  if (typeof value !== "string" || value.length === 0) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getExtendedProExpiryIso(currentExpiryRaw: unknown): string {
+  const now = new Date();
+  const currentExpiry = readDate(currentExpiryRaw);
+  const renewalBase =
+    currentExpiry && currentExpiry.getTime() > now.getTime() ? currentExpiry : now;
+
+  return new Date(renewalBase.getTime() + PREMIUM_SUBSCRIPTION_DAYS * DAY_IN_MS).toISOString();
 }
 
 function isMissingTableError(error: { code?: string; message?: string } | null | undefined) {
@@ -171,7 +192,40 @@ async function updateCheckoutSessionStatus(checkoutId: string, status: string) {
   }
 }
 
-async function activatePurchase(userId: string, productType: ProductType, eventType: string) {
+async function activatePurchase(
+  userId: string,
+  productType: ProductType,
+  eventType: string,
+  eventId: string,
+) {
+  const grantProMonthlyCredits = async () => {
+    if (productType !== "pro") return;
+
+    try {
+      await grantPremiumMonthlyCredits({
+        userId,
+        source: eventType === "subscription.invoice.paid" ? "paymongo_subscription" : "paymongo_checkout",
+        idempotencyKey: `paymongo-pro-credit:${eventId}`,
+        metadata: { eventType, eventId },
+      });
+    } catch (creditError) {
+      console.error("Unable to grant premium monthly credits:", creditError);
+    }
+  };
+
+  if (productType === "credit_topup") {
+    try {
+      await grantTopupCredits({
+        userId,
+        idempotencyKey: `paymongo-credit-topup:${eventId}`,
+        metadata: { eventType, eventId },
+      });
+    } catch (creditError) {
+      console.error("Unable to grant credit top-up:", creditError);
+    }
+    return;
+  }
+
   const { data: existingPortfolio, error: fetchError } = await supabaseAdmin
     .from("portfolios")
     .select("id, theme_settings")
@@ -219,6 +273,8 @@ async function activatePurchase(userId: string, productType: ProductType, eventT
             proLocked: true,
             proLastEvent: eventType,
             proUpdatedAt: new Date().toISOString(),
+            proActivatedAt: new Date().toISOString(),
+            proExpiresAt: getExtendedProExpiryIso(currentPremiumProfile.billing?.proExpiresAt),
           },
         }
       : {
@@ -253,6 +309,8 @@ async function activatePurchase(userId: string, productType: ProductType, eventT
       throw error;
     }
 
+    await grantProMonthlyCredits();
+
     return;
   }
 
@@ -261,9 +319,15 @@ async function activatePurchase(userId: string, productType: ProductType, eventT
   if (error) {
     throw error;
   }
+
+  await grantProMonthlyCredits();
 }
 
 async function deactivatePurchase(userId: string, productType: ProductType, eventType: string) {
+  if (productType === "credit_topup") {
+    return;
+  }
+
   const { data: existingPortfolio, error: fetchError } = await supabaseAdmin
     .from("portfolios")
     .select("id, theme_settings")
@@ -313,6 +377,7 @@ async function deactivatePurchase(userId: string, productType: ProductType, even
             proLocked: false,
             proLastEvent: eventType,
             proUpdatedAt: new Date().toISOString(),
+            proExpiresAt: new Date().toISOString(),
           },
         }
       : {
@@ -476,7 +541,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "activate") {
-      await activatePurchase(userId, productType, eventType);
+      await activatePurchase(userId, productType, eventType, eventId);
     } else if (action === "deactivate") {
       await deactivatePurchase(userId, productType, eventType);
     }

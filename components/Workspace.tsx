@@ -47,6 +47,7 @@ import { UserWellness } from "../types/wellness";
 
 interface WorkspaceProps {
   projects: Project[];
+  currentUserId?: string;
   onUpdateProject?: (project: Project) => void;
   onCreateProject?: (project: Project) => void;
   workflows?: any[];
@@ -55,6 +56,7 @@ interface WorkspaceProps {
 
 export default function Workspace({ 
   projects, 
+  currentUserId,
   onUpdateProject, 
   onCreateProject,
   workflows = [],
@@ -220,6 +222,7 @@ export default function Workspace({
       {activeCall && (
         <VideoCall 
           projectId={selectedProject?.id} 
+          currentUserId={currentUserId}
           onLeave={() => setActiveCall(false)} 
         />
       )}

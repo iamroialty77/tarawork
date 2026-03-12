@@ -8,9 +8,10 @@ interface VideoCallProps {
   roomUrl?: string;
   onLeave: () => void;
   projectId?: string;
+  currentUserId?: string;
 }
 
-export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProps) {
+export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }: VideoCallProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -38,11 +39,15 @@ export default function VideoCall({ roomUrl, onLeave, projectId }: VideoCallProp
         body: JSON.stringify({
           transcript: mockTranscript,
           projectId: projectId || 'mock-project-123',
-          participants: ['Client', 'Freelancer']
+          participants: ['Client', 'Freelancer'],
+          userId: currentUserId,
         }),
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Summarization failed');
+      }
       setSummary(data.summary);
     } catch (error) {
       console.error('Summarization failed:', error);

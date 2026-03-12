@@ -117,12 +117,16 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
     try {
       const data = (targetData as any) || {};
       const payload = data?.profile ? data : { profile: data };
+      const userId = payload?.userId || payload?.profile?.id;
       const response = await fetch("/api/career-roadmap", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          userId,
+        })
       });
       if (!response.ok) {
         throw new Error(`Career roadmap request failed (${response.status})`);

@@ -138,6 +138,8 @@ export default function Home() {
   });
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showUpgradePlans, setShowUpgradePlans] = useState(false);
+  const [planCheckoutLoading, setPlanCheckoutLoading] = useState<"pro" | "credit_topup" | null>(null);
 
   useEffect(() => {
     // Handle email confirmation success message
@@ -166,6 +168,8 @@ export default function Home() {
       setToastMsg(
         product === "verification"
           ? "Payment received. Verification will activate after PayMongo webhook confirmation."
+          : product === "credit_topup"
+            ? "Payment received. Credit top-up will reflect after PayMongo webhook confirmation."
           : "Payment received. Freelancer Pro will activate after PayMongo webhook confirmation.",
       );
       setShowToast(true);
@@ -285,30 +289,47 @@ export default function Home() {
             const premiumProfile = themeSettings.premiumProfile && typeof themeSettings.premiumProfile === "object"
               ? themeSettings.premiumProfile
               : {};
+            const proExpiryRaw =
+              typeof premiumProfile.billing?.proExpiresAt === "string"
+                ? premiumProfile.billing.proExpiresAt
+                : "";
+            const proExpiryDate = proExpiryRaw ? new Date(proExpiryRaw) : null;
+            const hasValidProExpiry =
+              !!proExpiryDate && !Number.isNaN(proExpiryDate.getTime());
+            const isProExpired =
+              premiumProfile.tier === "pro" &&
+              hasValidProExpiry &&
+              !!proExpiryDate &&
+              proExpiryDate.getTime() <= Date.now();
+            const isActivePro = premiumProfile.tier === "pro" && !isProExpired;
 
             normalizedData.bio = pData.about_me || normalizedData.bio;
             normalizedData.premiumProfile = {
-              tier: premiumProfile.tier === "pro" ? "pro" : "free",
-              verifiedBadge: premiumProfile.verifiedBadge ?? premiumProfile.tier === "pro",
-              advancedPortfolio: premiumProfile.advancedPortfolio ?? premiumProfile.tier === "pro",
-              featuredPlacement: premiumProfile.featuredPlacement ?? false,
-              analyticsEnabled: premiumProfile.analyticsEnabled ?? false,
+              tier: isActivePro ? "pro" : "free",
+              verifiedBadge: premiumProfile.verifiedBadge ?? isActivePro,
+              advancedPortfolio: premiumProfile.advancedPortfolio ?? isActivePro,
+              featuredPlacement: isActivePro ? premiumProfile.featuredPlacement ?? false : false,
+              analyticsEnabled: isActivePro ? premiumProfile.analyticsEnabled ?? false : false,
               customDomain:
-                premiumProfile.tier === "pro"
+                isActivePro
                   ? pData.custom_domain || premiumProfile.customDomain || getPremiumProfileDomain(normalizedData.username, normalizedData.id)
                   : "",
-              videoIntroUrl: premiumProfile.videoIntroUrl || "",
+              videoIntroUrl: isActivePro ? premiumProfile.videoIntroUrl || "" : "",
               introHeadline: premiumProfile.introHeadline || pData.tagline || "",
               billing: {
                 proStatus:
-                  premiumProfile.billing?.proStatus === "active" ||
-                  premiumProfile.billing?.proStatus === "past_due" ||
-                  premiumProfile.billing?.proStatus === "cancelled"
-                    ? premiumProfile.billing.proStatus
-                    : "inactive",
-                proLocked: !!premiumProfile.billing?.proLocked,
+                  isProExpired
+                    ? "inactive"
+                    : premiumProfile.billing?.proStatus === "active" ||
+                        premiumProfile.billing?.proStatus === "past_due" ||
+                        premiumProfile.billing?.proStatus === "cancelled"
+                      ? premiumProfile.billing.proStatus
+                      : "inactive",
+                proLocked: isProExpired ? false : !!premiumProfile.billing?.proLocked,
                 proLastEvent: premiumProfile.billing?.proLastEvent || "",
                 proUpdatedAt: premiumProfile.billing?.proUpdatedAt || "",
+                proActivatedAt: premiumProfile.billing?.proActivatedAt || "",
+                proExpiresAt: proExpiryRaw,
               },
               analytics: {
                 profileViews: Number(premiumProfile.analytics?.profileViews || 0),
@@ -481,22 +502,44 @@ export default function Home() {
           currentThemeSettings.premiumProfile && typeof currentThemeSettings.premiumProfile === "object"
             ? currentThemeSettings.premiumProfile
             : {};
+        const currentProExpiryRaw =
+          typeof currentPremiumProfile.billing?.proExpiresAt === "string"
+            ? currentPremiumProfile.billing.proExpiresAt
+            : "";
+        const currentProExpiry = currentProExpiryRaw ? new Date(currentProExpiryRaw) : null;
+        const hasValidCurrentProExpiry =
+          !!currentProExpiry && !Number.isNaN(currentProExpiry.getTime());
+        const isExpiredBillingPro =
+          currentPremiumProfile.tier === "pro" &&
+          hasValidCurrentProExpiry &&
+          !!currentProExpiry &&
+          currentProExpiry.getTime() <= Date.now();
         const isBillingLockedPro =
-          currentPremiumProfile.tier === "pro" && !!currentPremiumProfile.billing?.proLocked;
+          currentPremiumProfile.tier === "pro" &&
+          !!currentPremiumProfile.billing?.proLocked &&
+          !isExpiredBillingPro;
         const requestedTier = premiumProfile.tier === "pro" ? "pro" : "free";
-        const finalTier = isBillingLockedPro && requestedTier === "free" ? "pro" : requestedTier;
+        const finalTier = isExpiredBillingPro
+          ? "free"
+          : isBillingLockedPro && requestedTier === "free"
+            ? "pro"
+            : requestedTier;
         const resolvedCustomDomain =
           finalTier === "pro" ? getPremiumProfileDomain(nextProfile.username, nextProfile.id || user.id) : "";
         const normalizedBilling = {
           proStatus:
-            currentPremiumProfile.billing?.proStatus === "active" ||
-            currentPremiumProfile.billing?.proStatus === "past_due" ||
-            currentPremiumProfile.billing?.proStatus === "cancelled"
-              ? currentPremiumProfile.billing.proStatus
-              : "inactive",
-          proLocked: !!currentPremiumProfile.billing?.proLocked,
+            isExpiredBillingPro
+              ? "inactive"
+              : currentPremiumProfile.billing?.proStatus === "active" ||
+                  currentPremiumProfile.billing?.proStatus === "past_due" ||
+                  currentPremiumProfile.billing?.proStatus === "cancelled"
+                ? currentPremiumProfile.billing.proStatus
+                : "inactive",
+          proLocked: isExpiredBillingPro ? false : !!currentPremiumProfile.billing?.proLocked,
           proLastEvent: currentPremiumProfile.billing?.proLastEvent || "",
           proUpdatedAt: currentPremiumProfile.billing?.proUpdatedAt || "",
+          proActivatedAt: currentPremiumProfile.billing?.proActivatedAt || "",
+          proExpiresAt: currentProExpiryRaw,
         };
 
         const portfolioPayload = {
@@ -536,7 +579,7 @@ export default function Home() {
           updated_at: new Date().toISOString(),
         };
 
-        if (isBillingLockedPro && requestedTier === "free") {
+        if (isBillingLockedPro && requestedTier === "free" && !isExpiredBillingPro) {
           nextProfile = {
             ...nextProfile,
             premiumProfile: {
@@ -893,6 +936,41 @@ export default function Home() {
     
     setSelectedJobIdForApply(jobId);
     setShowApplyModal(true);
+  };
+
+  const startUpgradeCheckout = async (productType: "pro" | "credit_topup") => {
+    if (!profile.id) {
+      setToastMsg("Save your profile first so billing can link to your account.");
+      setShowToast(true);
+      return;
+    }
+
+    setPlanCheckoutLoading(productType);
+
+    try {
+      const response = await fetch("/api/paymongo/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productType,
+          userId: profile.id,
+          name: profile.name,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload.checkoutUrl) {
+        throw new Error(payload.error || "Unable to start checkout.");
+      }
+
+      window.location.href = payload.checkoutUrl;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to start checkout.";
+      setToastMsg(message);
+      setShowToast(true);
+    } finally {
+      setPlanCheckoutLoading(null);
+    }
   };
 
   useEffect(() => {
@@ -2278,6 +2356,7 @@ export default function Home() {
                 >
                   <Workspace 
                     projects={profile.activeProjects || []} 
+                    currentUserId={user?.id || profile.id}
                     onUpdateProject={handleUpdateProject}
                     onCreateProject={handleCreateProject}
                     workflows={profile.workflows || []}
@@ -2320,6 +2399,7 @@ export default function Home() {
                   <div className="lg:col-span-8 space-y-6">
                     <ProfileForm 
                       initialProfile={profile} 
+                      onOpenUpgradePlans={() => setShowUpgradePlans(true)}
                       onUpdate={handleProfileSave} 
                       onAddPortfolio={addPortfolioItem}
                       onUpdatePortfolio={updatePortfolioItem}
@@ -2467,6 +2547,12 @@ export default function Home() {
                             <p className="text-[10px] text-slate-400 font-medium italic">
                               Professional URL: share this with employers to showcase your work for free.
                             </p>
+                            <button
+                              onClick={() => setShowUpgradePlans(true)}
+                              className="w-full rounded-xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-400"
+                            >
+                              Upgrade Plans
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -2836,6 +2922,86 @@ export default function Home() {
           <AdminDashboard />
         )}
       </main>
+
+      <AnimatePresence>
+        {showUpgradePlans && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowUpgradePlans(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.96 }}
+              className="relative w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            >
+              <div className="mb-6 flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Upgrade Plans</p>
+                  <h3 className="mt-1 text-2xl font-black text-slate-900">Free vs Premium</h3>
+                  <p className="mt-1 text-sm text-slate-500">Pili ka ng plan, then continue to PayMongo checkout.</p>
+                </div>
+                <button
+                  onClick={() => setShowUpgradePlans(false)}
+                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Free Profile</p>
+                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                    <li>Basic portfolio</li>
+                    <li>Skills and experience</li>
+                    <li>Standard profile URL</li>
+                    <li>No premium credits</li>
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Premium Profile</p>
+                  <ul className="mt-3 space-y-2 text-sm text-slate-800">
+                    <li>Verified badge + stronger profile trust</li>
+                    <li>Advanced portfolio sections</li>
+                    <li>Monthly premium credits</li>
+                    <li>Top-up support via PayMongo</li>
+                  </ul>
+                  <button
+                    onClick={() => void startUpgradeCheckout("pro")}
+                    disabled={planCheckoutLoading === "pro"}
+                    className="mt-5 w-full rounded-xl bg-amber-500 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-slate-950 hover:bg-amber-400 disabled:opacity-60"
+                  >
+                    {planCheckoutLoading === "pro" ? "Redirecting..." : "Upgrade to Premium"}
+                  </button>
+                </div>
+              </div>
+
+              {profile.premiumProfile?.tier === "pro" && (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Need more credits?</p>
+                      <p className="text-sm font-semibold text-emerald-900">Top-up package: +10 Premium Credits</p>
+                    </div>
+                    <button
+                      onClick={() => void startUpgradeCheckout("credit_topup")}
+                      disabled={planCheckoutLoading === "credit_topup"}
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      {planCheckoutLoading === "credit_topup" ? "Redirecting..." : "Top-up Credits"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Freelancer Profile Modal */}
       <AnimatePresence>

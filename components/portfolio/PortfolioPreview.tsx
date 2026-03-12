@@ -18,7 +18,8 @@ import {
   Award,
   ShieldCheck,
   PlayCircle,
-  BarChart3
+  BarChart3,
+  Eye
 } from 'lucide-react';
 import { FreelancerProfile, PortfolioProject } from '@/types/portfolio';
 import Image from 'next/image';
@@ -78,7 +79,17 @@ const ProjectCard = ({ project, isPro = false }: { project: PortfolioProject; is
   </div>
 );
 
-const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro?: boolean }) => (
+const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro?: boolean }) => {
+  const skillItems =
+    profile.portfolio?.skills && profile.portfolio.skills.length > 0
+      ? profile.portfolio.skills.map((skill) => skill.name)
+      : (profile.bio || "")
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean);
+  const socialLinks = profile.portfolio?.links || [];
+
+  return (
   <div className={`space-y-12 ${isPro ? "rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-sm" : ""}`}>
     <div className="space-y-6">
       <div className={`relative w-24 h-24 overflow-hidden rounded-full ${isPro ? "border-4 border-white/20 shadow-2xl shadow-amber-400/20" : "border border-gray-100"}`}>
@@ -130,31 +141,33 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
     <div className="space-y-6">
       <h4 className={`text-[11px] uppercase tracking-[0.2em] font-semibold ${isPro ? "text-slate-400" : "text-gray-400"}`}>Skills</h4>
       <div className="flex flex-wrap gap-2">
-        {profile.portfolio?.skills.map((skill) => (
-          <span key={skill.id} className={`text-xs px-3 py-1 ${isPro ? "bg-white/10 text-white border border-white/10 rounded-full" : "bg-gray-50 text-gray-600 border border-gray-100"}`}>
-            {skill.name}
-          </span>
-        )) || profile.bio?.split(',').map(s => (
-          <span key={s} className={`text-xs px-3 py-1 ${isPro ? "bg-white/10 text-white border border-white/10 rounded-full" : "bg-gray-50 text-gray-600 border border-gray-100"}`}>
-            {s.trim()}
-          </span>
-        ))}
+        {skillItems.length > 0 ? (
+          skillItems.map((skill) => (
+            <span key={skill} className={`text-xs px-3 py-1 ${isPro ? "bg-white/10 text-white border border-white/10 rounded-full" : "bg-gray-50 text-gray-600 border border-gray-100"}`}>
+              {skill}
+            </span>
+          ))
+        ) : (
+          <p className={`text-sm ${isPro ? "text-slate-400" : "text-gray-400"}`}>Skills will be added soon.</p>
+        )}
       </div>
     </div>
 
     <div className="space-y-6">
       <h4 className={`text-[11px] uppercase tracking-[0.2em] font-semibold ${isPro ? "text-slate-400" : "text-gray-400"}`}>Social</h4>
       <div className="flex gap-4">
-        {profile.portfolio?.links.map((link) => {
-          const Icon = link.label.toLowerCase() === 'github' ? Github : 
-                       link.label.toLowerCase() === 'linkedin' ? Linkedin : 
-                       link.label.toLowerCase() === 'mail' ? Mail : ExternalLink;
-          return (
-            <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={link.label} className={isPro ? "text-slate-400 hover:text-white transition-colors" : "text-gray-400 hover:text-black transition-colors"}>
-              <Icon size={20} strokeWidth={1.5} />
-            </a>
-          );
-        }) || (
+        {socialLinks.length > 0 ? (
+          socialLinks.map((link) => {
+            const Icon = link.label.toLowerCase() === 'github' ? Github : 
+                         link.label.toLowerCase() === 'linkedin' ? Linkedin : 
+                         link.label.toLowerCase() === 'mail' ? Mail : ExternalLink;
+            return (
+              <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={link.label} className={isPro ? "text-slate-400 hover:text-white transition-colors" : "text-gray-400 hover:text-black transition-colors"}>
+                <Icon size={20} strokeWidth={1.5} />
+              </a>
+            );
+          })
+        ) : (
           <>
             <Github className="text-gray-400 hover:text-black cursor-pointer transition-colors" size={20} strokeWidth={1.5} />
             <Linkedin className="text-gray-400 hover:text-black cursor-pointer transition-colors" size={20} strokeWidth={1.5} />
@@ -164,7 +177,8 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default function PortfolioPreview({ profile, isPublic = true }: PortfolioPreviewProps) {
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
@@ -177,11 +191,8 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   });
 
   const handleHireMe = () => {
-    if (isPublic) {
-      setIsInquiryModalOpen(true);
-    } else {
-      alert('This is a preview mode.');
-    }
+    if (!isPublic) return;
+    setIsInquiryModalOpen(true);
   };
 
   const handleInquirySubmit = async (e: React.FormEvent) => {
@@ -220,6 +231,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
 
   const analytics = profile.premiumProfile?.analytics;
   const isPro = profile.premiumProfile?.tier === 'pro';
+  const firstName = (profile.name || 'Freelancer').split(' ')[0];
   const pageShellClass = isPro
     ? "min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#111827_35%,#0b1220_100%)] text-white font-sans selection:bg-amber-300 selection:text-slate-950"
     : "min-h-screen bg-white text-[#1a1a1a] font-sans selection:bg-black selection:text-white";
@@ -239,6 +251,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           </div>
           <div className="hidden md:flex items-center gap-8">
             <span className={`text-xs font-bold uppercase tracking-widest ${isPro ? "text-slate-400" : "text-gray-400"}`}>Professional Network</span>
+            <div className={`flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${isPro ? "border-white/15 bg-white/10 text-slate-200" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
+              <Eye size={12} />
+              Public Portfolio
+            </div>
             <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-tighter ${isPro ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-gray-50 border-gray-100 text-gray-700"}`}>
               {isPro ? <Star size={12} className="text-amber-500" /> : <ShieldCheck size={12} className="text-blue-500" />}
               {isPro ? 'Freelancer Pro' : 'Verified Profile'}
@@ -246,9 +262,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           </div>
           <button 
             onClick={handleHireMe}
+            disabled={!isPublic}
             className={`px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 ${isPro ? "bg-amber-300 text-slate-950 hover:bg-amber-200" : "bg-black text-white hover:bg-gray-800"}`}
           >
-            Hire {profile.name.split(' ')[0]}
+            Send Inquiry
           </button>
         </div>
       </nav>
@@ -301,7 +318,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 <div className="mt-8 grid gap-4 md:grid-cols-3">
                   <div className="rounded-2xl bg-white p-5 text-slate-900">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Custom Domain</p>
-                    <p className="mt-3 text-lg font-black">{profile.premiumProfile?.customDomain || 'roi.tarawork.ph'}</p>
+                    <p className="mt-3 text-lg font-black">{profile.premiumProfile?.customDomain || 'https://www.tarawork.online/@roi'}</p>
                   </div>
                   <div className="rounded-2xl bg-white p-5 text-slate-900">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Featured Placement</p>
@@ -412,9 +429,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       <div className="fixed bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none">
         <button 
           onClick={handleHireMe}
-          className={`pointer-events-auto flex items-center gap-3 px-8 py-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 group ${isPro ? "bg-amber-300 text-slate-950 hover:bg-amber-200" : "bg-black text-white hover:bg-gray-900"}`}
+          disabled={!isPublic}
+          className={`pointer-events-auto flex items-center gap-3 px-8 py-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 group disabled:cursor-not-allowed disabled:opacity-60 ${isPro ? "bg-amber-300 text-slate-950 hover:bg-amber-200" : "bg-black text-white hover:bg-gray-900"}`}
         >
-          <span className="font-semibold tracking-wide">Hire {profile.name.split(' ')[0]}</span>
+          <span className="font-semibold tracking-wide">Message {firstName}</span>
           <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
         </button>
       </div>
@@ -458,9 +476,9 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
               ) : (
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-2xl font-semibold text-gray-900">Work with {profile.name.split(' ')[0]}</h3>
+                    <h3 className="text-2xl font-semibold text-gray-900">Work with {firstName}</h3>
                     <p className="text-gray-500 mt-2 text-sm">
-                      Fill out this quick form and {profile.name.split(' ')[0]} will get back to you as soon as possible.
+                      This is a public, view-only portfolio. Send your project brief and {firstName} can reply to your email.
                     </p>
                   </div>
 

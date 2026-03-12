@@ -29,9 +29,10 @@ PAYMONGO_PAYMENT_METHODS=gcash,card,grab_pay
 2. Run `supabase_schema.sql`.
 3. (Optional) Run `seed_test_data.sql` for sample data.
 4. Verify realtime includes: `applications`, `jobs`, `messages`.
-5. If your DB is already existing, run `docs/paymongo_webhook_upgrade.sql`.
-6. Configure PayMongo webhook URL to `https://your-domain.com/api/paymongo/webhook`.
-7. Enable webhook events:
+5. If your DB is already existing, run `docs/paymongo_webhook_upgrade.sql` (includes `credit_topup` product support).
+6. Run `docs/premium_credits_upgrade.sql` to enable premium credit wallet + ledger RPCs.
+7. Configure PayMongo webhook URL to `https://your-domain.com/api/paymongo/webhook`.
+8. Enable webhook events:
    - `checkout_session.payment.paid`
    - `checkout_session.payment.failed`
    - `subscription.invoice.paid`

@@ -74,7 +74,9 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
 }
 
 async function getPortfolio(username: string): Promise<FreelancerProfile | null> {
-  console.log(`[Portfolio] Starting lookup for: "${username}"`);
+  const normalizedUsername = username.startsWith("@") ? username.slice(1) : username;
+  if (!normalizedUsername) return null;
+  console.log(`[Portfolio] Starting lookup for: "${username}" (normalized: "${normalizedUsername}")`);
   
   // Debug environment (safely)
   const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -82,7 +84,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
   console.log(`[Portfolio] Env status: URL=${hasUrl}, ServiceKey=${hasKey}`);
 
   // Demo data for testing and local development
-  if (username === 'johndoe' || username === 'demo') {
+  if (normalizedUsername === 'johndoe' || normalizedUsername === 'demo') {
     return {
       id: 'demo-uuid',
       name: 'John Doe',
@@ -94,7 +96,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
         profile_id: 'demo-uuid',
         about_me: 'I am a passionate developer from Seoul with 5 years of experience in Next.js and Tailwind CSS. I believe in the power of minimalism and efficiency in software design.',
         tagline: 'Minimalist Engineering for Modern Web',
-        custom_domain: 'johndoe.tarawork.ph',
+        custom_domain: 'https://www.tarawork.online/@johndoe',
         projects: [
           {
             id: 'p1',
@@ -131,7 +133,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
             advancedPortfolio: true,
             featuredPlacement: true,
             analyticsEnabled: true,
-            customDomain: 'johndoe.tarawork.ph',
+            customDomain: 'https://www.tarawork.online/@johndoe',
             videoIntroUrl: 'https://www.loom.com/share/portfolio-demo',
             introHeadline: 'Helping startups ship elegant, performant products.',
             analytics: {
@@ -147,7 +149,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
         advancedPortfolio: true,
         featuredPlacement: true,
         analyticsEnabled: true,
-        customDomain: 'johndoe.tarawork.ph',
+        customDomain: 'https://www.tarawork.online/@johndoe',
         videoIntroUrl: 'https://www.loom.com/share/portfolio-demo',
         introHeadline: 'Helping startups ship elegant, performant products.',
         analytics: {
@@ -159,27 +161,27 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
   }
 
   // List of reserved routes that shouldn't be treated as usernames
-  const reservedRoutes = ['auth', 'api', 'admin', 'messages', 'portfolio', 'dashboard', 'settings', 'projects'];
-  if (reservedRoutes.includes(username)) {
+  const reservedRoutes = ['auth', 'api', 'admin', 'messages', 'portfolio', 'dashboard', 'settings', 'projects', 'p'];
+  if (reservedRoutes.includes(normalizedUsername)) {
     return null;
   }
 
   try {
     // 1. Try by username (case-insensitive)
-    console.log(`[Portfolio] Step 1: Searching for username: "${username}"`);
+    console.log(`[Portfolio] Step 1: Searching for username: "${normalizedUsername}"`);
     const query1 = supabaseAdmin
       .from('profiles')
       .select(`
         id, name, role, avatar_url, bio, hourlyRate, username,
         portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
-      .filter('username', 'ilike', username)
+      .filter('username', 'ilike', normalizedUsername)
       .maybeSingle();
 
-    const profileByUsername = await fetchProfileWithFallback(query1, username);
+    const profileByUsername = await fetchProfileWithFallback(query1, normalizedUsername);
 
     if (profileByUsername) {
-      console.log(`[Portfolio] SUCCESS: Found profile by username match: ${username}`);
+      console.log(`[Portfolio] SUCCESS: Found profile by username match: ${normalizedUsername}`);
       return mapProfile(profileByUsername);
     }
 
@@ -191,26 +193,26 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     if (countError) console.error('[Portfolio] Count error:', countError.message);
 
     // 2. Try by full UUID
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(username);
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalizedUsername);
     if (isUUID) {
-      console.log(`[Portfolio] Step 2: Attempting UUID lookup for: ${username}`);
+      console.log(`[Portfolio] Step 2: Attempting UUID lookup for: ${normalizedUsername}`);
       const query2 = supabaseAdmin
         .from('profiles')
         .select(`
           id, name, role, avatar_url, bio, hourlyRate, username,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
-        .eq('id', username)
+        .eq('id', normalizedUsername)
         .maybeSingle();
       
-      const profileById = await fetchProfileWithFallback(query2, username);
+      const profileById = await fetchProfileWithFallback(query2, normalizedUsername);
       if (profileById) return mapProfile(profileById);
     }
 
     // 3. Robust Match (Fallback) - Aggressive fuzzy search
-    console.log(`[Portfolio] Step 3: Aggressive fuzzy match for: "${username}"`);
-    const alphaParts = username.match(/[a-z]{3,}/gi) || [];
-    const searchWord = alphaParts[0] || username || '';
+    console.log(`[Portfolio] Step 3: Aggressive fuzzy match for: "${normalizedUsername}"`);
+    const alphaParts = normalizedUsername.match(/[a-z]{3,}/gi) || [];
+    const searchWord = alphaParts[0] || normalizedUsername || '';
     const flexibleSearch = searchWord.length > 5 ? searchWord.substring(0, 5) : searchWord;
     
     const { data: candidates, error: candidateError } = await supabaseAdmin
@@ -229,7 +231,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       for (let p of candidates) {
         const cleanName = p.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
         const cleanDbUsername = p.username?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
-        const cleanRequested = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanRequested = normalizedUsername.toLowerCase().replace(/[^a-z0-9]/g, '');
         
         console.log(`[Portfolio] Comparing: req="${cleanRequested}" with db_name="${cleanName}" and db_user="${cleanDbUsername}"`);
 
@@ -272,18 +274,18 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     }
 
     // 4. Try by partial ID match (8 chars)
-    if (username.length >= 8) {
-      console.log(`[Portfolio] Step 4: Attempting prefix lookup for: "${username}"`);
+    if (normalizedUsername.length >= 8) {
+      console.log(`[Portfolio] Step 4: Attempting prefix lookup for: "${normalizedUsername}"`);
       const query4 = supabaseAdmin
         .from('profiles')
         .select(`
           id, name, role, avatar_url, bio, hourlyRate, username,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
-        .filter('id', 'ilike', `${username}%`)
+        .filter('id', 'ilike', `${normalizedUsername}%`)
         .limit(1);
 
-      const profileByPrefix = await fetchProfileWithFallback(query4, username);
+      const profileByPrefix = await fetchProfileWithFallback(query4, normalizedUsername);
       if (profileByPrefix) return mapProfile(profileByPrefix);
     }
 
@@ -297,6 +299,38 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
 // Helper to map DB profile to FreelancerProfile interface
 function mapProfile(profile: any): FreelancerProfile {
   const portfolioData = profile.portfolios?.[0];
+  const premiumProfile = portfolioData?.theme_settings?.premiumProfile;
+  const proExpiryRaw =
+    typeof premiumProfile?.billing?.proExpiresAt === "string"
+      ? premiumProfile.billing.proExpiresAt
+      : "";
+  const proExpiryDate = proExpiryRaw ? new Date(proExpiryRaw) : null;
+  const hasValidProExpiry = !!proExpiryDate && !Number.isNaN(proExpiryDate.getTime());
+  const isExpiredPro =
+    premiumProfile?.tier === "pro" &&
+    hasValidProExpiry &&
+    !!proExpiryDate &&
+    proExpiryDate.getTime() <= Date.now();
+  const normalizedPremiumProfile = premiumProfile
+    ? {
+        ...premiumProfile,
+        tier: isExpiredPro ? "free" : premiumProfile.tier,
+        verifiedBadge: isExpiredPro ? !!premiumProfile.verifiedProgram?.enrolled : premiumProfile.verifiedBadge,
+        advancedPortfolio: isExpiredPro ? false : premiumProfile.advancedPortfolio,
+        featuredPlacement: isExpiredPro ? false : premiumProfile.featuredPlacement,
+        analyticsEnabled: isExpiredPro ? false : premiumProfile.analyticsEnabled,
+        customDomain: isExpiredPro ? "" : premiumProfile.customDomain,
+        videoIntroUrl: isExpiredPro ? "" : premiumProfile.videoIntroUrl,
+        billing: premiumProfile.billing
+          ? {
+              ...premiumProfile.billing,
+              proStatus: isExpiredPro ? "inactive" : premiumProfile.billing.proStatus,
+              proLocked: isExpiredPro ? false : premiumProfile.billing.proLocked,
+            }
+          : undefined,
+      }
+    : undefined;
+
   return {
     id: profile.id,
     name: profile.name || 'Anonymous',
@@ -315,7 +349,7 @@ function mapProfile(profile: any): FreelancerProfile {
       skills: portfolioData.portfolio_skills || [],
       links: portfolioData.portfolio_links || [],
     } : undefined,
-    premiumProfile: portfolioData?.theme_settings?.premiumProfile
+    premiumProfile: normalizedPremiumProfile
   };
 }
 

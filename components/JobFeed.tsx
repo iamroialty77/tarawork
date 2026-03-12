@@ -28,6 +28,8 @@ const smartMatchErrorMessage = (errorCode?: string, fallbackError?: string) => {
       return "Gemini is temporarily unavailable. Using local smart matching.";
     case "network_error":
       return "Network issue connecting to Gemini. Using local smart matching.";
+    case "missing_user_id":
+      return "User session missing. Please refresh and sign in again.";
     default:
       return fallbackError || "Gemini unavailable, using local smart matching.";
   }
@@ -126,6 +128,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             profile: {
+              id: profile.id,
               category: profile.category,
               skills: profile.skills,
               wellness: profile.wellness
