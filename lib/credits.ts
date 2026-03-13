@@ -76,12 +76,11 @@ export async function isUserPremiumActive(userId: string): Promise<boolean> {
   const premiumProfile = toObject(themeSettings.premiumProfile);
   const billing = toObject(premiumProfile.billing);
   const tier = premiumProfile.tier;
-  const proStatus = billing.proStatus;
   const expiresAt = typeof billing.proExpiresAt === "string" ? new Date(billing.proExpiresAt) : null;
   const hasValidExpiry = !!expiresAt && !Number.isNaN(expiresAt.getTime());
   const notExpired = !hasValidExpiry || !!expiresAt && expiresAt.getTime() > Date.now();
 
-  return tier === "pro" && (proStatus === "active" || proStatus === undefined) && notExpired;
+  return tier === "pro" && notExpired;
 }
 
 export async function consumePremiumCredits(params: {

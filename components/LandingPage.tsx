@@ -414,10 +414,7 @@ export default function LandingPage() {
             </div>
 
             <div className="rounded-3xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 via-white/10 to-white/5 p-8 shadow-2xl shadow-amber-900/20">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-300">Pro</p>
-                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-slate-950">P199-P399/mo</span>
-              </div>
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-300">Pro</p>
               <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-white">
                 <div>Verified badge</div>
                 <div>Custom domain</div>

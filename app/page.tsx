@@ -1754,12 +1754,28 @@ export default function Home() {
 
             <div className="flex items-center gap-4">
               {profile.role === "freelancer" && (
-                <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 sm:px-3.5 py-1.5 shadow-sm">
-                  <Coins className="h-4 w-4 text-amber-600" />
-                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Credit Wallet</span>
-                  <span className="rounded-lg bg-white px-2 py-0.5 text-xs font-black text-slate-900 border border-amber-100">
-                    {headerCreditsLoading ? "..." : headerCreditBalance}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 sm:px-3.5 py-1.5 shadow-sm">
+                    <Coins className="h-4 w-4 text-amber-600" />
+                    <span className="hidden sm:inline text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Credit Wallet</span>
+                    <span className="rounded-lg bg-white px-2 py-0.5 text-xs font-black text-slate-900 border border-amber-100">
+                      {headerCreditsLoading ? "..." : headerCreditBalance}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (profile.premiumProfile?.tier === "pro") {
+                        void startUpgradeCheckout("credit_topup");
+                        return;
+                      }
+                      setShowUpgradePlans(true);
+                    }}
+                    disabled={planCheckoutLoading === "credit_topup"}
+                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700 transition-all hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {planCheckoutLoading === "credit_topup" ? "Loading..." : "Top Up"}
+                  </button>
                 </div>
               )}
               <button 

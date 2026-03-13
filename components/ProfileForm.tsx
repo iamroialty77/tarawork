@@ -320,9 +320,6 @@ export default function ProfileForm({
                     </span>
                   )}
                 </div>
-                <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">
-                  Mas malinis na editor na hiwalay ang bawat group ng details para hindi crowded.
-                </p>
               </div>
             </div>
           </div>
@@ -574,96 +571,52 @@ export default function ProfileForm({
         )}
 
         {activeTab === "premium" && isFreelancer && (
-          <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${isPro ? "border-slate-900 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-2xl shadow-slate-900/20" : "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-lg shadow-amber-100/50"}`}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "border border-white/10 bg-white/10 text-amber-300" : "border border-amber-200 bg-white text-amber-700"}`}>
+          <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${isPro ? "border-slate-900 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-2xl shadow-slate-900/20" : "border-slate-200 bg-white shadow-sm"}`}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "border border-white/10 bg-white/10 text-amber-300" : "border border-slate-200 bg-slate-50 text-slate-600"}`}>
                   <Star className="h-3.5 w-3.5" />
-                  {isPro ? "Analytic Professional Board" : "Freelancer Pro"}
+                  {isPro ? "Analytic Professional Board" : "Analytics Board"}
                 </div>
-                <h3 className={`text-xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>Profile upgrade</h3>
-              </div>
-              <div className={`rounded-2xl px-4 py-3 ${isPro ? "bg-white/10 border border-white/10" : "bg-slate-950 text-white"}`}>
-                <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "text-slate-300" : "text-amber-300"}`}>Suggested Price</p>
-                <p className="mt-1 text-lg font-black">P199-P399/mo</p>
-              </div>
-            </div>
-
-            <div className={`mt-6 grid gap-4 ${isPro ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
-              {!isPro && (
-                <div className={`rounded-2xl border p-4 ${premiumProfile.tier === "free" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em]">Free Profile</p>
-                  <ul className="mt-3 space-y-2 text-sm">
-                    <li>Basic portfolio</li>
-                    <li>Skills and experience</li>
-                    <li>Contact info</li>
-                    <li>Limited media uploads</li>
-                  </ul>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!proLockedByBilling) {
-                        handlePremiumChange({ tier: "free" });
-                      }
-                    }}
-                    disabled={proLockedByBilling}
-                    className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.tier === "free" ? "bg-white text-slate-900" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
-                  >
-                    {proLockedByBilling ? "Managed by Billing" : "Current: Free"}
-                  </button>
-                </div>
-              )}
-
-              <div className={`rounded-2xl border p-4 ${premiumProfile.tier === "pro" ? "border-amber-300 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-xl shadow-amber-200/40" : "border-slate-200 bg-white"}`}>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Premium Profile</p>
-                <ul className="mt-3 space-y-2 text-sm">
-                  <li>Verified badge</li>
-                  <li>Custom domain</li>
-                  <li>Advanced portfolio sections</li>
-                  <li>Featured placement</li>
-                  <li>Analytics and video intro</li>
-                </ul>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenUpgradePlans?.();
-                  }}
-                  className={`mt-4 w-full rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all ${premiumProfile.tier === "pro" ? "bg-white text-slate-950" : "bg-amber-500 text-slate-950 hover:bg-amber-400"}`}
-                >
-                  {premiumProfile.tier === "pro" ? "Current: Pro" : "Open Upgrade Plans"}
-                </button>
+                <h3 className={`mt-3 text-xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>Performance Analytics</h3>
                 {isPro && premiumExpiryLabel && (
-                  <p className="mt-3 text-xs font-semibold text-amber-200">
+                  <p className={`${isPro ? "text-slate-300" : "text-slate-500"} mt-1 text-sm`}>
                     Active until {premiumExpiryLabel}{premiumDaysLeft !== null ? ` (${premiumDaysLeft} day${premiumDaysLeft === 1 ? "" : "s"} left)` : ""}
                   </p>
                 )}
               </div>
+              {!isPro && (
+                <button
+                  type="button"
+                  onClick={() => onOpenUpgradePlans?.()}
+                  className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-400"
+                >
+                  Open Upgrade Plans
+                </button>
+              )}
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-white p-4 text-slate-900">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Views</p>
+                <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.profileViews || 0}</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4 text-slate-900">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clicks</p>
+                <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.clientClicks || 0}</p>
+              </div>
+              <div className={isPro ? "rounded-2xl border border-white/10 bg-white/5 p-4 text-white" : "rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700"}>
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isPro ? "text-slate-300" : "text-slate-500"}`}>Domain</p>
+                <p className="mt-2 text-sm font-bold truncate">{isPro ? autoPremiumDomain : "Upgrade to unlock custom domain"}</p>
+              </div>
             </div>
 
             {isPro && (
-              <div className="mt-6 grid grid-cols-3 gap-3">
-                <div className="rounded-2xl bg-white p-4 text-slate-900">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Views</p>
-                  <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.profileViews || 0}</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4 text-slate-900">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clicks</p>
-                  <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.clientClicks || 0}</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Domain</p>
-                  <p className="mt-2 text-sm font-bold truncate">{autoPremiumDomain}</p>
-                </div>
-              </div>
-            )}
-
-            {premiumProfile.tier === "pro" && (
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className={`mb-1 block text-xs font-black uppercase tracking-widest ${isPro ? "text-slate-400" : "text-slate-400"}`}>Premium URL (Auto)</label>
+                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Premium URL (Auto)</label>
                   <input
                     type="text"
-                    placeholder="https://www.tarawork.online/@roi"
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
                     value={autoPremiumDomain}
                     readOnly
@@ -689,52 +642,7 @@ export default function ProfileForm({
                     onChange={(e) => handlePremiumChange({ videoIntroUrl: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Profile Views</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
-                    value={premiumProfile.analytics?.profileViews || 0}
-                    onChange={(e) =>
-                      handlePremiumChange({
-                        analytics: {
-                          profileViews: Number(e.target.value || 0),
-                          clientClicks: premiumProfile.analytics?.clientClicks || 0,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Client Clicks</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
-                    value={premiumProfile.analytics?.clientClicks || 0}
-                    onChange={(e) =>
-                      handlePremiumChange({
-                        analytics: {
-                          profileViews: premiumProfile.analytics?.profileViews || 0,
-                          clientClicks: Number(e.target.value || 0),
-                        },
-                      })
-                    }
-                  />
-                </div>
               </div>
-            )}
-
-            {premiumProfile.tier !== "pro" && (
-              <p className="mt-6 text-sm text-slate-600">
-                Premium Profile is activated after successful PayMongo payment, valid for 30 days, then automatically returns to Free Profile on expiry.
-              </p>
-            )}
-            {proLockedByBilling && (
-              <p className="mt-3 text-sm text-amber-200">
-                Your Pro status is billing-managed. Downgrade happens automatically on expiry (30 days) or billing cancellation/failure events.
-              </p>
             )}
           </div>
         )}
