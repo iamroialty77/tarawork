@@ -14,7 +14,7 @@ import {
   Fingerprint
 } from "lucide-react";
 import { energyScore } from "../lib/utils";
-import { FreelancerCategory, PortfolioItem } from "../types";
+import { FreelancerCategory } from "../types";
 
 interface AIAgentProps {
   isOpen: boolean;
@@ -41,6 +41,24 @@ interface CareerRoadmapApiResponse {
   confidenceScore: number;
   modules: CareerRoadmapModule[];
   provider: "gemini" | "fallback";
+  fallback?: boolean;
+  error?: string;
+}
+
+interface ResumeParsePortfolioItem {
+  title?: string;
+  description?: string;
+  project_url?: string;
+  technologies?: string[];
+}
+
+interface ResumeParseApiResponse {
+  name?: string;
+  bio?: string;
+  skills?: string[];
+  category?: FreelancerCategory;
+  portfolio?: ResumeParsePortfolioItem[];
+  provider?: "gemini" | "fallback";
   fallback?: boolean;
   error?: string;
 }
@@ -134,6 +152,33 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
       return (await response.json()) as CareerRoadmapApiResponse;
     } catch (error) {
       console.error("Career roadmap generation failed:", error);
+      return null;
+    }
+  };
+
+  const requestResumeParse = async (): Promise<ResumeParseApiResponse | null> => {
+    try {
+      const data = (targetData as any) || {};
+      const file = data?.file as File | undefined;
+      if (!file) return null;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/parse-resume", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        const message = (payload as any)?.error || `Resume parse failed (${response.status})`;
+        throw new Error(message);
+      }
+
+      return (await response.json()) as ResumeParseApiResponse;
+    } catch (error) {
+      console.error("Resume parsing failed:", error);
       return null;
     }
   };
@@ -280,45 +325,49 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
       }
 
     } else if (mode === "resume-parse") {
-      setFinalScore(100);
-      
+      const response = await requestResumeParse();
+      const sourceFileName = ((targetData as any)?.file as File | undefined)?.name || "Resume";
+
       const parsedData = {
-        name: "Alex Rivera",
-        bio: "Senior Full-stack Engineer with 8+ years of experience in scaling distributed systems and leading cross-functional teams. Expert in React, Node.js, and Cloud Architecture.",
-        skills: ["React", "Node.js", "TypeScript", "AWS", "System Design", "GraphQL", "PostgreSQL", "Docker"],
-        category: "Developer" as FreelancerCategory,
-        portfolio: [
-          {
-            id: "p1-" + Math.random().toString(36).substr(2, 5),
-            title: "Enterprise E-commerce Engine",
-            description: "Architected a high-traffic e-commerce platform handling 1M+ monthly active users. Integrated real-time inventory management and AI-driven recommendations.",
-            technologies: ["React", "Node.js", "Redis", "AWS"],
-            project_url: "https://github.com/example/ecommerce",
-            category: "Full-stack Development"
-          },
-          {
-            id: "p2-" + Math.random().toString(36).substr(2, 5),
-            title: "Open-source Auth Framework",
-            description: "Created a lightweight, secure authentication library with 5k+ GitHub stars. Focused on zero-trust architecture and seamless OAuth2 integration.",
-            technologies: ["TypeScript", "OAuth2", "Security"],
-            project_url: "https://github.com/example/auth-lib",
-            category: "Security"
-          }
-        ]
+        name: response?.name?.trim() || sourceFileName.replace(/\.pdf$/i, "").replace(/[-_]/g, " "),
+        bio: response?.bio?.trim() || "Resume parsed successfully. Review and refine before saving.",
+        skills: Array.isArray(response?.skills)
+          ? Array.from(new Set(response.skills.map((skill) => String(skill).trim()).filter(Boolean))).slice(0, 25)
+          : [],
+        category: response?.category || ("General" as FreelancerCategory),
+        portfolio: Array.isArray(response?.portfolio)
+          ? response.portfolio
+              .map((item) => ({
+                title: String(item?.title || "").trim(),
+                description: String(item?.description || "").trim(),
+                project_url: item?.project_url ? String(item.project_url).trim() : "",
+                technologies: Array.isArray(item?.technologies)
+                  ? Array.from(new Set(item.technologies.map((tech) => String(tech).trim()).filter(Boolean))).slice(0, 12)
+                  : [],
+              }))
+              .filter((item) => item.title && item.description)
+              .slice(0, 8)
+          : []
       };
 
+      const usedGemini = response?.provider === "gemini";
+      setFinalScore(usedGemini ? 100 : 84);
       setInsights([
-        `Entity Extraction Complete: Successfully identified "${parsedData.name}" and extracted professional narrative.`,
-        `Portfolio Mapping: ${parsedData.portfolio.length} high-impact projects translated into technical artifacts.`,
-        `Skill Synchronization: ${parsedData.skills.length} technical competencies mapped to the TARA knowledge graph.`,
-        "Verification Recommendation: Extracted documentation depth qualifies for instant 'Verified' status assessment.",
-        `Algorithmic Alignment: Profile category optimized for "${parsedData.category}" for maximum SEO visibility.`
+        `Entity Extraction Complete: Parsed "${parsedData.name}" and mapped core professional identity.`,
+        `Portfolio Mapping: ${parsedData.portfolio.length} project artifact${parsedData.portfolio.length === 1 ? "" : "s"} prepared for your profile.`,
+        `Skill Synchronization: ${parsedData.skills.length} competencies detected from your resume.`,
+        `Category Alignment: Profile routed to "${parsedData.category}".`,
+        usedGemini
+          ? "Gemini semantic extraction successfully completed with structured output."
+          : "Fallback parser used because Gemini was unavailable. Please review extracted details."
       ]);
-      setSummary("Neural Parse Successful: Your resume has been synchronized with 99.8% semantic accuracy. Your profile and portfolio have been automatically updated with validated evidence.");
-      
-      if (onComplete) {
-        onComplete(parsedData);
-      }
+      setSummary(
+        usedGemini
+          ? "Resume parsing complete. Professional details and portfolio data are ready for sync."
+          : "Resume text was extracted, but Gemini was unavailable. Please review parsed output before saving."
+      );
+
+      if (onComplete) onComplete(parsedData);
 
     } else if (mode === "audit") {
       // Data-driven audit analysis

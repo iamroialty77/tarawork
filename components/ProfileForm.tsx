@@ -42,6 +42,7 @@ export default function ProfileForm({
   const [profile, setProfile] = useState(initialProfile);
   const [skillInput, setSkillInput] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
+  const [resumeParseFile, setResumeParseFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | "credit_topup" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -172,6 +173,7 @@ export default function ProfileForm({
     if (!file) return;
 
     // Use AI Agent for professional parsing experience
+    setResumeParseFile(file);
     setShowAIAgent(true);
     if (resumeInputRef.current) resumeInputRef.current.value = "";
   };
@@ -233,16 +235,51 @@ export default function ProfileForm({
     bio?: string; 
     skills?: string[]; 
     category?: FreelancerCategory; 
-    portfolio?: PortfolioItem[] 
+    portfolio?: Array<Partial<PortfolioItem>>
   }) => {
-    const existingPortfolioIds = new Set((profile.portfolio || []).map(item => item.id));
-    const newPortfolioItems = (data.portfolio || []).filter((item: PortfolioItem) => !existingPortfolioIds.has(item.id));
+    const existingPortfolioKeys = new Set(
+      (profile.portfolio || []).map(
+        (item) =>
+          `${(item.title || "").trim().toLowerCase()}::${(item.description || "").trim().toLowerCase()}`,
+      ),
+    );
+
+    const normalizedPortfolioItems: PortfolioItem[] = (data.portfolio || [])
+      .reduce<PortfolioItem[]>((acc, item) => {
+        const title = (item.title || "").trim();
+        const description = (item.description || "").trim();
+        if (!title || !description) return acc;
+
+        const normalizedItem: PortfolioItem = {
+          id: item.id && String(item.id).trim() ? String(item.id).trim() : `p-${Math.random().toString(36).slice(2, 10)}`,
+          profile_id: profile.id || item.profile_id || "",
+          title,
+          description,
+          technologies: Array.isArray(item.technologies)
+            ? Array.from(new Set(item.technologies.map((tech) => String(tech).trim()).filter(Boolean))).slice(0, 12)
+            : [],
+          created_at: item.created_at && String(item.created_at).trim()
+            ? String(item.created_at)
+            : new Date().toISOString(),
+        };
+        const projectUrl = (item.project_url || "").trim();
+        if (projectUrl) {
+          normalizedItem.project_url = projectUrl;
+        }
+        acc.push(normalizedItem);
+        return acc;
+      }, []);
+
+    const newPortfolioItems = normalizedPortfolioItems.filter((item) => {
+      const dedupeKey = `${item.title.trim().toLowerCase()}::${item.description.trim().toLowerCase()}`;
+      return !existingPortfolioKeys.has(dedupeKey);
+    });
 
     const updatedProfile = {
       ...profile,
       name: data.name || profile.name,
       bio: data.bio || profile.bio,
-      skills: Array.from(new Set([...profile.skills, ...(data.skills || [])])),
+      skills: Array.from(new Set([...profile.skills, ...(data.skills || []).map((skill) => String(skill).trim()).filter(Boolean)])),
       category: data.category || profile.category,
       portfolio: [...(profile.portfolio || []), ...newPortfolioItems]
     };
@@ -255,6 +292,7 @@ export default function ProfileForm({
       newPortfolioItems.forEach((item: PortfolioItem) => onAddPortfolio(item));
     }
     
+    setResumeParseFile(null);
     setShowAIAgent(false);
   };
 
@@ -737,9 +775,12 @@ export default function ProfileForm({
 
       <AIAgent 
         isOpen={showAIAgent}
-        onClose={() => setShowAIAgent(false)}
+        onClose={() => {
+          setShowAIAgent(false);
+          setResumeParseFile(null);
+        }}
         mode="resume-parse"
-        targetData={{}}
+        targetData={{ file: resumeParseFile }}
         onComplete={handleAIParseComplete}
       />
     </div>
