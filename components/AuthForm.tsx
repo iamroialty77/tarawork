@@ -73,37 +73,14 @@ export default function AuthForm() {
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`;
       const oauthOptions: {
         redirectTo: string;
-        queryParams?: Record<string, string>;
       } = {
         redirectTo,
       };
-
-      // Try one-click browser account continuation for Google first.
-      if (provider === "google") {
-        oauthOptions.queryParams = { prompt: "none" };
-      }
 
       let { error } = await supabase.auth.signInWithOAuth({
         provider: effectiveProvider as any,
         options: oauthOptions,
       });
-
-      if (
-        provider === "google" &&
-        error &&
-        (error.message?.includes("login_required") ||
-          error.message?.includes("interaction_required"))
-      ) {
-        // Fallback to standard account chooser when silent auth is not possible.
-        const retry = await supabase.auth.signInWithOAuth({
-          provider: effectiveProvider as any,
-          options: {
-            redirectTo,
-            queryParams: { prompt: "select_account" },
-          },
-        });
-        error = retry.error;
-      }
 
       if (error) throw error;
     } catch (err: any) {
