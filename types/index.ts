@@ -195,6 +195,11 @@ export interface Project {
 export interface PremiumProfileAnalytics {
   profileViews: number;
   clientClicks: number;
+  inviteResponseHours?: number;
+  inviteRate?: number;
+  completionRate?: number;
+  onTimeDeliveryRate?: number;
+  repeatClientRate?: number;
 }
 
 export interface PremiumProfile {
@@ -225,6 +230,14 @@ export interface PremiumProfile {
   };
 }
 
+export interface ExperienceItem {
+  id: string;
+  company: string;
+  role: string;
+  duration: string;
+  description: string;
+}
+
 export interface UserProfile {
   id?: string;
   username?: string;
@@ -244,6 +257,7 @@ export interface UserProfile {
   aiInsights?: AIAnalysis;
   ranking?: number; // Leaderboard position
   portfolio?: PortfolioItem[];
+  experience?: ExperienceItem[];
   premiumProfile?: PremiumProfile;
   creditBalance?: number;
   wellness?: UserWellness;

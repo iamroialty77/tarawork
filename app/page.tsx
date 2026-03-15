@@ -79,6 +79,8 @@ export default function Home() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [freelancerSearchTerm, setFreelancerSearchTerm] = useState("");
   const [debouncedFreelancerSearchTerm, setDebouncedFreelancerSearchTerm] = useState("");
+  const [talentsFilter, setTalentsFilter] = useState<"all" | "premium" | "verified">("all");
+  const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
@@ -120,6 +122,7 @@ export default function Home() {
     ranking: 15,
     hourlyRate: "$0",
     bio: "",
+    experience: [],
     activeProjects: [],
     premiumProfile: {
       tier: "free",
@@ -143,6 +146,11 @@ export default function Home() {
   const [planCheckoutLoading, setPlanCheckoutLoading] = useState<"pro" | "credit_topup" | null>(null);
   const [headerCreditBalance, setHeaderCreditBalance] = useState(0);
   const [headerCreditsLoading, setHeaderCreditsLoading] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const isEmployerView = view === "client" || profile.role === "employer";
 
   useEffect(() => {
     // Handle email confirmation success message
@@ -258,6 +266,12 @@ export default function Home() {
         const normalizedData: UserProfile = {
           ...data,
           skills: Array.isArray(data.skills) ? data.skills : [],
+          experience:
+            Array.isArray(data.experience)
+              ? data.experience
+              : Array.isArray(data.aiInsights?.resumeExperience)
+                ? data.aiInsights.resumeExperience
+                : [],
           verifiedSkills: Array.isArray(data.verifiedSkills) ? data.verifiedSkills : [],
           softSkills: Array.isArray(data.softSkills) ? data.softSkills : (prevProfile ? prevProfile.softSkills : []),
           activeProjects: Array.isArray(data.activeProjects) ? data.activeProjects : [],
@@ -412,6 +426,7 @@ export default function Home() {
           role: role as any,
           category: "Developer" as const,
           skills: [],
+          experience: [],
           hourlyRate: "$0",
           bio: "",
           premiumProfile: {
@@ -430,7 +445,9 @@ export default function Home() {
             },
           },
         };
-        const { error: insertError } = await supabase.from('profiles').insert([initialData]);
+        const initialInsertData = { ...initialData } as Record<string, unknown>;
+        delete initialInsertData.experience;
+        const { error: insertError } = await supabase.from('profiles').insert([initialInsertData]);
         if (insertError) {
            if (insertError.code === 'PGRST205' || insertError.message.includes('relation')) {
              setDbError(true);
@@ -475,6 +492,13 @@ export default function Home() {
           profileToSave[key] = (nextProfile as any)[key];
         }
       });
+
+      if (Array.isArray(nextProfile.experience)) {
+        profileToSave.aiInsights = {
+          ...(profileToSave.aiInsights || {}),
+          resumeExperience: nextProfile.experience,
+        };
+      }
       
       // Always add updated_at
       profileToSave.updated_at = new Date().toISOString();
@@ -1001,6 +1025,39 @@ export default function Home() {
     }
   };
 
+  const handlePasswordUpdate = async () => {
+    if (newPassword.length < 8) {
+      setToastMsg("Password must be at least 8 characters.");
+      setShowToast(true);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setToastMsg("Passwords do not match.");
+      setShowToast(true);
+      return;
+    }
+
+    setSettingsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setToastMsg("Password updated successfully.");
+      setShowToast(true);
+      setShowSettingsModal(false);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update password.";
+      setToastMsg(message);
+      setShowToast(true);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!pendingApplyJobId || jobs.length === 0) return;
 
@@ -1346,13 +1403,86 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [freelancerSearchTerm]);
 
-  const filteredFreelancers = useMemo(() => {
+  const parseHourlyRate = (hourlyRate: string): number => {
+    const parsedRate = Number.parseFloat(hourlyRate.replace(/[^0-9.]/g, ""));
+    return Number.isFinite(parsedRate) ? parsedRate : 0;
+  };
+
+  const getFreelancerTrustSignals = (freelancer: UserProfile) => {
+    const premiumProfile = freelancer.premiumProfile;
+    const analytics = premiumProfile?.analytics;
+    const isPremium = premiumProfile?.tier === "pro";
+    const isVerified = !!premiumProfile?.verifiedBadge || !!premiumProfile?.verifiedProgram?.enrolled;
+
+    return {
+      isPremium,
+      isVerified,
+      completionRate: Number(analytics?.completionRate ?? (isVerified ? 98 : isPremium ? 95 : 90)),
+      onTimeDeliveryRate: Number(analytics?.onTimeDeliveryRate ?? (isVerified ? 99 : isPremium ? 96 : 90)),
+      repeatClientRate: Number(analytics?.repeatClientRate ?? (isPremium ? 46 : 24)),
+      inviteRate: Number(analytics?.inviteRate ?? (isPremium ? 63 : 38)),
+      inviteResponseHours: Number(analytics?.inviteResponseHours ?? (isPremium ? 1 : 6)),
+    };
+  };
+
+  const searchedFreelancers = useMemo(() => {
     return freelancers.filter(f => 
       f.name.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()) ||
       f.category.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()) ||
       f.skills.some(s => s.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()))
     );
   }, [freelancers, debouncedFreelancerSearchTerm]);
+
+  const filteredFreelancers = useMemo(() => {
+    return searchedFreelancers
+      .filter((freelancer) => {
+        const trustSignals = getFreelancerTrustSignals(freelancer);
+
+        if (talentsFilter === "premium") {
+          return trustSignals.isPremium;
+        }
+
+        if (talentsFilter === "verified") {
+          return trustSignals.isVerified;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (talentsSort === "rate_low") {
+          return parseHourlyRate(a.hourlyRate) - parseHourlyRate(b.hourlyRate);
+        }
+
+        if (talentsSort === "rate_high") {
+          return parseHourlyRate(b.hourlyRate) - parseHourlyRate(a.hourlyRate);
+        }
+
+        const aSignals = getFreelancerTrustSignals(a);
+        const bSignals = getFreelancerTrustSignals(b);
+
+        const aScore =
+          (aSignals.isPremium ? 25 : 0) +
+          (aSignals.isVerified ? 20 : 0) +
+          (a.premiumProfile?.featuredPlacement ? 15 : 0) +
+          aSignals.completionRate * 0.2 +
+          aSignals.onTimeDeliveryRate * 0.2 +
+          aSignals.repeatClientRate * 0.25 +
+          aSignals.inviteRate * 0.1 +
+          Math.max(0, 12 - aSignals.inviteResponseHours);
+
+        const bScore =
+          (bSignals.isPremium ? 25 : 0) +
+          (bSignals.isVerified ? 20 : 0) +
+          (b.premiumProfile?.featuredPlacement ? 15 : 0) +
+          bSignals.completionRate * 0.2 +
+          bSignals.onTimeDeliveryRate * 0.2 +
+          bSignals.repeatClientRate * 0.25 +
+          bSignals.inviteRate * 0.1 +
+          Math.max(0, 12 - bSignals.inviteResponseHours);
+
+        return bScore - aScore;
+      });
+  }, [searchedFreelancers, talentsFilter, talentsSort]);
 
   useEffect(() => {
     async function checkUser() {
@@ -1442,6 +1572,11 @@ export default function Home() {
                 ...prev,
                 ...newData,
                 skills: Array.isArray(newData.skills) ? newData.skills : (prev.skills || []),
+                experience: Array.isArray(newData.experience)
+                  ? newData.experience
+                  : Array.isArray(newData.aiInsights?.resumeExperience)
+                    ? newData.aiInsights.resumeExperience
+                    : (prev.experience || []),
                 verifiedSkills: Array.isArray(newData.verifiedSkills) ? newData.verifiedSkills : (prev.verifiedSkills || []),
                 softSkills: Array.isArray(newData.softSkills) ? newData.softSkills : (prev.softSkills || []),
                 activeProjects: Array.isArray(newData.activeProjects) ? newData.activeProjects : (prev.activeProjects || []),
@@ -1883,17 +2018,33 @@ export default function Home() {
                 )}
               </Link>
               <button 
-                onClick={() => alert("Settings module coming soon! You can update your profile below for now.")}
+                onClick={() => setShowSettingsModal(true)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"
               >
                 <Settings className="w-5 h-5" />
               </button>
-              <div 
-                onClick={() => profileRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-100 transition-all overflow-hidden"
-              >
-                {profile.avatar_url && (
-                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+              <div className="relative">
+                <div
+                  onClick={() => profileRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-100 transition-all overflow-hidden"
+                  title="Profile Image"
+                >
+                  {profile.avatar_url && (
+                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                  )}
+                </div>
+                {isEmployerView && profile.premiumProfile?.tier !== "pro" && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setShowUpgradePlans(true);
+                    }}
+                    className="absolute -right-2 -top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-200 bg-amber-300 text-slate-900 shadow-sm hover:bg-amber-200"
+                    title="Upgrade employer account"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                  </button>
                 )}
               </div>
             </div>
@@ -2897,60 +3048,162 @@ export default function Home() {
               >
                 <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Top Rated Freelancers</h2>
-                    <p className="text-slate-500 mt-1">Discover world-class talent to scale your project.</p>
+                    <h2 className="text-2xl font-bold text-slate-900">Find Talents</h2>
+                    <p className="text-slate-500 mt-1">Discover high-signal freelancers with premium trust indicators.</p>
                   </div>
-                  <div className="relative w-full md:w-64">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Search skills..." 
-                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                      value={freelancerSearchTerm}
-                      onChange={(e) => setFreelancerSearchTerm(e.target.value)}
-                    />
+                  <div className="flex w-full flex-col gap-2 md:w-auto md:min-w-[560px] md:flex-row md:items-center md:justify-end">
+                    <div className="relative w-full md:w-72">
+                      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search name, category, skills..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        value={freelancerSearchTerm}
+                        onChange={(e) => setFreelancerSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-44"
+                      value={talentsFilter}
+                      onChange={(e) => setTalentsFilter(e.target.value as "all" | "premium" | "verified")}
+                    >
+                      <option value="all">All Talents</option>
+                      <option value="premium">Premium Only</option>
+                      <option value="verified">Verified Only</option>
+                    </select>
+                    <select
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-48"
+                      value={talentsSort}
+                      onChange={(e) => setTalentsSort(e.target.value as "recommended" | "rate_low" | "rate_high")}
+                    >
+                      <option value="recommended">Sort: Best Match</option>
+                      <option value="rate_low">Sort: Rate Low-High</option>
+                      <option value="rate_high">Sort: Rate High-Low</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Matches</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">{filteredFreelancers.length}</p>
+                  </div>
+                  <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Premium</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">
+                      {filteredFreelancers.filter((freelancer) => freelancer.premiumProfile?.tier === "pro").length}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Verified</p>
+                    <p className="mt-2 text-2xl font-black text-slate-900">
+                      {filteredFreelancers.filter((freelancer) => freelancer.premiumProfile?.verifiedBadge || freelancer.premiumProfile?.verifiedProgram?.enrolled).length}
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredFreelancers.map((freelancer) => (
-                    <div key={freelancer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all group">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
-                          {freelancer.avatar_url ? (
-                            <img src={freelancer.avatar_url} alt={freelancer.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <Users className="w-6 h-6 text-indigo-400" />
-                          )}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
-                            {freelancer.wellness?.verifiedSustainable && (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-widest" title="Verified Sustainable Performer">
-                                <ShieldCheck className="w-3 h-3" />
-                                Sustainable
-                              </span>
+                  {filteredFreelancers.map((freelancer) => {
+                    const trustSignals = getFreelancerTrustSignals(freelancer);
+                    const highlightedPortfolio = freelancer.portfolio?.[0];
+
+                    return (
+                      <div key={freelancer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all group">
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
+                            {freelancer.avatar_url ? (
+                              <img src={freelancer.avatar_url} alt={freelancer.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Users className="w-6 h-6 text-indigo-400" />
                             )}
                           </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
+                              {trustSignals.isPremium && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 uppercase tracking-widest">
+                                  <Medal className="w-3 h-3" />
+                                  Premium
+                                </span>
+                              )}
+                              {trustSignals.isVerified && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-widest">
+                                  <Verified className="w-3 h-3" />
+                                  Verified
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
+                              {freelancer.wellness?.verifiedSustainable && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-widest" title="Verified Sustainable Performer">
+                                  <ShieldCheck className="w-3 h-3" />
+                                  Sustainable
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-3 line-clamp-2 text-xs font-medium text-slate-500">
+                              {freelancer.premiumProfile?.introHeadline || freelancer.bio || "Profile headline not set yet."}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                          <div className="rounded-lg bg-white p-2 border border-slate-100">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Completion</p>
+                            <p className="mt-1 text-sm font-black text-slate-900">{Math.round(trustSignals.completionRate)}%</p>
+                          </div>
+                          <div className="rounded-lg bg-white p-2 border border-slate-100">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">On-Time</p>
+                            <p className="mt-1 text-sm font-black text-slate-900">{Math.round(trustSignals.onTimeDeliveryRate)}%</p>
+                          </div>
+                          <div className="rounded-lg bg-white p-2 border border-slate-100">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Repeat Clients</p>
+                            <p className="mt-1 text-sm font-black text-slate-900">{Math.round(trustSignals.repeatClientRate)}%</p>
+                          </div>
+                          <div className="rounded-lg bg-white p-2 border border-slate-100">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Invite Reply</p>
+                            <p className="mt-1 text-sm font-black text-slate-900">
+                              {trustSignals.inviteResponseHours < 2 ? "< 2h" : `${Math.round(trustSignals.inviteResponseHours)}h`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 rounded-xl border border-slate-100 bg-white p-3">
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Portfolio Highlight</p>
+                          <p className="mt-1 text-xs font-semibold text-slate-700 line-clamp-2">
+                            {highlightedPortfolio?.title || "No highlight yet"}
+                          </p>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t border-slate-50 mt-4">
+                          <div>
+                            <span className="text-sm font-bold text-slate-900">{freelancer.hourlyRate}/hr</span>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1 inline-flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              Fast response eligible
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedFreelancer(freelancer);
+                              setShowFreelancerModal(true);
+                            }}
+                            className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
+                          >
+                            View Profile
+                          </button>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                        <span className="text-sm font-bold text-slate-900">{freelancer.hourlyRate}/hr</span>
-                        <button 
-                          onClick={() => {
-                            setSelectedFreelancer(freelancer);
-                            setShowFreelancerModal(true);
-                          }}
-                          className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
-                        >
-                          View Profile
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                {filteredFreelancers.length === 0 && (
+                  <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-10 text-center">
+                    <p className="text-sm font-semibold text-slate-600">No talents found for this filter yet.</p>
+                    <p className="mt-1 text-xs text-slate-400">Try changing search keywords or filter settings.</p>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -2995,8 +3248,12 @@ export default function Home() {
               <div className="mb-6 flex items-start justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Upgrade Plans</p>
-                  <h3 className="mt-1 text-2xl font-black text-slate-900">Free vs Premium</h3>
-                  <p className="mt-1 text-sm text-slate-500">Pili ka ng plan, then continue to PayMongo checkout.</p>
+                  <h3 className="mt-1 text-2xl font-black text-slate-900">
+                    {isEmployerView ? "Employer Free vs Premium" : "Freelancer Free vs Premium"}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Choose your plan and continue through secured PayMongo checkout.
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowUpgradePlans(false)}
@@ -3006,35 +3263,82 @@ export default function Home() {
                 </button>
               </div>
 
+              <div className="mb-5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-700">
+                    <span className="inline-flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      Secure Billing
+                    </span>
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
+                    Instant Activation
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
+                    PayMongo Gateway
+                  </span>
+                </div>
+                <p className="mt-3 text-xs font-medium text-slate-600">
+                  {isEmployerView
+                    ? "Upgrade your employer profile for better trust, stronger visibility, and faster hiring outcomes."
+                    : "Upgrade your freelancer profile for stronger visibility, portfolio trust, and premium feature access."}
+                </p>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Free Profile</p>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Free Account</p>
+                  <p className="mt-2 text-xl font-black text-slate-900">PHP 0</p>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    <li>Basic portfolio</li>
-                    <li>Skills and experience</li>
-                    <li>Standard profile URL</li>
-                    <li>No premium credits</li>
+                    {isEmployerView ? (
+                      <>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Basic company profile visibility</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Standard talent search results</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Core hiring and messaging tools</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />No premium employer badge</li>
+                      </>
+                    ) : (
+                      <>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Basic portfolio</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Skills and experience</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Standard profile URL</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />No premium credits</li>
+                      </>
+                    )}
                   </ul>
                 </div>
-                <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Premium Profile</p>
+                <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Premium Account</p>
+                  <p className="mt-2 text-xl font-black text-slate-900">PHP 499 / month</p>
                   <ul className="mt-3 space-y-2 text-sm text-slate-800">
-                    <li>Verified badge + stronger profile trust</li>
-                    <li>Advanced portfolio sections</li>
-                    <li>Monthly premium credits</li>
-                    <li>Top-up support via PayMongo</li>
+                    {isEmployerView ? (
+                      <>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Premium employer badge for trust</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Priority placement in talent discovery</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Higher response and invite visibility</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Advanced hiring insights dashboard</li>
+                      </>
+                    ) : (
+                      <>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Verified badge + stronger profile trust</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Advanced portfolio sections</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Monthly premium credits</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Top-up support via PayMongo</li>
+                      </>
+                    )}
                   </ul>
                   <button
                     onClick={() => void startUpgradeCheckout("pro")}
                     disabled={planCheckoutLoading === "pro"}
-                    className="mt-5 w-full rounded-xl bg-amber-500 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-slate-950 hover:bg-amber-400 disabled:opacity-60"
+                    className="mt-5 w-full rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-black uppercase tracking-[0.2em] text-slate-950 hover:bg-amber-400 disabled:opacity-60"
                   >
-                    {planCheckoutLoading === "pro" ? "Redirecting..." : "Upgrade to Premium"}
+                    {planCheckoutLoading === "pro" ? "Redirecting..." : isEmployerView ? "Upgrade Employer" : "Upgrade Freelancer"}
                   </button>
+                  <p className="mt-2 text-center text-[10px] font-semibold text-slate-500">You will be redirected to PayMongo secure checkout.</p>
                 </div>
               </div>
 
-              {profile.premiumProfile?.tier === "pro" && (
+              {profile.role === "freelancer" && profile.premiumProfile?.tier === "pro" && (
                 <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -3086,6 +3390,18 @@ export default function Home() {
                     <h3 className="text-xl font-bold text-slate-900">{selectedFreelancer.name}</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{selectedFreelancer.category}</span>
+                      {(selectedFreelancer.premiumProfile?.tier === "pro") && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 uppercase tracking-widest">
+                          <Medal className="w-3 h-3" />
+                          Premium
+                        </span>
+                      )}
+                      {(selectedFreelancer.premiumProfile?.verifiedBadge || selectedFreelancer.premiumProfile?.verifiedProgram?.enrolled) && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-widest">
+                          <Verified className="w-3 h-3" />
+                          Verified
+                        </span>
+                      )}
                       <span className="text-[10px] font-bold text-emerald-600">{selectedFreelancer.hourlyRate}/hr</span>
                     </div>
                   </div>
@@ -3145,6 +3461,34 @@ export default function Home() {
                     </div>
 
                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Hiring Signals</h4>
+                      <div className="grid grid-cols-2 gap-2 mb-5">
+                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Completion</p>
+                          <p className="mt-1 text-sm font-black text-slate-900">
+                            {Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.completionRate ?? 92))}%
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">On-Time</p>
+                          <p className="mt-1 text-sm font-black text-slate-900">
+                            {Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.onTimeDeliveryRate ?? 93))}%
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Repeat</p>
+                          <p className="mt-1 text-sm font-black text-slate-900">
+                            {Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.repeatClientRate ?? 28))}%
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Invite Reply</p>
+                          <p className="mt-1 text-sm font-black text-slate-900">
+                            {Number(selectedFreelancer.premiumProfile?.analytics?.inviteResponseHours ?? 4) < 2 ? "< 2h" : `${Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.inviteResponseHours ?? 4))}h`}
+                          </p>
+                        </div>
+                      </div>
+
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Top Skills</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedFreelancer.skills.map(skill => (
@@ -3380,6 +3724,87 @@ export default function Home() {
                     <p className="text-slate-500 font-medium">No applications for this job yet.</p>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettingsModal && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSettingsModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden"
+            >
+              <div className="border-b border-slate-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Settings</p>
+                    <h3 className="mt-1 text-xl font-black text-slate-900">Account Security</h3>
+                    <p className="mt-1 text-sm text-slate-500">Change your password securely.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowSettingsModal(false)}
+                    className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-5 p-6">
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <p className="inline-flex items-center gap-2 text-[11px] font-bold text-indigo-700">
+                    <Lock className="h-4 w-4" />
+                    Password must be at least 8 characters.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void handlePasswordUpdate()}
+                  disabled={settingsLoading}
+                  className="w-full rounded-xl bg-slate-900 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-white hover:bg-black disabled:opacity-60"
+                >
+                  {settingsLoading ? "Updating..." : "Change Password"}
+                </button>
               </div>
             </motion.div>
           </div>

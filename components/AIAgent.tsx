@@ -14,7 +14,7 @@ import {
   Fingerprint
 } from "lucide-react";
 import { energyScore } from "../lib/utils";
-import { FreelancerCategory } from "../types";
+import { ExperienceItem, FreelancerCategory } from "../types";
 
 interface AIAgentProps {
   isOpen: boolean;
@@ -57,17 +57,31 @@ interface ResumeParseApiResponse {
   bio?: string;
   skills?: string[];
   category?: FreelancerCategory;
+  experience?: Array<Partial<ExperienceItem>>;
   portfolio?: ResumeParsePortfolioItem[];
   provider?: "gemini" | "fallback";
   fallback?: boolean;
   error?: string;
 }
 
+const buildResumeFallback = (file: File, message?: string): ResumeParseApiResponse => ({
+  name: file.name.replace(/\.pdf$/i, "").replace(/[-_]/g, " ").trim() || "Freelancer",
+  bio: "Nabasa ang file pero hindi kumpleto ang AI extraction. Pwede mo i-review at i-edit bago i-save.",
+  skills: [],
+  category: "General",
+  experience: [],
+  portfolio: [],
+  provider: "fallback",
+  fallback: true,
+  error: message,
+});
+
 export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete }: AIAgentProps) {
   const [status, setStatus] = useState<"idle" | "analyzing" | "completed">("idle");
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("Initializing AI Engine...");
   const [insights, setInsights] = useState<string[]>([]);
+  const [parseDiagnostics, setParseDiagnostics] = useState<string[]>([]);
   const [finalScore, setFinalScore] = useState(0);
   const [summary, setSummary] = useState("");
   
@@ -120,6 +134,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
       setStatus("analyzing");
       setProgress(0);
       setInsights([]);
+      setParseDiagnostics([]);
       setFinalScore(0);
       setSummary("");
       setCurrentStep(steps[0]);
@@ -170,16 +185,33 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
         body: formData,
       });
 
+      const payload = (await response.json().catch(() => null)) as
+        | (ResumeParseApiResponse & { error?: string })
+        | null;
+
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        const message = (payload as any)?.error || `Resume parse failed (${response.status})`;
-        throw new Error(message);
+        const message = payload?.error || `Resume parse failed (${response.status})`;
+        return {
+          ...buildResumeFallback(file, message),
+          ...(payload && typeof payload === "object" ? payload : {}),
+          provider: "fallback",
+          fallback: true,
+          error: message,
+        };
       }
 
-      return (await response.json()) as ResumeParseApiResponse;
+      if (!payload || typeof payload !== "object") {
+        return buildResumeFallback(file, "Empty parser response");
+      }
+
+      return payload;
     } catch (error) {
       console.error("Resume parsing failed:", error);
-      return null;
+      const data = (targetData as any) || {};
+      const file = data?.file as File | undefined;
+      if (!file) return null;
+      const message = error instanceof Error ? error.message : "Resume parsing request failed";
+      return buildResumeFallback(file, message);
     }
   };
 
@@ -335,6 +367,18 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
           ? Array.from(new Set(response.skills.map((skill) => String(skill).trim()).filter(Boolean))).slice(0, 25)
           : [],
         category: response?.category || ("General" as FreelancerCategory),
+        experience: Array.isArray(response?.experience)
+          ? response.experience
+              .map((item, idx) => ({
+                id: item?.id && String(item.id).trim() ? String(item.id).trim() : `exp-${Math.random().toString(36).slice(2, 9)}-${idx}`,
+                company: String(item?.company || "").trim(),
+                role: String(item?.role || "").trim(),
+                duration: String(item?.duration || "").trim(),
+                description: String(item?.description || "").trim(),
+              }))
+              .filter((item) => item.role && item.description)
+              .slice(0, 8)
+          : [],
         portfolio: Array.isArray(response?.portfolio)
           ? response.portfolio
               .map((item) => ({
@@ -351,20 +395,31 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
       };
 
       const usedGemini = response?.provider === "gemini";
+      const parserProviderLabel = response?.provider === "gemini" ? "Gemini" : "Free Parser";
+      setParseDiagnostics([
+        `Source file: ${sourceFileName}`,
+        `Provider: ${parserProviderLabel}`,
+        `Fallback: ${response?.fallback ? "yes" : "no"}`,
+        `Experience items: ${parsedData.experience.length}`,
+        `Portfolio items: ${parsedData.portfolio.length}`,
+        `Skills: ${parsedData.skills.length}`,
+        `Note: ${response?.error || "none"}`,
+      ]);
       setFinalScore(usedGemini ? 100 : 84);
       setInsights([
         `Entity Extraction Complete: Parsed "${parsedData.name}" and mapped core professional identity.`,
+        `Experience Mapping: ${parsedData.experience.length} role record${parsedData.experience.length === 1 ? "" : "s"} prepared for Professional section.`,
         `Portfolio Mapping: ${parsedData.portfolio.length} project artifact${parsedData.portfolio.length === 1 ? "" : "s"} prepared for your profile.`,
         `Skill Synchronization: ${parsedData.skills.length} competencies detected from your resume.`,
         `Category Alignment: Profile routed to "${parsedData.category}".`,
         usedGemini
           ? "Gemini semantic extraction successfully completed with structured output."
-          : "Fallback parser used because Gemini was unavailable. Please review extracted details."
+          : "Free parser pipeline completed (PDF text + OCR fallback). Please review extracted details."
       ]);
       setSummary(
         usedGemini
           ? "Resume parsing complete. Professional details and portfolio data are ready for sync."
-          : "Resume text was extracted, but Gemini was unavailable. Please review parsed output before saving."
+          : "Resume parsing complete using free parser mode. Review and save to publish updates."
       );
 
       if (onComplete) onComplete(parsedData);
@@ -554,14 +609,14 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
                       <div key={i} className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
                     ))}
                   </div>
-                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Model: Gemini Pro 1.5 Flash</span>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Model: Free PDF Parser + OCR</span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
                <div className="hidden md:flex flex-col items-end mr-2">
                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Connection Status</span>
-                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tight">Direct API Active</span>
+                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tight">Parser Active</span>
                </div>
                <button 
                 onClick={onClose}
@@ -689,6 +744,19 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
                     </motion.div>
                   ))}
                 </div>
+
+                {mode === "resume-parse" && parseDiagnostics.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Parser Debug</h4>
+                    <div className="rounded-2xl border border-slate-800 bg-black/40 p-4">
+                      {parseDiagnostics.map((line, idx) => (
+                        <p key={idx} className="font-mono text-[11px] leading-relaxed text-slate-300">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-4 flex gap-3">
                   <button 

@@ -1,6 +1,6 @@
 "use client";
 
-import { UserProfile, FreelancerCategory, PortfolioItem } from "../types";
+import { UserProfile, FreelancerCategory, PortfolioItem, ExperienceItem } from "../types";
 import { useState, useEffect, useRef } from "react";
 import {
   Camera,
@@ -43,6 +43,12 @@ export default function ProfileForm({
   const [skillInput, setSkillInput] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [resumeParseFile, setResumeParseFile] = useState<File | null>(null);
+  const [experienceInput, setExperienceInput] = useState({
+    company: "",
+    role: "",
+    duration: "",
+    description: "",
+  });
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | "credit_topup" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +116,39 @@ export default function ProfileForm({
     setProfile({
       ...profile,
       skills: profile.skills.filter((s) => s !== skillToRemove),
+    });
+  };
+
+  const addExperience = () => {
+    const role = experienceInput.role.trim();
+    const description = experienceInput.description.trim();
+    if (!role || !description) return;
+
+    const newExperience: ExperienceItem = {
+      id: `exp-${Math.random().toString(36).slice(2, 9)}`,
+      company: experienceInput.company.trim() || "Company",
+      role,
+      duration: experienceInput.duration.trim() || "Not specified",
+      description,
+    };
+
+    setProfile({
+      ...profile,
+      experience: [...(profile.experience || []), newExperience],
+    });
+
+    setExperienceInput({
+      company: "",
+      role: "",
+      duration: "",
+      description: "",
+    });
+  };
+
+  const removeExperience = (id: string) => {
+    setProfile({
+      ...profile,
+      experience: (profile.experience || []).filter((item) => item.id !== id),
     });
   };
 
@@ -235,6 +274,7 @@ export default function ProfileForm({
     bio?: string; 
     skills?: string[]; 
     category?: FreelancerCategory; 
+    experience?: Array<Partial<ExperienceItem>>;
     portfolio?: Array<Partial<PortfolioItem>>
   }) => {
     const existingPortfolioKeys = new Set(
@@ -275,12 +315,45 @@ export default function ProfileForm({
       return !existingPortfolioKeys.has(dedupeKey);
     });
 
+    const existingExperienceKeys = new Set(
+      (profile.experience || []).map(
+        (item) =>
+          `${(item.role || "").trim().toLowerCase()}::${(item.company || "").trim().toLowerCase()}::${(item.description || "")
+            .trim()
+            .toLowerCase()}`,
+      ),
+    );
+
+    const normalizedExperienceItems: ExperienceItem[] = (data.experience || [])
+      .reduce<ExperienceItem[]>((acc, item) => {
+        const role = (item.role || "").trim();
+        const description = (item.description || "").trim();
+        if (!role || !description) return acc;
+
+        acc.push({
+          id: item.id && String(item.id).trim() ? String(item.id).trim() : `exp-${Math.random().toString(36).slice(2, 10)}`,
+          company: (item.company || "").trim() || "Company",
+          role,
+          duration: (item.duration || "").trim() || "Not specified",
+          description,
+        });
+        return acc;
+      }, []);
+
+    const newExperienceItems = normalizedExperienceItems.filter((item) => {
+      const dedupeKey = `${item.role.trim().toLowerCase()}::${item.company.trim().toLowerCase()}::${item.description
+        .trim()
+        .toLowerCase()}`;
+      return !existingExperienceKeys.has(dedupeKey);
+    });
+
     const updatedProfile = {
       ...profile,
       name: data.name || profile.name,
       bio: data.bio || profile.bio,
       skills: Array.from(new Set([...profile.skills, ...(data.skills || []).map((skill) => String(skill).trim()).filter(Boolean)])),
       category: data.category || profile.category,
+      experience: [...(profile.experience || []), ...newExperienceItems],
       portfolio: [...(profile.portfolio || []), ...newPortfolioItems]
     };
     
@@ -600,6 +673,77 @@ export default function ProfileForm({
                           &times;
                         </button>
                       </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                  <div className="mb-4">
+                    <h4 className="text-base font-bold text-slate-950">Experience</h4>
+                    <p className="text-sm text-slate-500">Ito ang ginagamit para mas professional at complete ang profile summary mo.</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      placeholder="Company"
+                      value={experienceInput.company}
+                      onChange={(e) => setExperienceInput((prev) => ({ ...prev, company: e.target.value }))}
+                    />
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      placeholder="Role / Position"
+                      value={experienceInput.role}
+                      onChange={(e) => setExperienceInput((prev) => ({ ...prev, role: e.target.value }))}
+                    />
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      placeholder="Duration (e.g. Jan 2023 - Dec 2024)"
+                      value={experienceInput.duration}
+                      onChange={(e) => setExperienceInput((prev) => ({ ...prev, duration: e.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={addExperience}
+                      className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black"
+                    >
+                      Add Experience
+                    </button>
+                    <div className="sm:col-span-2">
+                      <textarea
+                        className={inputClassName}
+                        rows={3}
+                        placeholder="What did you do? Results, scope, tools, and impact."
+                        value={experienceInput.description}
+                        onChange={(e) => setExperienceInput((prev) => ({ ...prev, description: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {(profile.experience || []).length === 0 && (
+                      <p className="text-sm text-slate-500">No experience records yet.</p>
+                    )}
+                    {(profile.experience || []).map((item) => (
+                      <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{item.role}</p>
+                            <p className="text-xs font-medium text-slate-500">
+                              {item.company} - {item.duration}
+                            </p>
+                            <p className="mt-2 text-sm text-slate-700">{item.description}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeExperience(item.id)}
+                            className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
