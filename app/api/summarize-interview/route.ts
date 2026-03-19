@@ -2,17 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { supabase } from '@/lib/supabase';
-import { consumePremiumCredits } from '@/lib/credits';
+import { consumePremiumCredits, getCreditCost } from '@/lib/credits';
+
+const INTERVIEW_SUMMARY_COST = getCreditCost("interview_summary");
 
 export async function POST(req: NextRequest) {
   try {
-    const { transcript, projectId, participants, userId } = await req.json();
+    const { transcript, projectId, participants, userId, confirmCreditUse } = await req.json();
 
     if (!transcript) {
       return NextResponse.json({ error: 'No transcript provided' }, { status: 400 });
     }
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId.' }, { status: 400 });
+    }
+    if (confirmCreditUse !== true) {
+      return NextResponse.json(
+        {
+          error: "Credit confirmation is required before summarization.",
+          errorCode: "confirmation_required",
+          requiredCredits: INTERVIEW_SUMMARY_COST,
+        },
+        { status: 400 },
+      );
     }
 
     const creditSpend = await consumePremiumCredits({

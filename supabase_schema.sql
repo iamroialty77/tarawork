@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     "jobType" TEXT,
     budget NUMERIC,
+    currency_code TEXT DEFAULT 'PHP',
     milestones JSONB DEFAULT '[]',
     deadline TEXT,
     "customQuestions" JSONB DEFAULT '[]',
@@ -582,6 +583,9 @@ CREATE TABLE IF NOT EXISTS public.portfolio_links (
     icon TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+ALTER TABLE public.jobs
+    ADD COLUMN IF NOT EXISTS currency_code TEXT DEFAULT 'PHP';
 
 -- 12. PayMongo tracking tables for webhook idempotency + payment mapping
 CREATE TABLE IF NOT EXISTS public.paymongo_checkout_sessions (

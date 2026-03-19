@@ -1,5 +1,19 @@
 import { PremiumProfile } from "./index";
 
+export interface ProfileAboutSections {
+  whoIHelp: string;
+  whatISpecializeIn: string;
+  resultsIHaveDelivered: string;
+  howIWork: string;
+}
+
+export interface ServiceOffering {
+  serviceName: string;
+  startingPrice: number;
+  currency: string;
+  typicalTurnaround: string;
+}
+
 export interface PortfolioProject {
   id: string;
   title: string;
@@ -46,6 +60,8 @@ export interface FreelancerProfile {
   role: string;
   avatar_url?: string;
   bio?: string;
+  aboutSections?: ProfileAboutSections;
+  servicesOffered?: ServiceOffering[];
   hourlyRate?: string;
   premiumProfile?: PremiumProfile;
   portfolio?: Portfolio;

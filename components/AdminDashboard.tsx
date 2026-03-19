@@ -40,8 +40,14 @@ import {
 } from "lucide-react";
 
 type TabType = "overview" | "users" | "jobs" | "escrow" | "disputes" | "reports" | "health";
+type AdminViewMode = "admin" | "freelancer" | "client";
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  viewAs?: AdminViewMode;
+  onViewAsChange?: (mode: AdminViewMode) => void;
+}
+
+export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [counts, setCounts] = useState({ users: 0, jobs: 0, employers: 0, freelancers: 0, escrows: 0, disputes: 0 });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
@@ -261,22 +267,57 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Admin Console</h1>
           <p className="text-slate-500 font-medium mt-1">Review, moderate, and manage Tara platform operations.</p>
         </div>
-        
-                  <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm w-full xl:w-auto">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as TabType)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                activeTab === item.id 
-                  ? "bg-slate-900 text-white shadow-lg" 
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <item.icon className="w-4 h-4" />
-              <span>{item.label}</span>
-            </button>
-          ))}
+
+        <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
+          {onViewAsChange && (
+            <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-2 xl:w-auto">
+              <span className="px-2 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700">View As</span>
+              <button
+                type="button"
+                onClick={() => onViewAsChange("freelancer")}
+                className={`rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] transition-all ${
+                  viewAs === "freelancer" ? "bg-indigo-600 text-white" : "bg-white text-indigo-700 border border-indigo-100"
+                }`}
+              >
+                Freelancer Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewAsChange("client")}
+                className={`rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] transition-all ${
+                  viewAs === "client" ? "bg-indigo-600 text-white" : "bg-white text-indigo-700 border border-indigo-100"
+                }`}
+              >
+                Hirer Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewAsChange("admin")}
+                className={`rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] transition-all ${
+                  viewAs === "admin" ? "bg-slate-900 text-white" : "bg-white text-slate-700 border border-slate-200"
+                }`}
+              >
+                Admin Mode
+              </button>
+            </div>
+          )}
+
+          <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm xl:w-auto">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as TabType)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  activeTab === item.id 
+                    ? "bg-slate-900 text-white shadow-lg" 
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

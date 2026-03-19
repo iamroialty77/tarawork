@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { UserProfile, Job, PortfolioItem, Squad, Project } from "../types";
+import { CurrencyCode, UserProfile, Job, PortfolioItem, Squad, Project, ProfileAboutSections, ServiceOffering } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
 import SkillAssessment from "../components/SkillAssessment";
@@ -61,6 +61,67 @@ import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
 import LandingPage from "../components/LandingPage";
 import { buildPublicProfileUrl, getPremiumProfileDomain } from "../lib/profileUrl";
+import TooltipAction from "../components/ui/TooltipAction";
+
+const SUPPORTED_JOB_CURRENCIES: CurrencyCode[] = ["USD", "AUD", "GBP", "PHP"];
+
+const normalizeCurrencyCode = (value: unknown): CurrencyCode =>
+  typeof value === "string" && SUPPORTED_JOB_CURRENCIES.includes(value as CurrencyCode)
+    ? (value as CurrencyCode)
+    : "PHP";
+
+const emptyAboutSections = (): ProfileAboutSections => ({
+  whoIHelp: "",
+  whatISpecializeIn: "",
+  resultsIHaveDelivered: "",
+  howIWork: "",
+});
+
+const normalizeAboutSections = (
+  sections: unknown,
+  fallbackBio = "",
+): ProfileAboutSections => {
+  const source = sections && typeof sections === "object" ? (sections as Record<string, unknown>) : {};
+
+  return {
+    whoIHelp: typeof source.whoIHelp === "string" ? source.whoIHelp : "",
+    whatISpecializeIn:
+      typeof source.whatISpecializeIn === "string"
+        ? source.whatISpecializeIn
+        : fallbackBio || "",
+    resultsIHaveDelivered: typeof source.resultsIHaveDelivered === "string" ? source.resultsIHaveDelivered : "",
+    howIWork: typeof source.howIWork === "string" ? source.howIWork : "",
+  };
+};
+
+const normalizeServicesOffered = (services: unknown): ServiceOffering[] => {
+  if (!Array.isArray(services)) return [];
+  return services
+    .map((service) => {
+      if (!service || typeof service !== "object") return null;
+      const source = service as Record<string, unknown>;
+      const serviceName = typeof source.serviceName === "string" ? source.serviceName.trim() : "";
+      const typicalTurnaround = typeof source.typicalTurnaround === "string" ? source.typicalTurnaround.trim() : "";
+      const currency = typeof source.currency === "string" && source.currency.trim().length > 0 ? source.currency.trim() : "PHP";
+      const startingPriceRaw =
+        typeof source.startingPrice === "number"
+          ? source.startingPrice
+          : typeof source.startingPrice === "string"
+            ? Number(source.startingPrice)
+            : 0;
+      const startingPrice = Number.isFinite(startingPriceRaw) ? Math.max(0, startingPriceRaw) : 0;
+
+      if (!serviceName) return null;
+      return {
+        serviceName,
+        startingPrice,
+        currency,
+        typicalTurnaround,
+      } as ServiceOffering;
+    })
+    .filter((service): service is ServiceOffering => !!service)
+    .slice(0, 6);
+};
 
 export default function Home() {
   const router = useRouter();
@@ -69,6 +130,7 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [view, setView] = useState<"freelancer" | "client" | "admin">("freelancer");
+  const [adminViewMode, setAdminViewMode] = useState<"admin" | "freelancer" | "client">("admin");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [employerJobs, setemployerJobs] = useState<Job[]>([]);
   const [appliedJobs, setAppliedJobs] = useState<Record<string, string>>({});
@@ -80,6 +142,7 @@ export default function Home() {
   const [freelancerSearchTerm, setFreelancerSearchTerm] = useState("");
   const [debouncedFreelancerSearchTerm, setDebouncedFreelancerSearchTerm] = useState("");
   const [talentsFilter, setTalentsFilter] = useState<"all" | "premium" | "verified">("all");
+  const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
   const [showEscrowModal, setShowEscrowModal] = useState(false);
@@ -117,11 +180,15 @@ export default function Home() {
     aiInsights: {
       gapAnalysis: [],
       compatibilityScore: 0,
-      cultureMatch: []
+      cultureMatch: [],
+      preferredCurrency: "PHP",
     },
+    preferredCurrency: "PHP",
     ranking: 15,
     hourlyRate: "$0",
     bio: "",
+    aboutSections: emptyAboutSections(),
+    servicesOffered: [],
     experience: [],
     activeProjects: [],
     premiumProfile: {
@@ -150,7 +217,18 @@ export default function Home() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [settingsLoading, setSettingsLoading] = useState(false);
-  const isEmployerView = view === "client" || profile.role === "employer";
+  const effectiveView = profile.role === "admin" ? adminViewMode : view;
+  const isEmployerView = effectiveView === "client" || profile.role === "employer";
+
+  const handleViewSwitch = (nextView: "freelancer" | "client" | "admin") => {
+    setView(nextView);
+    if (profile.role === "admin") {
+      setAdminViewMode(nextView);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("admin_view_mode", nextView);
+      }
+    }
+  };
 
   useEffect(() => {
     // Handle email confirmation success message
@@ -165,6 +243,15 @@ export default function Home() {
       window.history.replaceState({}, document.title, newUrl);
     }
   }, []);
+
+  useEffect(() => {
+    if (profile.role !== "admin" || typeof window === "undefined") return;
+    const stored = sessionStorage.getItem("admin_view_mode");
+    if (stored === "admin" || stored === "freelancer" || stored === "client") {
+      setAdminViewMode(stored);
+      setView(stored);
+    }
+  }, [profile.role]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -276,6 +363,12 @@ export default function Home() {
           softSkills: Array.isArray(data.softSkills) ? data.softSkills : (prevProfile ? prevProfile.softSkills : []),
           activeProjects: Array.isArray(data.activeProjects) ? data.activeProjects : [],
           workflows: Array.isArray(data.workflows) ? data.workflows : [],
+          aboutSections: normalizeAboutSections(
+            data.aiInsights?.aboutSections,
+            typeof data.bio === "string" ? data.bio : "",
+          ),
+          servicesOffered: normalizeServicesOffered(data.aiInsights?.servicesOffered),
+          preferredCurrency: normalizeCurrencyCode(data.aiInsights?.preferredCurrency),
           premiumProfile: prevProfile?.premiumProfile || {
             tier: "free",
             analytics: {
@@ -345,7 +438,16 @@ export default function Home() {
               proExpiryDate.getTime() <= Date.now();
             const isActivePro = premiumProfile.tier === "pro" && !isProExpired;
 
-            normalizedData.bio = pData.about_me || normalizedData.bio;
+            const aboutSectionsFromTheme = normalizeAboutSections(
+              themeSettings.aboutSections,
+              typeof pData.about_me === "string" ? pData.about_me : normalizedData.bio,
+            );
+            const servicesFromTheme = normalizeServicesOffered(
+              themeSettings.servicesOffered || normalizedData.servicesOffered,
+            );
+            normalizedData.aboutSections = aboutSectionsFromTheme;
+            normalizedData.servicesOffered = servicesFromTheme;
+            normalizedData.bio = aboutSectionsFromTheme.whatISpecializeIn || normalizedData.bio;
             normalizedData.premiumProfile = {
               tier: isActivePro ? "pro" : "free",
               verifiedBadge: premiumProfile.verifiedBadge ?? isActivePro,
@@ -429,6 +531,9 @@ export default function Home() {
           experience: [],
           hourlyRate: "$0",
           bio: "",
+          preferredCurrency: "PHP",
+          aboutSections: emptyAboutSections(),
+          servicesOffered: [],
           premiumProfile: {
             tier: "free",
             analytics: {
@@ -473,6 +578,17 @@ export default function Home() {
     setIsSaving(true);
     try {
       let nextProfile = updatedProfile;
+      const resolvedAboutSections = normalizeAboutSections(
+        updatedProfile.aboutSections,
+        updatedProfile.bio || "",
+      );
+      const resolvedServices = normalizeServicesOffered(updatedProfile.servicesOffered);
+      nextProfile = {
+        ...updatedProfile,
+        aboutSections: resolvedAboutSections,
+        servicesOffered: resolvedServices,
+        bio: resolvedAboutSections.whatISpecializeIn || updatedProfile.bio || "",
+      };
 
       // List of columns that definitely exist in the profiles table base on supabase_schema.sql
       const dbColumns = [
@@ -499,6 +615,13 @@ export default function Home() {
           resumeExperience: nextProfile.experience,
         };
       }
+      profileToSave.bio = nextProfile.aboutSections?.whatISpecializeIn || nextProfile.bio || "";
+      profileToSave.aiInsights = {
+        ...(profileToSave.aiInsights || {}),
+        aboutSections: nextProfile.aboutSections || emptyAboutSections(),
+        servicesOffered: nextProfile.servicesOffered || [],
+        preferredCurrency: normalizeCurrencyCode(nextProfile.preferredCurrency || nextProfile.aiInsights?.preferredCurrency),
+      };
       
       // Always add updated_at
       profileToSave.updated_at = new Date().toISOString();
@@ -596,11 +719,13 @@ export default function Home() {
 
         const portfolioPayload = {
           profile_id: user.id,
-          about_me: nextProfile.bio,
+          about_me: nextProfile.aboutSections?.whatISpecializeIn || nextProfile.bio,
           tagline: premiumProfile.introHeadline || null,
           custom_domain: finalTier === "pro" ? resolvedCustomDomain : null,
           theme_settings: {
             ...currentThemeSettings,
+            aboutSections: nextProfile.aboutSections || emptyAboutSections(),
+            servicesOffered: nextProfile.servicesOffered || [],
             aesthetic: currentThemeSettings.aesthetic || "professional",
             primaryColor: currentThemeSettings.primaryColor || "#4f46e5",
             premiumProfile: {
@@ -846,6 +971,12 @@ export default function Home() {
       if (data && data.length > 0) {
         const formattedJobs = data.map((job: any) => ({
           ...job,
+          budget: Number.isFinite(Number(job.budget)) ? Number(job.budget) : 0,
+          currencyCode: normalizeCurrencyCode(job.currency_code || job.currencyCode),
+          rate:
+            typeof job.rate === "string" && job.rate.trim().length > 0
+              ? job.rate
+              : `${normalizeCurrencyCode(job.currency_code || job.currencyCode)} ${Number.isFinite(Number(job.budget)) ? Number(job.budget).toLocaleString() : "0"}`,
           energyRequirement: job.energy_requirement || "Balanced",
           paymentMethod: job.paymentMethod || "Flat-Rate",
           jobType: job.jobType || "Contract"
@@ -878,6 +1009,12 @@ export default function Home() {
       if (data) {
         const formattedJobs = data.map((job: any) => ({
           ...job,
+          budget: Number.isFinite(Number(job.budget)) ? Number(job.budget) : 0,
+          currencyCode: normalizeCurrencyCode(job.currency_code || job.currencyCode),
+          rate:
+            typeof job.rate === "string" && job.rate.trim().length > 0
+              ? job.rate
+              : `${normalizeCurrencyCode(job.currency_code || job.currencyCode)} ${Number.isFinite(Number(job.budget)) ? Number(job.budget).toLocaleString() : "0"}`,
           applicantCount: job.applications?.[0]?.count || 0,
           energyRequirement: job.energy_requirement || "Balanced",
           paymentMethod: job.paymentMethod || "Flat-Rate",
@@ -1244,11 +1381,18 @@ export default function Home() {
       }
 
       if (data) {
-        const formatted = data.map((f: any) => ({
-          ...f,
-          portfolio: f.portfolio_items || []
-        }));
-        setFreelancers(formatted);
+        const normalizedFreelancers = data.map((f: any) => {
+          const normalizedAbout = normalizeAboutSections(f.aiInsights?.aboutSections, f.bio || "");
+          const normalizedServices = normalizeServicesOffered(f.aiInsights?.servicesOffered);
+          return {
+            ...f,
+            aboutSections: normalizedAbout,
+            servicesOffered: normalizedServices,
+            bio: normalizedAbout.whatISpecializeIn || f.bio || "",
+            portfolio: f.portfolio_items || []
+          };
+        });
+        setFreelancers(normalizedFreelancers);
       }
     } catch (err) {
       console.warn("Unexpected freelancer list fetch issue:", err);
@@ -1426,27 +1570,47 @@ export default function Home() {
   };
 
   const searchedFreelancers = useMemo(() => {
-    return freelancers.filter(f => 
-      f.name.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()) ||
-      f.category.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()) ||
-      f.skills.some(s => s.toLowerCase().includes(debouncedFreelancerSearchTerm.toLowerCase()))
+    const normalizedSearch = debouncedFreelancerSearchTerm.toLowerCase();
+    return freelancers.filter((freelancer) =>
+      freelancer.name.toLowerCase().includes(normalizedSearch) ||
+      freelancer.category.toLowerCase().includes(normalizedSearch) ||
+      freelancer.skills.some((skill) => skill.toLowerCase().includes(normalizedSearch)) ||
+      (freelancer.servicesOffered || []).some((service) =>
+        service.serviceName.toLowerCase().includes(normalizedSearch),
+      ),
     );
   }, [freelancers, debouncedFreelancerSearchTerm]);
+
+  const serviceTypeOptions = useMemo(() => {
+    const uniqueServices = new Set<string>();
+    freelancers.forEach((freelancer) => {
+      (freelancer.servicesOffered || []).forEach((service) => {
+        const serviceName = service.serviceName.trim();
+        if (serviceName) uniqueServices.add(serviceName);
+      });
+    });
+    return Array.from(uniqueServices).sort((a, b) => a.localeCompare(b));
+  }, [freelancers]);
 
   const filteredFreelancers = useMemo(() => {
     return searchedFreelancers
       .filter((freelancer) => {
         const trustSignals = getFreelancerTrustSignals(freelancer);
+        const matchesServiceType =
+          serviceTypeFilter === "all" ||
+          (freelancer.servicesOffered || []).some(
+            (service) => service.serviceName.toLowerCase() === serviceTypeFilter.toLowerCase(),
+          );
 
         if (talentsFilter === "premium") {
-          return trustSignals.isPremium;
+          return trustSignals.isPremium && matchesServiceType;
         }
 
         if (talentsFilter === "verified") {
-          return trustSignals.isVerified;
+          return trustSignals.isVerified && matchesServiceType;
         }
 
-        return true;
+        return matchesServiceType;
       })
       .sort((a, b) => {
         if (talentsSort === "rate_low") {
@@ -1482,7 +1646,7 @@ export default function Home() {
 
         return bScore - aScore;
       });
-  }, [searchedFreelancers, talentsFilter, talentsSort]);
+  }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter]);
 
   useEffect(() => {
     async function checkUser() {
@@ -1568,6 +1732,10 @@ export default function Home() {
           }, (payload) => {
             setProfile(prev => {
               const newData = payload.new as any;
+              const normalizedAboutSections = normalizeAboutSections(
+                newData.aiInsights?.aboutSections,
+                typeof newData.bio === "string" ? newData.bio : prev.bio,
+              );
               return {
                 ...prev,
                 ...newData,
@@ -1581,6 +1749,10 @@ export default function Home() {
                 softSkills: Array.isArray(newData.softSkills) ? newData.softSkills : (prev.softSkills || []),
                 activeProjects: Array.isArray(newData.activeProjects) ? newData.activeProjects : (prev.activeProjects || []),
                 workflows: Array.isArray(newData.workflows) ? newData.workflows : (prev.workflows || []),
+                aboutSections: normalizedAboutSections,
+                servicesOffered: normalizeServicesOffered(newData.aiInsights?.servicesOffered || prev.servicesOffered),
+                bio: normalizedAboutSections.whatISpecializeIn || prev.bio,
+                preferredCurrency: normalizeCurrencyCode(newData.aiInsights?.preferredCurrency || prev.preferredCurrency),
               };
             });
           })
@@ -1853,7 +2025,7 @@ export default function Home() {
             <span className="opacity-90 font-medium">Some database tables ({missingTables.join(", ")}) need to be set up for full functionality.</span>
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setView("admin")}
+                onClick={() => handleViewSwitch("admin")}
                 className="bg-white text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black hover:bg-indigo-50 transition-all cursor-pointer uppercase tracking-tighter"
               >
                 Setup Database
@@ -1881,9 +2053,32 @@ export default function Home() {
               </div>
               
               <div className="hidden lg:flex items-center gap-6">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                  {view === 'admin' ? 'Admin Portal' : view === 'client' ? 'Client Dashboard' : 'Freelancer Workspace'}
-                </span>
+                {profile.role === "admin" ? (
+                  <div className="flex items-center gap-2">
+                    {[
+                      { id: "admin", label: "Admin" },
+                      { id: "freelancer", label: "Freelancer" },
+                      { id: "client", label: "Hirer" },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleViewSwitch(item.id as "admin" | "freelancer" | "client")}
+                        className={`rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] transition-all ${
+                          effectiveView === item.id
+                            ? "bg-slate-900 text-white"
+                            : "bg-white text-slate-500 border border-slate-200 hover:text-slate-800 hover:border-slate-300"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+                    {effectiveView === 'admin' ? 'Admin Portal' : effectiveView === 'client' ? 'Client Dashboard' : 'Freelancer Workspace'}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -2063,23 +2258,23 @@ export default function Home() {
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 gap-2">
                 <button 
-                  onClick={() => { setView('freelancer'); setIsMenuOpen(false); }}
-                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${view === 'freelancer' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                  onClick={() => { handleViewSwitch('freelancer'); setIsMenuOpen(false); }}
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${effectiveView === 'freelancer' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
                 >
                   <Briefcase className="w-5 h-5" />
                   Freelancer Workspace
                 </button>
                 <button 
-                  onClick={() => { setView('client'); setIsMenuOpen(false); }}
-                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${view === 'client' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                  onClick={() => { handleViewSwitch('client'); setIsMenuOpen(false); }}
+                  className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${effectiveView === 'client' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
                 >
                   <Users className="w-5 h-5" />
                   Employer Dashboard
                 </button>
                 {profile.role === 'admin' && (
                   <button 
-                    onClick={() => { setView('admin'); setIsMenuOpen(false); }}
-                    className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${view === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                    onClick={() => { handleViewSwitch('admin'); setIsMenuOpen(false); }}
+                    className={`flex items-center gap-3 p-3 rounded-xl font-bold text-sm ${effectiveView === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
                   >
                     <ShieldCheck className="w-5 h-5" />
                     Admin Portal
@@ -2112,7 +2307,7 @@ export default function Home() {
       </AnimatePresence>
 
       <main className="max-w-full px-4 sm:px-10 py-8">
-        {view === "freelancer" ? (
+        {effectiveView === "freelancer" ? (
           <div className="space-y-8">
             {/* Freelancer Tab Navigation */}
             <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -2855,29 +3050,30 @@ export default function Home() {
               )}
             </AnimatePresence>
           </div>
-        ) : view === "client" ? (
+        ) : effectiveView === "client" ? (
           <div className="space-y-8">
             {/* Client Tab Navigation */}
             <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none]">
               {[
-                { id: "overview", label: "Overview", icon: LayoutDashboard },
-                { id: "post", label: "Post a Job", icon: PlusCircle },
-                { id: "postings", label: "My Postings", icon: FileText },
-                { id: "talents", label: "Find Talents", icon: Users },
-                { id: "profile", label: "Company Profile", icon: User },
+                { id: "overview", label: "Overview", icon: LayoutDashboard, tooltip: "View your hiring dashboard summary" },
+                { id: "post", label: "Post a Job", icon: PlusCircle, tooltip: "Post a new job listing" },
+                { id: "postings", label: "My Postings", icon: FileText, tooltip: "View your active proposals" },
+                { id: "talents", label: "Find Talents", icon: Users, tooltip: "Browse freelancers by skills" },
+                { id: "profile", label: "Company Profile", icon: User, tooltip: "Edit your company profile" },
               ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setClientTab(tab.id as any)}
-                  className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                    clientTab === tab.id 
-                      ? "bg-slate-900 text-white shadow-lg" 
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
+                <TooltipAction key={tab.id} text={tab.tooltip}>
+                  <button
+                    onClick={() => setClientTab(tab.id as any)}
+                    className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                      clientTab === tab.id 
+                        ? "bg-slate-900 text-white shadow-lg" 
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                </TooltipAction>
               ))}
             </div>
 
@@ -2941,12 +3137,14 @@ export default function Home() {
                       <p className="text-sm text-slate-400 mb-4 leading-relaxed">
                         Invite teammates to review applications and manage projects together.
                       </p>
-                      <button 
-                        onClick={() => alert("Squad management for Employers coming soon!")}
-                        className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
-                      >
-                        Configure Team <ArrowUpRight className="w-3 h-3" />
-                      </button>
+                      <TooltipAction text="Manage your hiring team settings">
+                        <button 
+                          onClick={() => alert("Squad management for Employers coming soon!")}
+                          className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                        >
+                          Configure Team <ArrowUpRight className="w-3 h-3" />
+                        </button>
+                      </TooltipAction>
                     </div>
                     <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-600/10 rounded-full blur-xl"></div>
                   </div>
@@ -2974,7 +3172,20 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                  <JobPostingForm onPublish={() => { fetchEmployerJobs(user.id); setClientTab("postings"); }} />
+                  <JobPostingForm
+                    preferredCurrency={profile.preferredCurrency || "PHP"}
+                    onCurrencyPreferenceChange={(currency) => {
+                      setProfile((prev) => ({
+                        ...prev,
+                        preferredCurrency: currency,
+                        aiInsights: {
+                          ...(prev.aiInsights || { gapAnalysis: [], compatibilityScore: 0, cultureMatch: [] }),
+                          preferredCurrency: currency,
+                        },
+                      }));
+                    }}
+                    onPublish={() => { fetchEmployerJobs(user.id); setClientTab("postings"); }}
+                  />
                 </div>
               </motion.div>
             )}
@@ -3005,6 +3216,9 @@ export default function Home() {
                               <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">{job.category}</span>
                             </div>
                             <p className="text-xs text-slate-500 font-medium">Posted on {new Date(job.createdAt).toLocaleDateString()}</p>
+                            <p className="mt-2 inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-indigo-700">
+                              Duration: {job.duration || "Not specified"}
+                            </p>
                           </div>
                           <div className="text-right">
                             <p className="text-lg font-bold text-slate-900">{job.rate || (job.budget ? `₱${job.budget}` : "Not specified")}</p>
@@ -3019,12 +3233,14 @@ export default function Home() {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <button 
-                              onClick={() => fetchApplicants(job.id, job.title)}
-                              className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
-                            >
-                              View Applicants
-                            </button>
+                            <TooltipAction text="Review applicants for this job">
+                              <button 
+                                onClick={() => fetchApplicants(job.id, job.title)}
+                                className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
+                              >
+                                View Applicants
+                              </button>
+                            </TooltipAction>
                           </div>
                         </div>
                       </div>
@@ -3072,6 +3288,18 @@ export default function Home() {
                       <option value="verified">Verified Only</option>
                     </select>
                     <select
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-56"
+                      value={serviceTypeFilter}
+                      onChange={(e) => setServiceTypeFilter(e.target.value)}
+                    >
+                      <option value="all">All Services</option>
+                      {serviceTypeOptions.map((serviceType) => (
+                        <option key={serviceType} value={serviceType}>
+                          {serviceType}
+                        </option>
+                      ))}
+                    </select>
+                    <select
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-48"
                       value={talentsSort}
                       onChange={(e) => setTalentsSort(e.target.value as "recommended" | "rate_low" | "rate_high")}
@@ -3106,6 +3334,7 @@ export default function Home() {
                   {filteredFreelancers.map((freelancer) => {
                     const trustSignals = getFreelancerTrustSignals(freelancer);
                     const highlightedPortfolio = freelancer.portfolio?.[0];
+                    const displayedServices = (freelancer.servicesOffered || []).slice(0, 2);
 
                     return (
                       <div key={freelancer.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all group">
@@ -3143,7 +3372,7 @@ export default function Home() {
                               )}
                             </div>
                             <p className="mt-3 line-clamp-2 text-xs font-medium text-slate-500">
-                              {freelancer.premiumProfile?.introHeadline || freelancer.bio || "Profile headline not set yet."}
+                              {freelancer.premiumProfile?.introHeadline || freelancer.aboutSections?.whatISpecializeIn || freelancer.bio || "Profile headline not set yet."}
                             </p>
                           </div>
                         </div>
@@ -3170,6 +3399,27 @@ export default function Home() {
                         </div>
 
                         <div className="mt-3 rounded-xl border border-slate-100 bg-white p-3">
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Services</p>
+                          {displayedServices.length > 0 ? (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {displayedServices.map((service, index) => (
+                                <span
+                                  key={`${service.serviceName}-${index}`}
+                                  className="inline-flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700"
+                                >
+                                  {service.serviceName}
+                                  <span className="text-indigo-500">
+                                    from {service.currency} {Number(service.startingPrice || 0).toLocaleString()}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-1 text-xs font-semibold text-slate-500">No services listed yet.</p>
+                          )}
+                        </div>
+
+                        <div className="mt-3 rounded-xl border border-slate-100 bg-white p-3">
                           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Portfolio Highlight</p>
                           <p className="mt-1 text-xs font-semibold text-slate-700 line-clamp-2">
                             {highlightedPortfolio?.title || "No highlight yet"}
@@ -3184,15 +3434,17 @@ export default function Home() {
                               Fast response eligible
                             </p>
                           </div>
-                          <button
-                            onClick={() => {
-                              setSelectedFreelancer(freelancer);
-                              setShowFreelancerModal(true);
-                            }}
-                            className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
-                          >
-                            View Profile
-                          </button>
+                          <TooltipAction text="Open freelancer profile details">
+                            <button
+                              onClick={() => {
+                                setSelectedFreelancer(freelancer);
+                                setShowFreelancerModal(true);
+                              }}
+                              className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
+                            >
+                              View Profile
+                            </button>
+                          </TooltipAction>
                         </div>
                       </div>
                     );
@@ -3225,7 +3477,7 @@ export default function Home() {
           </AnimatePresence>
         </div>
       ) : (
-          <AdminDashboard />
+          <AdminDashboard viewAs={adminViewMode} onViewAsChange={handleViewSwitch} />
         )}
       </main>
 
@@ -3512,13 +3764,34 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="lg:col-span-2 space-y-8">
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-widest">About</h4>
-                      <p className="text-slate-600 leading-relaxed font-medium">
-                        {selectedFreelancer.bio || "No detailed bio provided yet."}
-                      </p>
-                    </div>
+                    <div className="lg:col-span-2 space-y-8">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-widest">About</h4>
+                        {[
+                          { label: "Who I Help", value: selectedFreelancer.aboutSections?.whoIHelp },
+                          { label: "What I Specialize In", value: selectedFreelancer.aboutSections?.whatISpecializeIn || selectedFreelancer.bio },
+                          { label: "Results I've Delivered", value: selectedFreelancer.aboutSections?.resultsIHaveDelivered },
+                          { label: "How I Work", value: selectedFreelancer.aboutSections?.howIWork },
+                        ].some((item) => (item.value || "").trim().length > 0) ? (
+                          <div className="grid gap-3">
+                            {[
+                              { label: "Who I Help", value: selectedFreelancer.aboutSections?.whoIHelp },
+                              { label: "What I Specialize In", value: selectedFreelancer.aboutSections?.whatISpecializeIn || selectedFreelancer.bio },
+                              { label: "Results I've Delivered", value: selectedFreelancer.aboutSections?.resultsIHaveDelivered },
+                              { label: "How I Work", value: selectedFreelancer.aboutSections?.howIWork },
+                            ]
+                              .filter((item) => (item.value || "").trim().length > 0)
+                              .map((item) => (
+                                <div key={item.label} className="rounded-xl border border-slate-200 bg-white p-4">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
+                                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-700">{item.value}</p>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          <p className="text-slate-600 leading-relaxed font-medium">No detailed profile sections provided yet.</p>
+                        )}
+                      </div>
 
                     <div className="pt-6 border-t border-slate-100">
                       <h4 className="text-sm font-bold text-slate-900 mb-6 uppercase tracking-widest">Portfolio Showcase</h4>
@@ -3672,45 +3945,53 @@ export default function Home() {
                           </div>
 
                           <div className="flex flex-wrap gap-3 pt-2">
-                            <button 
-                              onClick={() => {
-                                setVettingData(app);
-                                setIsVetting(true);
-                              }}
-                              className="px-6 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-slate-800 transition-all uppercase tracking-widest flex items-center gap-2 border border-slate-800 shadow-xl shadow-slate-900/10 active:scale-95"
-                            >
-                              <Brain className="w-3.5 h-3.5 text-indigo-400" />
-                              Start AI Vetting
-                            </button>
-                            {app.status === 'pending' && (
+                            <TooltipAction text="Run AI vetting on applicant">
                               <button 
                                 onClick={() => {
-                                  const job = employerJobs.find(j => j.title === selectedJobTitle);
-                                  approveApplication(app.id, app.freelancer_id, app.job_id, selectedJobTitle, job?.budget || 0);
+                                  setVettingData(app);
+                                  setIsVetting(true);
                                 }}
-                                disabled={isSaving}
-                                className="px-6 py-3 bg-indigo-600 text-white text-[10px] font-bold rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-500/20 active:scale-95"
+                                className="px-6 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-slate-800 transition-all uppercase tracking-widest flex items-center gap-2 border border-slate-800 shadow-xl shadow-slate-900/10 active:scale-95"
                               >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Approve & Fund Budget
+                                <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                                Start AI Vetting
                               </button>
+                            </TooltipAction>
+                            {app.status === 'pending' && (
+                              <TooltipAction text="Approve applicant and fund escrow">
+                                <button 
+                                  onClick={() => {
+                                    const job = employerJobs.find(j => j.title === selectedJobTitle);
+                                    approveApplication(app.id, app.freelancer_id, app.job_id, selectedJobTitle, job?.budget || 0);
+                                  }}
+                                  disabled={isSaving}
+                                  className="px-6 py-3 bg-indigo-600 text-white text-[10px] font-bold rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-500/20 active:scale-95"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  Approve & Fund Budget
+                                </button>
+                              </TooltipAction>
                             )}
-                            <button 
-                              onClick={() => {
-                                setSelectedFreelancer(app.profiles);
-                                setShowFreelancerModal(true);
-                              }}
-                              className="px-5 py-3 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
-                            >
-                              Profile Details
-                            </button>
-                            <Link 
-                              href={`/messages?with=${app.freelancer_id}`}
-                              className="px-5 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
-                            >
-                              <Mail className="w-4 h-4 text-indigo-400" />
-                              Interview Chat
-                            </Link>
+                            <TooltipAction text="Open full freelancer profile">
+                              <button 
+                                onClick={() => {
+                                  setSelectedFreelancer(app.profiles);
+                                  setShowFreelancerModal(true);
+                                }}
+                                className="px-5 py-3 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
+                              >
+                                Profile Details
+                              </button>
+                            </TooltipAction>
+                            <TooltipAction text="Open direct interview messaging">
+                              <Link 
+                                href={`/messages?with=${app.freelancer_id}`}
+                                className="px-5 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
+                              >
+                                <Mail className="w-4 h-4 text-indigo-400" />
+                                Interview Chat
+                              </Link>
+                            </TooltipAction>
                           </div>
                         </div>
                       </div>

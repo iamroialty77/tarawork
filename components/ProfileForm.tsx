@@ -1,6 +1,6 @@
 "use client";
 
-import { UserProfile, FreelancerCategory, PortfolioItem, ExperienceItem } from "../types";
+import { UserProfile, FreelancerCategory, PortfolioItem, ExperienceItem, ServiceOffering } from "../types";
 import { useState, useEffect, useRef } from "react";
 import {
   Camera,
@@ -29,6 +29,54 @@ interface ProfileFormProps {
 }
 
 type TabKey = "basics" | "professional" | "premium" | "portfolio";
+type AboutSectionKey = "whoIHelp" | "whatISpecializeIn" | "resultsIHaveDelivered" | "howIWork";
+
+const ABOUT_SECTION_MAX = 200;
+const MAX_SERVICES = 6;
+const EMPTY_ABOUT_SECTIONS = {
+  whoIHelp: "",
+  whatISpecializeIn: "",
+  resultsIHaveDelivered: "",
+  howIWork: "",
+};
+const DEFAULT_SERVICE_ENTRY: ServiceOffering = {
+  serviceName: "",
+  startingPrice: 0,
+  currency: "PHP",
+  typicalTurnaround: "",
+};
+const SERVICE_CURRENCIES = ["PHP", "USD", "EUR", "SGD", "AUD"];
+
+const normalizeAboutSections = (profile: UserProfile) => {
+  const sections = profile.aboutSections || EMPTY_ABOUT_SECTIONS;
+  return {
+    whoIHelp: (sections.whoIHelp || "").slice(0, ABOUT_SECTION_MAX),
+    whatISpecializeIn: (sections.whatISpecializeIn || profile.bio || "").slice(0, ABOUT_SECTION_MAX),
+    resultsIHaveDelivered: (sections.resultsIHaveDelivered || "").slice(0, ABOUT_SECTION_MAX),
+    howIWork: (sections.howIWork || "").slice(0, ABOUT_SECTION_MAX),
+  };
+};
+
+const normalizeServices = (services: ServiceOffering[] | undefined): ServiceOffering[] => {
+  if (!Array.isArray(services)) return [];
+  return services
+    .map((service) => {
+      const serviceName = (service?.serviceName || "").trim();
+      if (!serviceName) return null;
+      const currency = (service?.currency || "PHP").trim() || "PHP";
+      const startingPrice = Number.isFinite(service?.startingPrice)
+        ? Math.max(0, Number(service.startingPrice))
+        : 0;
+      return {
+        serviceName,
+        startingPrice,
+        currency,
+        typicalTurnaround: (service?.typicalTurnaround || "").trim(),
+      };
+    })
+    .filter((service): service is ServiceOffering => !!service)
+    .slice(0, MAX_SERVICES);
+};
 
 export default function ProfileForm({ 
   initialProfile, 
@@ -39,7 +87,15 @@ export default function ProfileForm({
   onRemovePortfolio,
   isSaving = false 
 }: ProfileFormProps) {
-  const [profile, setProfile] = useState(initialProfile);
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const aboutSections = normalizeAboutSections(initialProfile);
+    return {
+      ...initialProfile,
+      aboutSections,
+      servicesOffered: normalizeServices(initialProfile.servicesOffered),
+      bio: aboutSections.whatISpecializeIn || initialProfile.bio,
+    };
+  });
   const [skillInput, setSkillInput] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [resumeParseFile, setResumeParseFile] = useState<File | null>(null);
@@ -50,6 +106,7 @@ export default function ProfileForm({
     description: "",
   });
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
+  const [serviceInput, setServiceInput] = useState<ServiceOffering>(DEFAULT_SERVICE_ENTRY);
   const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | "credit_topup" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +141,13 @@ export default function ProfileForm({
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
-    setProfile(initialProfile);
+    const aboutSections = normalizeAboutSections(initialProfile);
+    setProfile({
+      ...initialProfile,
+      aboutSections,
+      servicesOffered: normalizeServices(initialProfile.servicesOffered),
+      bio: aboutSections.whatISpecializeIn || initialProfile.bio,
+    });
   }, [initialProfile]);
 
   useEffect(() => {
@@ -149,6 +212,78 @@ export default function ProfileForm({
     setProfile({
       ...profile,
       experience: (profile.experience || []).filter((item) => item.id !== id),
+    });
+  };
+
+  const handleAboutSectionChange = (key: AboutSectionKey, value: string) => {
+    const trimmed = value.slice(0, ABOUT_SECTION_MAX);
+    const nextSections = {
+      ...(profile.aboutSections || EMPTY_ABOUT_SECTIONS),
+      [key]: trimmed,
+    };
+    setProfile({
+      ...profile,
+      aboutSections: nextSections,
+      bio: nextSections.whatISpecializeIn || "",
+    });
+  };
+
+  const addServiceEntry = () => {
+    const serviceName = serviceInput.serviceName.trim();
+    const typicalTurnaround = serviceInput.typicalTurnaround.trim();
+    const startingPrice = Number.isFinite(serviceInput.startingPrice)
+      ? Math.max(0, Number(serviceInput.startingPrice))
+      : 0;
+    if (!serviceName) return;
+
+    const currentServices = normalizeServices(profile.servicesOffered);
+    if (currentServices.length >= MAX_SERVICES) return;
+
+    setProfile({
+      ...profile,
+      servicesOffered: [
+        ...currentServices,
+        {
+          serviceName,
+          startingPrice,
+          currency: serviceInput.currency || "PHP",
+          typicalTurnaround,
+        },
+      ],
+    });
+    setServiceInput(DEFAULT_SERVICE_ENTRY);
+  };
+
+  const updateServiceEntry = (
+    index: number,
+    field: keyof ServiceOffering,
+    value: string | number,
+  ) => {
+    const currentServices = normalizeServices(profile.servicesOffered);
+    if (!currentServices[index]) return;
+
+    const nextServices = currentServices.map((service, idx) => {
+      if (idx !== index) return service;
+      if (field === "startingPrice") {
+        const parsed = typeof value === "number" ? value : Number(value);
+        return {
+          ...service,
+          startingPrice: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
+        };
+      }
+      return {
+        ...service,
+        [field]: String(value),
+      };
+    });
+    setProfile({ ...profile, servicesOffered: nextServices });
+  };
+
+  const removeServiceEntry = (index: number) => {
+    const currentServices = normalizeServices(profile.servicesOffered);
+    setProfile({
+      ...profile,
+      servicesOffered: currentServices.filter((_, idx) => idx !== index),
     });
   };
 
@@ -351,6 +486,10 @@ export default function ProfileForm({
       ...profile,
       name: data.name || profile.name,
       bio: data.bio || profile.bio,
+      aboutSections: {
+        ...(profile.aboutSections || EMPTY_ABOUT_SECTIONS),
+        whatISpecializeIn: (data.bio || profile.aboutSections?.whatISpecializeIn || profile.bio || "").slice(0, ABOUT_SECTION_MAX),
+      },
       skills: Array.from(new Set([...profile.skills, ...(data.skills || []).map((skill) => String(skill).trim()).filter(Boolean)])),
       category: data.category || profile.category,
       experience: [...(profile.experience || []), ...newExperienceItems],
@@ -385,6 +524,7 @@ export default function ProfileForm({
     "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100";
   const labelClassName =
     "mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500";
+  const servicesOffered = normalizeServices(profile.servicesOffered);
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
@@ -521,14 +661,49 @@ export default function ProfileForm({
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className={labelClassName}>Short Bio</label>
-                <textarea
-                  className={inputClassName}
-                  rows={4}
-                  value={profile.bio}
-                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                />
+              <div className="sm:col-span-2 grid grid-cols-1 gap-4">
+                {[
+                  {
+                    key: "whoIHelp" as const,
+                    label: "Who I Help",
+                    placeholder: "Early-stage SaaS founders launching MVPs",
+                  },
+                  {
+                    key: "whatISpecializeIn" as const,
+                    label: "What I Specialize In",
+                    placeholder: "High-performance React apps and scalable APIs",
+                  },
+                  {
+                    key: "resultsIHaveDelivered" as const,
+                    label: "Results I've Delivered",
+                    placeholder: "Built dashboards used by 10,000+ users",
+                  },
+                  {
+                    key: "howIWork" as const,
+                    label: "How I Work",
+                    placeholder: "Clear timelines. Weekly updates. Clean documentation.",
+                  },
+                ].map((field) => {
+                  const value = profile.aboutSections?.[field.key] || "";
+                  return (
+                    <div key={field.key}>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <label className={labelClassName}>{field.label}</label>
+                        <span className="text-[11px] font-bold text-slate-400">
+                          {value.length}/{ABOUT_SECTION_MAX}
+                        </span>
+                      </div>
+                      <textarea
+                        className={inputClassName}
+                        rows={2}
+                        maxLength={ABOUT_SECTION_MAX}
+                        placeholder={field.placeholder}
+                        value={value}
+                        onChange={(e) => handleAboutSectionChange(field.key, e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -673,6 +848,133 @@ export default function ProfileForm({
                           &times;
                         </button>
                       </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-base font-bold text-slate-950">Services Offered</h4>
+                      <p className="text-sm text-slate-500">Add up to 6 services with starting price and turnaround.</p>
+                    </div>
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                      {servicesOffered.length}/{MAX_SERVICES}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+                    <div className="md:col-span-2">
+                      <input
+                        type="text"
+                        className={inputClassName}
+                        placeholder="Service Name (e.g. Landing Page Build)"
+                        value={serviceInput.serviceName}
+                        onChange={(e) => setServiceInput((prev) => ({ ...prev, serviceName: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        min={0}
+                        className={inputClassName}
+                        placeholder="Starting Price"
+                        value={serviceInput.startingPrice}
+                        onChange={(e) => setServiceInput((prev) => ({ ...prev, startingPrice: Number(e.target.value) || 0 }))}
+                      />
+                    </div>
+                    <div>
+                      <select
+                        className={inputClassName}
+                        value={serviceInput.currency}
+                        onChange={(e) => setServiceInput((prev) => ({ ...prev, currency: e.target.value }))}
+                      >
+                        {SERVICE_CURRENCIES.map((currency) => (
+                          <option key={currency} value={currency}>
+                            {currency}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <input
+                        type="text"
+                        className={inputClassName}
+                        placeholder="Typical Turnaround (e.g. 3-5 days)"
+                        value={serviceInput.typicalTurnaround}
+                        onChange={(e) => setServiceInput((prev) => ({ ...prev, typicalTurnaround: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addServiceEntry}
+                    disabled={servicesOffered.length >= MAX_SERVICES}
+                    className="mt-3 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add Service
+                  </button>
+
+                  <div className="mt-4 space-y-3">
+                    {servicesOffered.length === 0 && (
+                      <p className="text-sm text-slate-500">No services added yet.</p>
+                    )}
+                    {servicesOffered.map((service, index) => (
+                      <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+                          <div className="md:col-span-2">
+                            <label className={labelClassName}>Service Name</label>
+                            <input
+                              type="text"
+                              className={inputClassName}
+                              value={service.serviceName}
+                              onChange={(e) => updateServiceEntry(index, "serviceName", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className={labelClassName}>Starting Price</label>
+                            <input
+                              type="number"
+                              min={0}
+                              className={inputClassName}
+                              value={service.startingPrice}
+                              onChange={(e) => updateServiceEntry(index, "startingPrice", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className={labelClassName}>Currency</label>
+                            <select
+                              className={inputClassName}
+                              value={service.currency}
+                              onChange={(e) => updateServiceEntry(index, "currency", e.target.value)}
+                            >
+                              {SERVICE_CURRENCIES.map((currency) => (
+                                <option key={currency} value={currency}>
+                                  {currency}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className={labelClassName}>Typical Turnaround</label>
+                            <input
+                              type="text"
+                              className={inputClassName}
+                              value={service.typicalTurnaround}
+                              onChange={(e) => updateServiceEntry(index, "typicalTurnaround", e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => removeServiceEntry(index)}
+                            className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                          >
+                            Delete Service
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>

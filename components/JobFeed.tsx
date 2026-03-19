@@ -1,19 +1,25 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCategory, SmartMatchResult, SmartMatchResponse } from "../types";
+import type { CurrencyCode, Job, FreelancerProfile, PaymentMethod, JobDuration, FreelancerCategory, SmartMatchResult, SmartMatchResponse } from "../types";
 import JobCard from "./JobCard";
 import AIAgent from "./AIAgent";
 
 import { Search, Filter, Sparkles, Loader2 } from "lucide-react";
 import { energyScore } from "../lib/utils";
 import { heuristicSmartMatchMany } from "../lib/smartMatch";
+import { FALLBACK_WEEKLY_USD_RATES, convertAmount, formatCurrencyAmount, isCurrencyCode } from "../lib/currency";
 
 interface JobFeedProps {
   jobs: Job[];
   profile: FreelancerProfile;
   onApply?: (jobId: string) => void;
   appliedJobs?: Record<string, string>;
+}
+
+interface ForexRatesResponse {
+  base: "USD";
+  rates: Record<CurrencyCode, number>;
 }
 
 const smartMatchErrorMessage = (errorCode?: string, fallbackError?: string) => {
@@ -54,6 +60,33 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   const [smartMatches, setSmartMatches] = useState<Record<string, SmartMatchResult>>({});
   const [smartMatchLoading, setSmartMatchLoading] = useState(false);
   const [smartMatchError, setSmartMatchError] = useState<string | null>(null);
+  const [ratesByUsd, setRatesByUsd] = useState<Record<CurrencyCode, number>>(FALLBACK_WEEKLY_USD_RATES);
+
+  const preferredCurrency: CurrencyCode = isCurrencyCode(profile.preferredCurrency)
+    ? profile.preferredCurrency
+    : isCurrencyCode(profile.aiInsights?.preferredCurrency)
+      ? profile.aiInsights.preferredCurrency
+      : "PHP";
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadForexRates = async () => {
+      try {
+        const response = await fetch("/api/forex/rates?base=USD", { cache: "no-store" });
+        const payload = (await response.json()) as ForexRatesResponse;
+        if (!response.ok || !payload?.rates) return;
+        if (mounted) setRatesByUsd(payload.rates);
+      } catch {
+        // Keep weekly fallback rates if API is unavailable.
+      }
+    };
+
+    void loadForexRates();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSmartMatchingToggle = (checked: boolean) => {
     setUseSmartMatching(checked);
@@ -303,6 +336,22 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             let sustainabilityMatch = Math.round(0.6 * matchScore + 0.4 * eScore);
             if (profile.wellness?.verifiedSustainable) sustainabilityMatch = Math.min(100, sustainabilityMatch + 5);
 
+            const sourceCurrency: CurrencyCode = isCurrencyCode(job.currencyCode) ? job.currencyCode : "PHP";
+            const sourceBudget = Number(job.budget || 0);
+            const convertedBudget =
+              Number.isFinite(sourceBudget) && sourceBudget > 0
+                ? convertAmount(sourceBudget, sourceCurrency, preferredCurrency, ratesByUsd)
+                : null;
+
+            const rateLabel =
+              convertedBudget !== null
+                ? formatCurrencyAmount(convertedBudget, preferredCurrency)
+                : job.rate;
+            const rateSubLabel =
+              convertedBudget !== null && sourceCurrency !== preferredCurrency
+                ? `${formatCurrencyAmount(sourceBudget, sourceCurrency)} original`
+                : undefined;
+
             return (
               <JobCard 
                 key={job.id} 
@@ -315,6 +364,8 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                 applicationStatus={appliedJobs[job.id]}
                 sustainabilityMatch={sustainabilityMatch}
                 energyRequirement={job.energyRequirement}
+                rateLabel={rateLabel}
+                rateSubLabel={rateSubLabel}
                 onViewSmartMatch={(j) => {
                   setSelectedJobForAI(j);
                   setShowAIAgent(true);

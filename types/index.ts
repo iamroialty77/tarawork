@@ -23,6 +23,7 @@ export type FreelancerCategory =
 export type PaymentMethod = "Hourly" | "Flat-Rate";
 export type JobType = "Full-time" | "Part-time" | "Contract" | "One-time Project";
 export type JobDuration = "1-2 weeks" | "1-3 months" | "Ongoing";
+export type CurrencyCode = "USD" | "AUD" | "GBP" | "PHP";
 export type ProjectStatus = "Active" | "Completed" | "Pending" | "In-Review" | "In Progress";
 export type WorkspaceType =
   | "Code"
@@ -67,6 +68,7 @@ export interface AIAnalysis {
     responseTime: string;
     clientSentiment: "Positive" | "Neutral" | "Negative";
   };
+  preferredCurrency?: CurrencyCode;
 }
 
 export interface SoftSkill {
@@ -102,11 +104,12 @@ export interface Job {
   category: FreelancerCategory;
   paymentMethod: PaymentMethod;
   rate: string;
-  duration: JobDuration;
+  duration: string;
   skills: string[];
   createdAt: string;
   jobType?: JobType;
   budget?: number;
+  currencyCode?: CurrencyCode;
   milestones?: Milestone[];
   deadline?: string;
   customQuestions?: ProposalQuestion[];
@@ -238,6 +241,20 @@ export interface ExperienceItem {
   description: string;
 }
 
+export interface ProfileAboutSections {
+  whoIHelp: string;
+  whatISpecializeIn: string;
+  resultsIHaveDelivered: string;
+  howIWork: string;
+}
+
+export interface ServiceOffering {
+  serviceName: string;
+  startingPrice: number;
+  currency: string;
+  typicalTurnaround: string;
+}
+
 export interface UserProfile {
   id?: string;
   username?: string;
@@ -249,12 +266,15 @@ export interface UserProfile {
   softSkills?: SoftSkill[];
   hourlyRate: string;
   bio: string;
+  aboutSections?: ProfileAboutSections;
+  servicesOffered?: ServiceOffering[];
   avatar_url?: string;
   companyName?: string;
   activeProjects?: Project[];
   squad?: Squad;
   workflows?: any[];
   aiInsights?: AIAnalysis;
+  preferredCurrency?: CurrencyCode;
   ranking?: number; // Leaderboard position
   portfolio?: PortfolioItem[];
   experience?: ExperienceItem[];

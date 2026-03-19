@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Video, VideoOff, Mic, MicOff, PhoneOff, MessageSquare, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PREMIUM_CREDIT_COSTS } from "@/lib/creditConfig";
+import CreditConfirmationModal from "./ui/CreditConfirmationModal";
 
 interface VideoCallProps {
   roomUrl?: string;
@@ -12,19 +14,45 @@ interface VideoCallProps {
 }
 
 export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }: VideoCallProps) {
+  const interviewSummaryCost = PREMIUM_CREDIT_COSTS.interview_summary;
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
+  const [showCreditConfirm, setShowCreditConfirm] = useState(false);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
 
   const handleSummarizeRequest = () => {
     setShowConsent(true);
   };
 
-  const confirmConsent = () => {
+  const openCreditConfirmation = async () => {
+    setIsBalanceLoading(true);
+    try {
+      if (currentUserId) {
+        const response = await fetch(`/api/credits/balance?userId=${encodeURIComponent(currentUserId)}`);
+        const payload = await response.json();
+        if (response.ok) {
+          setRemainingCredits(Number(payload?.balance || 0));
+        } else {
+          setRemainingCredits(0);
+        }
+      } else {
+        setRemainingCredits(0);
+      }
+    } catch {
+      setRemainingCredits(0);
+    } finally {
+      setIsBalanceLoading(false);
+      setShowCreditConfirm(true);
+    }
+  };
+
+  const confirmConsent = async () => {
     setShowConsent(false);
-    handleSummarize();
+    await openCreditConfirmation();
   };
 
   const handleSummarize = async () => {
@@ -41,6 +69,7 @@ export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }
           projectId: projectId || 'mock-project-123',
           participants: ['Client', 'Freelancer'],
           userId: currentUserId,
+          confirmCreditUse: true,
         }),
       });
 
@@ -49,10 +78,14 @@ export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }
         throw new Error(data?.error || 'Summarization failed');
       }
       setSummary(data.summary);
+      if (typeof data?.credits?.remaining === "number") {
+        setRemainingCredits(Number(data.credits.remaining));
+      }
     } catch (error) {
       console.error('Summarization failed:', error);
     } finally {
       setIsSummarizing(false);
+      setShowCreditConfirm(false);
     }
   };
 
@@ -189,6 +222,18 @@ export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }
           </div>
         )}
       </AnimatePresence>
+
+      <CreditConfirmationModal
+        isOpen={showCreditConfirm}
+        creditsRequired={interviewSummaryCost}
+        remainingBalance={remainingCredits}
+        isBalanceLoading={isBalanceLoading}
+        isConfirming={isSummarizing}
+        onCancel={() => setShowCreditConfirm(false)}
+        onConfirm={() => {
+          void handleSummarize();
+        }}
+      />
 
       <p className="mt-6 text-slate-500 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
         <Shield className="w-3 h-3" />

@@ -31,6 +31,8 @@ export interface JobCardProps {
   applicationStatus?: string;
   sustainabilityMatch?: number;
   energyRequirement?: string;
+  rateLabel?: string;
+  rateSubLabel?: string;
   onViewSmartMatch?: (job: Job) => void;
 }
 
@@ -44,6 +46,8 @@ export default function JobCard({
   applicationStatus,
   sustainabilityMatch,
   energyRequirement,
+  rateLabel,
+  rateSubLabel,
   onViewSmartMatch
 }: JobCardProps) {
   const isApplied = !!applicationStatus;
@@ -272,7 +276,12 @@ export default function JobCard({
         <div className="flex flex-wrap gap-y-2 gap-x-4 mb-5">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
             <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-            {job.rate}
+            <div className="flex flex-col">
+              <span>{rateLabel || job.rate}</span>
+              {rateSubLabel && (
+                <span className="text-[10px] font-medium text-slate-400">{rateSubLabel}</span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
             <Clock className="w-3.5 h-3.5 text-slate-500" />

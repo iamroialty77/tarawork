@@ -1,16 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { Job, JobType, JobDuration, PaymentMethod, Milestone, ProposalQuestion } from "../types";
+import { useEffect, useState } from "react";
+import { CurrencyCode, Job, JobType, Milestone, ProposalQuestion } from "../types";
 import { supabase } from "../lib/supabase";
 import { Loader2, CheckCircle2, AlertCircle, Sparkles, Lock } from "lucide-react";
 import { cn } from "../lib/utils";
+import TooltipAction from "./ui/TooltipAction";
+import { CURRENCY_SYMBOLS, SUPPORTED_CURRENCIES, formatCurrencyAmount, getCurrencySymbol } from "../lib/currency";
 
 interface JobPostingFormProps {
   onPublish?: () => void;
+  preferredCurrency?: CurrencyCode;
+  onCurrencyPreferenceChange?: (currency: CurrencyCode) => void;
 }
 
-export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
+type DurationPreset = "1-2 weeks" | "1-3 months" | "Ongoing" | "custom";
+
+const DURATION_OPTIONS: Array<{
+  value: Exclude<DurationPreset, "custom">;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "1-2 weeks",
+    title: "1-2 weeks",
+    description: "Sprint work, specific deliverables, gig-style projects",
+  },
+  {
+    value: "1-3 months",
+    title: "1-3 months",
+    description: "Project-based work with a defined scope",
+  },
+  {
+    value: "Ongoing",
+    title: "Ongoing",
+    description: "Retainer or staff augmentation, recurring work",
+  },
+];
+
+export default function JobPostingForm({
+  onPublish,
+  preferredCurrency = "PHP",
+  onCurrencyPreferenceChange,
+}: JobPostingFormProps) {
   const [step, setStep] = useState(1);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -33,6 +65,13 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
   const [skillInput, setSkillInput] = useState("");
   const [newMilestone, setNewMilestone] = useState<Partial<Milestone>>({ title: "", dueDate: "", amount: 0 });
   const [newQuestion, setNewQuestion] = useState("");
+  const [durationPreset, setDurationPreset] = useState<DurationPreset>("1-3 months");
+  const [customDurationText, setCustomDurationText] = useState("");
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>(preferredCurrency);
+
+  useEffect(() => {
+    setSelectedCurrency(preferredCurrency);
+  }, [preferredCurrency]);
 
   const calculateScore = () => {
     let score = 0;
@@ -46,6 +85,8 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
   };
 
   const score = calculateScore();
+  const selectedCurrencySymbol = getCurrencySymbol(selectedCurrency);
+  const formattedBudget = formatCurrencyAmount(formData.budget || 0, selectedCurrency);
 
   const nextStep = () => {
     setIsAiAnalyzing(true);
@@ -115,15 +156,47 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
     setIsPublishing(true);
     setPublishStatus(null);
     try {
+      const resolvedDuration =
+        durationPreset === "custom" ? customDurationText.trim() : durationPreset;
+      if (!resolvedDuration) {
+        throw new Error("Please provide a custom work duration.");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Fetch user's profile to get company name
+      // Fetch user's profile to get company name and current preference payload
       const { data: profile } = await supabase
         .from('profiles')
-        .select('companyName')
+        .select('companyName, aiInsights')
         .eq('id', user.id)
         .single();
+
+      const numericBudget = Number(formData.budget || 0);
+      const resolvedBudget = Number.isFinite(numericBudget) ? Math.max(0, numericBudget) : 0;
+      const formattedRate = `${selectedCurrency} ${resolvedBudget.toLocaleString()}`;
+
+      const currentAiInsights =
+        profile?.aiInsights && typeof profile.aiInsights === "object"
+          ? profile.aiInsights
+          : {};
+
+      const { error: prefError } = await supabase
+        .from("profiles")
+        .update({
+          aiInsights: {
+            ...currentAiInsights,
+            preferredCurrency: selectedCurrency,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (prefError) {
+        console.warn("Unable to save preferred currency:", prefError);
+      } else {
+        onCurrencyPreferenceChange?.(selectedCurrency);
+      }
 
       const jobData = {
         id: Math.random().toString(36).substr(2, 9),
@@ -131,9 +204,11 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         description: formData.description,
         skills: formData.skills,
         jobType: formData.jobType,
-        duration: formData.duration,
+        duration: resolvedDuration,
         paymentMethod: formData.paymentMethod,
-        budget: formData.budget,
+        rate: formattedRate,
+        budget: resolvedBudget,
+        currency_code: selectedCurrency,
         milestones: formData.milestones,
         customQuestions: formData.customQuestions,
         deadline: formData.deadline,
@@ -149,10 +224,17 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         .insert([jobData]);
 
       if (error) {
-        if (error.message.includes("relation \"jobs\" does not exist")) {
+        if (/currency_code|currencyCode/i.test(error.message || "")) {
+          const { currency_code, ...legacyJobData } = jobData;
+          const { error: fallbackInsertError } = await supabase
+            .from("jobs")
+            .insert([legacyJobData]);
+          if (fallbackInsertError) throw fallbackInsertError;
+        } else if (error.message.includes("relation \"jobs\" does not exist")) {
           throw new Error("Initialization Required: The 'jobs' table is not yet set up on the platform. As a professional platform, proper database configuration is required for the security of your escrow funds. Please check Admin Dashboard > System Health.");
+        } else {
+          throw error;
         }
-        throw error;
       }
 
       setPublishStatus({ type: 'success', msg: "Job published successfully! It's now live on the marketplace." });
@@ -172,6 +254,8 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         category: "General",
         energyRequirement: "Balanced",
       });
+      setDurationPreset("1-3 months");
+      setCustomDurationText("");
     } catch (err: any) {
       console.error("Error publishing job:", err);
       setPublishStatus({ type: 'error', msg: `Failed to publish job: ${err.message}` });
@@ -303,32 +387,40 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             onChange={(e) => setSkillInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && addSkill()}
           />
-          <button
-            type="button"
-            onClick={addSkill}
-            className="px-6 py-2 bg-gray-900 text-white rounded-xl hover:bg-black font-bold text-sm transition-all"
-          >
-            Add
-          </button>
+          <TooltipAction text="Add this skill requirement">
+            <button
+              type="button"
+              onClick={addSkill}
+              className="px-6 py-2 bg-gray-900 text-white rounded-xl hover:bg-black font-bold text-sm transition-all"
+            >
+              Add
+            </button>
+          </TooltipAction>
         </div>
         
         <div className="flex flex-wrap gap-2 mt-4">
           {formData.skills?.length === 0 && (
             <div className="text-[11px] text-gray-400 font-medium italic">Suggesting for you: 
-              <button onClick={() => { setSkillInput("React"); addSkill(); }} className="ml-2 hover:text-indigo-600 underline">React</button>, 
-              <button onClick={() => { setSkillInput("UI/UX"); addSkill(); }} className="ml-2 hover:text-indigo-600 underline">UI/UX</button>
+              <TooltipAction text="Quick add React skill">
+                <button onClick={() => { setSkillInput("React"); addSkill(); }} className="ml-2 hover:text-indigo-600 underline">React</button>
+              </TooltipAction>, 
+              <TooltipAction text="Quick add UI/UX skill">
+                <button onClick={() => { setSkillInput("UI/UX"); addSkill(); }} className="ml-2 hover:text-indigo-600 underline">UI/UX</button>
+              </TooltipAction>
             </div>
           )}
           {formData.skills?.map((skill) => (
             <span key={skill} className="inline-flex items-center px-4 py-1.5 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
               {skill}
-              <button
-                type="button"
-                onClick={() => removeSkill(skill)}
-                className="ml-2 hover:text-red-500 transition-colors"
-              >
-                &times;
-              </button>
+              <TooltipAction text="Remove this skill tag">
+                <button
+                  type="button"
+                  onClick={() => removeSkill(skill)}
+                  className="ml-2 hover:text-red-500 transition-colors"
+                >
+                  &times;
+                </button>
+              </TooltipAction>
             </span>
           ))}
         </div>
@@ -387,21 +479,60 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             </div>
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2">Duration</label>
-          <div className="relative">
-            <select
-              className="appearance-none block w-full rounded-2xl border-2 border-gray-100 bg-gray-50 px-5 py-3 font-bold text-gray-700 focus:border-indigo-600 focus:outline-none transition-all cursor-pointer"
-              value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: e.target.value as JobDuration })}
-            >
-              <option value="1-2 weeks">1-2 weeks</option>
-              <option value="1-3 months">1-3 months</option>
-              <option value="Ongoing">Ongoing</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-            </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-3">Work Duration</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {DURATION_OPTIONS.map((option) => {
+              const isActive = durationPreset === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setDurationPreset(option.value);
+                    setFormData({ ...formData, duration: option.value });
+                  }}
+                  className={cn(
+                    "rounded-2xl border-2 p-4 text-left transition-all",
+                    isActive
+                      ? "border-indigo-500 bg-indigo-50 shadow-sm shadow-indigo-100"
+                      : "border-gray-100 bg-gray-50 hover:border-indigo-200 hover:bg-white",
+                  )}
+                >
+                  <p className={cn("text-sm font-black", isActive ? "text-indigo-700" : "text-gray-900")}>
+                    {option.title}
+                  </p>
+                  <p className={cn("mt-1 text-xs leading-relaxed", isActive ? "text-indigo-600" : "text-gray-500")}>
+                    {option.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/70 p-4">
+            <label className="text-[11px] font-black uppercase tracking-widest text-gray-600">
+              Custom Duration (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 6 months with monthly milestones"
+              className="mt-2 block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 focus:border-indigo-500 focus:outline-none"
+              value={customDurationText}
+              onChange={(e) => {
+                const value = e.target.value;
+                setCustomDurationText(value);
+                if (value.trim()) {
+                  setDurationPreset("custom");
+                  setFormData({ ...formData, duration: value.trim() });
+                } else if (durationPreset === "custom") {
+                  setFormData({ ...formData, duration: "" });
+                }
+              }}
+            />
+            <p className="mt-2 text-[11px] font-medium text-gray-500">
+              Leave blank if one of the preset durations already fits your project.
+            </p>
           </div>
         </div>
 
@@ -409,19 +540,20 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
           <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2 text-amber-600">Energy Requirement</label>
           <div className="flex gap-2 p-1 bg-amber-50/30 border-2 border-amber-100/50 rounded-2xl">
             {["High", "Balanced", "Low"].map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => setFormData({ ...formData, energyRequirement: level as any })}
-                className={cn(
-                  "flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                  formData.energyRequirement === level 
-                    ? "bg-amber-500 text-white shadow-lg shadow-amber-200" 
-                    : "text-amber-700 hover:bg-amber-100"
-                )}
-              >
-                {level}
-              </button>
+              <TooltipAction key={level} text={`Set ${level.toLowerCase()} energy level`}>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, energyRequirement: level as any })}
+                  className={cn(
+                    "flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                    formData.energyRequirement === level 
+                      ? "bg-amber-500 text-white shadow-lg shadow-amber-200" 
+                      : "text-amber-700 hover:bg-amber-100"
+                  )}
+                >
+                  {level}
+                </button>
+              </TooltipAction>
             ))}
           </div>
         </div>
@@ -434,42 +566,67 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
       <div>
         <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-4">Payment Structure</label>
         <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={() => setFormData({ ...formData, paymentMethod: "Flat-Rate" })}
-            className={`p-5 rounded-2xl border-2 transition-all text-left ${
-              formData.paymentMethod === "Flat-Rate"
-                ? "border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-50"
-                : "border-gray-100 hover:border-gray-200"
-            }`}
-          >
-            <div className={`w-10 h-10 rounded-xl mb-3 flex items-center justify-center ${formData.paymentMethod === "Flat-Rate" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400"}`}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-            </div>
-            <p className="font-black text-gray-900">Fixed Project</p>
-            <p className="text-xs text-gray-500 mt-1">Pay a set price for the whole project.</p>
-          </button>
+          <TooltipAction text="Choose fixed project pricing">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, paymentMethod: "Flat-Rate" })}
+              className={`p-5 rounded-2xl border-2 transition-all text-left ${
+                formData.paymentMethod === "Flat-Rate"
+                  ? "border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-50"
+                  : "border-gray-100 hover:border-gray-200"
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl mb-3 flex items-center justify-center ${formData.paymentMethod === "Flat-Rate" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400"}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              </div>
+              <p className="font-black text-gray-900">Fixed Project</p>
+              <p className="text-xs text-gray-500 mt-1">Pay a set price for the whole project.</p>
+            </button>
+          </TooltipAction>
 
-          <button
-            type="button"
-            onClick={() => setFormData({ ...formData, paymentMethod: "Hourly" })}
-            className={`p-5 rounded-2xl border-2 transition-all text-left ${
-              formData.paymentMethod === "Hourly"
-                ? "border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-50"
-                : "border-gray-100 hover:border-gray-200"
-            }`}
-          >
-            <div className={`w-10 h-10 rounded-xl mb-3 flex items-center justify-center ${formData.paymentMethod === "Hourly" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400"}`}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <p className="font-black text-gray-900">Hourly Rate</p>
-            <p className="text-xs text-gray-500 mt-1">Pay for the time spent on the project.</p>
-          </button>
+          <TooltipAction text="Choose hourly project billing">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, paymentMethod: "Hourly" })}
+              className={`p-5 rounded-2xl border-2 transition-all text-left ${
+                formData.paymentMethod === "Hourly"
+                  ? "border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-50"
+                  : "border-gray-100 hover:border-gray-200"
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl mb-3 flex items-center justify-center ${formData.paymentMethod === "Hourly" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400"}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <p className="font-black text-gray-900">Hourly Rate</p>
+              <p className="text-xs text-gray-500 mt-1">Pay for the time spent on the project.</p>
+            </button>
+          </TooltipAction>
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2">Total Project Budget (PHP)</label>
+        <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2">Project Budget</label>
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-[180px_1fr]">
+          <div>
+            <label className="mb-1 block text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+              Currency
+            </label>
+            <select
+              value={selectedCurrency}
+              onChange={(e) => setSelectedCurrency(e.target.value as CurrencyCode)}
+              className="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 focus:border-indigo-600 focus:outline-none"
+            >
+              {SUPPORTED_CURRENCIES.map((currencyCode) => (
+                <option key={currencyCode} value={currencyCode}>
+                  {currencyCode} ({CURRENCY_SYMBOLS[currencyCode]})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <p className="text-xs font-medium text-gray-500">Selected: {selectedCurrency} ({selectedCurrencySymbol})</p>
+          </div>
+        </div>
         <div className="relative">
           <span className="absolute left-5 top-1/2 -translate-y-1/2 text-lg font-black text-gray-400">₱</span>
           <input
@@ -477,7 +634,10 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             className="block w-full rounded-2xl border-2 border-gray-100 bg-gray-50/50 pl-10 pr-5 py-4 text-2xl font-black text-indigo-600 transition-all focus:border-indigo-600 focus:bg-white focus:outline-none focus:ring-0"
             placeholder="e.g. 50000"
             value={formData.budget || ""}
-            onChange={(e) => setFormData({ ...formData, budget: parseFloat(e.target.value) })}
+            onChange={(e) => {
+              const parsed = Number.parseFloat(e.target.value);
+              setFormData({ ...formData, budget: Number.isFinite(parsed) ? parsed : 0 });
+            }}
           />
         </div>
         <p className="mt-3 text-xs text-gray-400 leading-relaxed">
@@ -553,13 +713,15 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
                   onChange={(e) => setNewMilestone({ ...newMilestone, amount: parseFloat(e.target.value) })}
                 />
               </div>
-              <button
-                type="button"
-                onClick={addMilestone}
-                className="px-6 py-2 bg-gray-900 text-white rounded-xl hover:bg-black font-bold text-sm transition-all shadow-lg shadow-gray-200"
-              >
-                Add Milestone
-              </button>
+              <TooltipAction text="Add this milestone payment">
+                <button
+                  type="button"
+                  onClick={addMilestone}
+                  className="px-6 py-2 bg-gray-900 text-white rounded-xl hover:bg-black font-bold text-sm transition-all shadow-lg shadow-gray-200"
+                >
+                  Add Milestone
+                </button>
+              </TooltipAction>
             </div>
           </div>
         </div>
@@ -593,12 +755,14 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             <div key={q.id} className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 group">
               <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">{idx + 1}</span>
               <p className="flex-1 text-sm font-bold text-indigo-900">{q.question}</p>
-              <button 
-                onClick={() => setFormData({ ...formData, customQuestions: formData.customQuestions?.filter(item => item.id !== q.id) })}
-                className="opacity-0 group-hover:opacity-100 text-red-500 transition-opacity"
-              >
-                &times;
-              </button>
+              <TooltipAction text="Remove this screening question">
+                <button 
+                  onClick={() => setFormData({ ...formData, customQuestions: formData.customQuestions?.filter(item => item.id !== q.id) })}
+                  className="opacity-0 group-hover:opacity-100 text-red-500 transition-opacity"
+                >
+                  &times;
+                </button>
+              </TooltipAction>
             </div>
           ))}
         </div>
@@ -612,14 +776,16 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             onChange={(e) => setNewQuestion(e.target.value)}
             disabled={(formData.customQuestions?.length || 0) >= 3}
           />
-          <button
-            type="button"
-            onClick={addQuestion}
-            className="px-6 py-2 bg-gray-900 text-white rounded-xl hover:bg-black font-bold text-sm transition-all disabled:opacity-50"
-            disabled={(formData.customQuestions?.length || 0) >= 3}
-          >
-            Add
-          </button>
+          <TooltipAction text="Add custom screening question">
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="px-6 py-2 bg-gray-900 text-white rounded-xl hover:bg-black font-bold text-sm transition-all disabled:opacity-50"
+              disabled={(formData.customQuestions?.length || 0) >= 3}
+            >
+              Add
+            </button>
+          </TooltipAction>
         </div>
       </div>
 
@@ -632,6 +798,7 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             </div>
             <div className="text-right">
               <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-1">Total Budget</p>
+              <p className="text-[10px] font-bold text-white/70">{formattedBudget}</p>
               <p className="text-xl font-black text-green-400">₱{(formData.budget || 0).toLocaleString()}</p>
             </div>
           </div>
@@ -673,14 +840,16 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Post your project</h2>
           <div className="flex items-center gap-3">
-            <button 
-              type="button"
-              onClick={suggestEnergyRequirement}
-              className="group flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 hover:bg-amber-100 transition-all font-bold text-[10px] uppercase tracking-widest active:scale-95"
-            >
-              <Sparkles className="w-3.5 h-3.5 group-hover:animate-spin" />
-              AI Energy Predictor
-            </button>
+            <TooltipAction text="Predict project energy requirement">
+              <button 
+                type="button"
+                onClick={suggestEnergyRequirement}
+                className="group flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 hover:bg-amber-100 transition-all font-bold text-[10px] uppercase tracking-widest active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 group-hover:animate-spin" />
+                AI Energy Predictor
+              </button>
+            </TooltipAction>
             <div className="flex items-center gap-2">
               {[1, 2, 3].map((s) => (
                 <div
@@ -732,50 +901,58 @@ export default function JobPostingForm({ onPublish }: JobPostingFormProps) {
             <div className="mt-12 pt-8 border-t border-gray-100 flex justify-between items-center">
               <div>
                 {step > 1 && (
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
-                    Back
-                  </button>
+                  <TooltipAction text="Return to previous step">
+                    <button
+                      type="button"
+                      onClick={prevStep}
+                      className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-900 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                      Back
+                    </button>
+                  </TooltipAction>
                 )}
               </div>
               
               <div className="flex gap-4">
-                <button
-                  type="button"
-                  className="px-6 py-3 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
-                >
-                  Save as Draft
-                </button>
-                {step < 3 ? (
+                <TooltipAction text="Save job as draft">
                   <button
                     type="button"
-                    onClick={nextStep}
-                    className="group px-8 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-200 transition-all flex items-center gap-2"
+                    className="px-6 py-3 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
                   >
-                    Continue
-                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                    Save as Draft
                   </button>
+                </TooltipAction>
+                {step < 3 ? (
+                  <TooltipAction text="Proceed to next section">
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      className="group px-8 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-200 transition-all flex items-center gap-2"
+                    >
+                      Continue
+                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  </TooltipAction>
                 ) : (
-                  <button
-                    type="submit"
-                    disabled={isPublishing}
-                    className="px-10 py-3 bg-gray-900 text-white rounded-2xl hover:bg-black font-black shadow-lg shadow-gray-200 transition-all active:scale-95 flex items-center gap-2"
-                  >
-                    {isPublishing ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        PUBLISHING...
-                      </>
-                    ) : (
-                      <>
-                        PUBLISH NOW 🚀
-                      </>
-                    )}
-                  </button>
+                  <TooltipAction text="Publish this job listing">
+                    <button
+                      type="submit"
+                      disabled={isPublishing}
+                      className="px-10 py-3 bg-gray-900 text-white rounded-2xl hover:bg-black font-black shadow-lg shadow-gray-200 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                      {isPublishing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          PUBLISHING...
+                        </>
+                      ) : (
+                        <>
+                          PUBLISH NOW 🚀
+                        </>
+                      )}
+                    </button>
+                  </TooltipAction>
                 )}
               </div>
             </div>

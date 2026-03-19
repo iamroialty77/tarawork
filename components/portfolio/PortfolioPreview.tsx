@@ -88,6 +88,12 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
           .map((skill) => skill.trim())
           .filter(Boolean);
   const socialLinks = profile.portfolio?.links || [];
+  const aboutSections = [
+    { label: "Who I Help", value: profile.aboutSections?.whoIHelp || "" },
+    { label: "What I Specialize In", value: profile.aboutSections?.whatISpecializeIn || profile.portfolio?.about_me || profile.bio || "" },
+    { label: "Results I've Delivered", value: profile.aboutSections?.resultsIHaveDelivered || "" },
+    { label: "How I Work", value: profile.aboutSections?.howIWork || "" },
+  ].filter((item) => item.value.trim().length > 0);
 
   return (
   <div className={`space-y-12 ${isPro ? "rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-sm" : ""}`}>
@@ -133,9 +139,18 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
 
     <div className="space-y-6">
       <h4 className={`text-[11px] uppercase tracking-[0.2em] font-semibold ${isPro ? "text-slate-400" : "text-gray-400"}`}>About</h4>
-      <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>
-        {profile.portfolio?.about_me || profile.bio || "No bio available."}
-      </p>
+      {aboutSections.length > 0 ? (
+        <div className="space-y-3">
+          {aboutSections.map((section) => (
+            <div key={section.label} className={`${isPro ? "rounded-2xl border border-white/10 bg-white/5 p-4" : "rounded-2xl border border-gray-100 bg-gray-50 p-4"}`}>
+              <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${isPro ? "text-slate-400" : "text-gray-400"}`}>{section.label}</p>
+              <p className={`mt-2 text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>{section.value}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>No profile sections available yet.</p>
+      )}
     </div>
 
     <div className="space-y-6">
@@ -232,6 +247,18 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const analytics = profile.premiumProfile?.analytics;
   const isPro = profile.premiumProfile?.tier === 'pro';
   const firstName = (profile.name || 'Freelancer').split(' ')[0];
+  const servicesOffered = profile.servicesOffered || [];
+  const formatServicePrice = (currency: string, value: number) => {
+    try {
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: currency || 'PHP',
+        maximumFractionDigits: 0,
+      }).format(Number.isFinite(value) ? Math.max(0, value) : 0);
+    } catch {
+      return `${currency || 'PHP'} ${Math.max(0, Number(value || 0)).toLocaleString()}`;
+    }
+  };
   const pageShellClass = isPro
     ? "min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_30%),linear-gradient(180deg,#0f172a_0%,#111827_35%,#0b1220_100%)] text-white font-sans selection:bg-amber-300 selection:text-slate-950"
     : "min-h-screen bg-white text-[#1a1a1a] font-sans selection:bg-black selection:text-white";
@@ -365,6 +392,41 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 )}
               </section>
             )}
+
+            <section className="space-y-8">
+              <div className="flex justify-between items-end">
+                <h2 className={`text-3xl font-semibold tracking-tight ${isPro ? "text-white" : "text-gray-900"}`}>Services Offered</h2>
+                <div className={`text-sm font-medium ${isPro ? "text-slate-400" : "text-gray-400"}`}>
+                  {servicesOffered.length} Services
+                </div>
+              </div>
+
+              {servicesOffered.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {servicesOffered.map((service, index) => (
+                    <div
+                      key={`${service.serviceName}-${index}`}
+                      className={`rounded-2xl border p-5 ${isPro ? "border-white/10 bg-white/5" : "border-gray-100 bg-white"}`}
+                    >
+                      <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isPro ? "text-slate-400" : "text-gray-400"}`}>Service</p>
+                      <h3 className={`mt-2 text-lg font-bold ${isPro ? "text-white" : "text-gray-900"}`}>{service.serviceName}</h3>
+                      <p className={`mt-4 text-[10px] font-black uppercase tracking-[0.2em] ${isPro ? "text-slate-400" : "text-gray-400"}`}>Starting Price</p>
+                      <p className={`mt-1 text-lg font-black ${isPro ? "text-amber-300" : "text-slate-900"}`}>
+                        {formatServicePrice(service.currency, Number(service.startingPrice || 0))}
+                      </p>
+                      <p className={`mt-4 text-[10px] font-black uppercase tracking-[0.2em] ${isPro ? "text-slate-400" : "text-gray-400"}`}>Typical Turnaround</p>
+                      <p className={`mt-1 text-sm font-semibold ${isPro ? "text-slate-200" : "text-slate-700"}`}>
+                        {service.typicalTurnaround || "To be discussed"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`rounded-2xl border border-dashed p-10 text-center ${isPro ? "border-white/10 bg-white/5 text-slate-400" : "border-gray-200 bg-white text-gray-500"}`}>
+                  No services listed yet.
+                </div>
+              )}
+            </section>
 
             <section className="space-y-10">
               <div className="flex justify-between items-end">
