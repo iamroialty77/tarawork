@@ -2115,7 +2115,7 @@ export default function Home() {
         {view === "freelancer" ? (
           <div className="space-y-8">
             {/* Freelancer Tab Navigation */}
-            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto sticky top-20 z-40">
+            <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none]">
               {[
                 { id: "overview", label: "Dashboard", icon: LayoutDashboard },
                 { id: "jobs", label: "Find Jobs", icon: Briefcase },
@@ -2126,7 +2126,7 @@ export default function Home() {
                 <button
                   key={tab.id}
                   onClick={() => setFreelancerTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                     freelancerTab === tab.id 
                       ? "bg-slate-900 text-white shadow-lg" 
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
@@ -2218,8 +2218,8 @@ export default function Home() {
                     <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest opacity-70">Share this link for frictionless hiring</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto relative">
-                  <div className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 font-mono text-xs text-indigo-700 font-black truncate min-w-[150px] shadow-inner">
+                <div className="relative flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+                  <div className="min-w-0 flex-1 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 font-mono text-xs text-indigo-700 font-black truncate shadow-inner sm:max-w-[24rem]">
                     {buildPublicProfileUrl({
                       tier: profile.premiumProfile?.tier || "free",
                       username: profile.username,
@@ -2240,7 +2240,7 @@ export default function Home() {
                       setShowToast(true);
                       setTimeout(() => setShowToast(false), 2000);
                     }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-xs font-black rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 active:scale-95 whitespace-nowrap"
+                    className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-md shadow-indigo-100 transition-all hover:bg-indigo-700 active:scale-95 sm:w-auto"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     Copy Professional URL
@@ -2858,7 +2858,7 @@ export default function Home() {
         ) : view === "client" ? (
           <div className="space-y-8">
             {/* Client Tab Navigation */}
-            <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto sticky top-20 z-40">
+            <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none]">
               {[
                 { id: "overview", label: "Overview", icon: LayoutDashboard },
                 { id: "post", label: "Post a Job", icon: PlusCircle },
@@ -2869,7 +2869,7 @@ export default function Home() {
                 <button
                   key={tab.id}
                   onClick={() => setClientTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                     clientTab === tab.id 
                       ? "bg-slate-900 text-white shadow-lg" 
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
@@ -3051,7 +3051,7 @@ export default function Home() {
                     <h2 className="text-2xl font-bold text-slate-900">Find Talents</h2>
                     <p className="text-slate-500 mt-1">Discover high-signal freelancers with premium trust indicators.</p>
                   </div>
-                  <div className="flex w-full flex-col gap-2 md:w-auto md:min-w-[560px] md:flex-row md:items-center md:justify-end">
+                  <div className="flex w-full flex-col gap-2 md:max-w-3xl md:flex-row md:flex-wrap md:items-center md:justify-end">
                     <div className="relative w-full md:w-72">
                       <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input

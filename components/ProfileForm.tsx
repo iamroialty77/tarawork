@@ -435,7 +435,7 @@ export default function ProfileForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Profile URL</p>
               <p className="mt-2 truncate text-sm font-semibold text-slate-800">

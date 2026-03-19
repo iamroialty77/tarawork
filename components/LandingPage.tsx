@@ -3,11 +3,21 @@
 import { Check, Users, Facebook, Twitter, Linkedin, Instagram, ChevronDown, ArrowRight, Star, ShieldCheck, Zap, Award, CheckCircle2, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    message: '',
+  });
+  const [isSendingContact, setIsSendingContact] = useState(false);
+  const [contactStatus, setContactStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({
+    type: 'idle',
+    message: '',
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,8 +27,48 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleContactSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!contactForm.name.trim() || !contactForm.email.trim() || !contactForm.message.trim()) {
+      setContactStatus({
+        type: 'error',
+        message: 'Please complete all fields before sending.',
+      });
+      return;
+    }
+
+    setIsSendingContact(true);
+    setContactStatus({ type: 'idle', message: '' });
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactForm),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to send your message right now.');
+      }
+
+      setContactForm({ name: '', email: '', message: '' });
+      setContactStatus({
+        type: 'success',
+        message: 'Message sent successfully. We will get back to you soon.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to send your message right now.';
+      setContactStatus({ type: 'error', message });
+    } finally {
+      setIsSendingContact(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
+    <div className="min-h-screen overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-blue-100">
       {/* Header */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-blue-600/95 backdrop-blur-md shadow-lg py-2' : 'bg-transparent py-4'}`}>
         <div className="container mx-auto px-6">
@@ -32,7 +82,7 @@ export default function LandingPage() {
                   <circle cx="12" cy="16" r="3" fill="#2563eb" />
                 </svg>
               </div>
-              <span className="text-white font-bold text-xl tracking-tight">TaraWork.ph</span>
+              <span className="text-white font-bold text-xl tracking-tight">TaraWork.online</span>
             </Link>
 
             {/* Navigation (Desktop) */}
@@ -119,8 +169,8 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-teal-400 min-h-screen flex items-center">
         {/* Decorative Background Elements */}
-        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[600px] h-[600px] bg-white/10 rounded-full blur-3xl -z-10"></div>
-        <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl -z-10"></div>
+        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 h-[72vw] w-[72vw] max-h-[38rem] max-w-[38rem] bg-white/10 rounded-full blur-3xl -z-10"></div>
+        <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 h-[62vw] w-[62vw] max-h-[32rem] max-w-[32rem] bg-white/10 rounded-full blur-3xl -z-10"></div>
         
         <div className="container mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -138,7 +188,7 @@ export default function LandingPage() {
                 Need an extra hand? You&apos;re in the right place.
               </h2>
               <p className="text-lg md:text-xl mb-12 text-white/80 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Tarawork.ph connects you with skilled freelancers and virtual assistants across the Philippines. 
+                Tarawork.online connects you with skilled freelancers and virtual assistants across the Philippines. 
                 From admin help and content creation to design, tech, and more — we make it easy to find the right people, fast.
               </p>
               
@@ -390,9 +440,9 @@ export default function LandingPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-amber-300">
                 <Star className="w-4 h-4" />
-                Freelancer Pro
+                Free & Premium
               </div>
-              <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight">Premium upgrades for top freelancers.</h2>
+              <h2 className="mt-6 text-4xl lg:text-5xl font-black tracking-tight">Free and Premium Plans</h2>
             </div>
             <Link href="/auth" className="inline-flex">
               <button className="rounded-2xl bg-amber-400 px-6 py-4 text-sm font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-300">
@@ -401,10 +451,9 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          <div className="mt-12 grid gap-5 lg:grid-cols-2">
             <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
               <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Free</p>
-              <p className="mt-4 text-4xl font-black">P0</p>
               <div className="mt-6 space-y-3 text-sm text-slate-200">
                 <div>Basic portfolio</div>
                 <div>Skills</div>
@@ -414,7 +463,8 @@ export default function LandingPage() {
             </div>
 
             <div className="rounded-3xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 via-white/10 to-white/5 p-8 shadow-2xl shadow-amber-900/20">
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-300">Pro</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-300">Premium</p>
+              <p className="mt-4 text-4xl font-black">P499</p>
               <div className="mt-6 grid grid-cols-2 gap-3 text-sm text-white">
                 <div>Verified badge</div>
                 <div>Custom domain</div>
@@ -422,15 +472,6 @@ export default function LandingPage() {
                 <div>Analytics</div>
                 <div>Video intro</div>
                 <div>Advanced portfolio</div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-8">
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Use Case</p>
-              <div className="mt-6 space-y-3 text-sm text-slate-200">
-                <div>Better first impression</div>
-                <div>Cleaner professional link</div>
-                <div>Higher response potential</div>
               </div>
             </div>
           </div>
@@ -546,7 +587,7 @@ export default function LandingPage() {
 
       {/* Trust & Security */}
       <section className="py-24 px-6 bg-slate-900 text-white rounded-2xl mx-6 mb-24 overflow-hidden relative">
-         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-[100px]"></div>
+         <div className="absolute bottom-0 right-0 h-[58vw] w-[58vw] max-h-[25rem] max-w-[25rem] bg-blue-600/20 rounded-full blur-[100px]"></div>
          <div className="container mx-auto max-w-5xl relative z-10">
             <div className="text-center mb-20">
               <h2 className="text-4xl lg:text-5xl font-black mb-6">Your Work, <span className="text-blue-400">Protected</span></h2>
@@ -591,9 +632,88 @@ export default function LandingPage() {
          </div>
       </section>
 
+      {/* Contact Us */}
+      <section className="py-24 px-6 bg-slate-50">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center mb-14">
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-4">Contact Us</h2>
+            <p className="text-lg text-slate-600 font-medium">
+              Send us a message and our team will respond as soon as possible.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 md:p-12 shadow-2xl shadow-slate-200/60">
+            <div className="max-w-3xl mx-auto">
+              <form className="space-y-5" onSubmit={handleContactSubmit}>
+                <div>
+                  <label htmlFor="contact-name" className="block text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    id="contact-name"
+                    type="text"
+                    value={contactForm.name}
+                    onChange={(event) => setContactForm((prev) => ({ ...prev, name: event.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Your name"
+                    disabled={isSendingContact}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="contact-email" className="block text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    id="contact-email"
+                    type="email"
+                    value={contactForm.email}
+                    onChange={(event) => setContactForm((prev) => ({ ...prev, email: event.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="you@email.com"
+                    disabled={isSendingContact}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="contact-message" className="block text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2">
+                    Message
+                  </label>
+                  <textarea
+                    id="contact-message"
+                    value={contactForm.message}
+                    onChange={(event) => setContactForm((prev) => ({ ...prev, message: event.target.value }))}
+                    className="w-full min-h-40 rounded-xl border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Tell us how we can help."
+                    disabled={isSendingContact}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSendingContact}
+                  className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-white font-bold transition-all hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isSendingContact ? 'Sending...' : 'Send Message'}
+                </button>
+
+                {contactStatus.type !== 'idle' && (
+                  <p className={`text-sm font-semibold ${contactStatus.type === 'success' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {contactStatus.message}
+                  </p>
+                )}
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-24 px-6 text-center overflow-hidden relative">
-         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[120px] -z-10"></div>
+         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[90vw] w-[90vw] max-h-[50rem] max-w-[50rem] bg-blue-500/5 rounded-full blur-[120px] -z-10"></div>
          <div className="container mx-auto relative">
             <h2 className="text-5xl lg:text-7xl font-black text-slate-900 mb-8 leading-tight">
               Work is better when we<br /><span className="text-blue-600">do it together.</span>
@@ -627,7 +747,7 @@ export default function LandingPage() {
                     <circle cx="12" cy="16" r="3" fill="white" />
                   </svg>
                 </div>
-                <span className="text-slate-900 font-extrabold text-xl tracking-tight">TaraWork.ph</span>
+                <span className="text-slate-900 font-extrabold text-xl tracking-tight">TaraWork.online</span>
               </Link>
               <p className="text-slate-500 font-medium leading-relaxed mb-8">
                 Smart job matching for Filipino freelancers and employers. Built with ❤️ in the Philippines.
@@ -670,7 +790,7 @@ export default function LandingPage() {
           </div>
 
           <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-slate-400 font-bold text-sm">© 2026 TaraWork.ph. All rights reserved.</p>
+            <p className="text-slate-400 font-bold text-sm">© 2026 TaraWork.online. All rights reserved.</p>
             <div className="flex gap-8">
               {['Privacy', 'Terms', 'Cookies'].map((item) => (
                 <Link key={item} href="#" className="text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors">{item}</Link>

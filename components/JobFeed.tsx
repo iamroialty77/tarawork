@@ -194,8 +194,8 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             />
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <div className="relative flex-1 min-w-[120px]">
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:w-auto">
+            <div className="relative w-full sm:min-w-0 lg:w-44">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <select
                 className="w-full appearance-none rounded-xl border border-gray-200 pl-10 pr-8 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
@@ -209,7 +209,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             </div>
 
             <select
-              className="flex-1 min-w-[120px] rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
+              className="w-full sm:min-w-0 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer lg:w-44"
               value={durationFilter}
               onChange={(e) => setDurationFilter(e.target.value as any)}
             >
@@ -220,7 +220,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             </select>
 
             <select
-              className="w-full md:w-auto rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer lg:w-52"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as any)}
             >
@@ -248,8 +248,8 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 pt-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="smart-matching" className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -264,7 +264,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                 Smart Matching
               </span>
             </label>
-            <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+            <span className="hidden max-w-full truncate text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 sm:inline-flex" title={`Skills: ${profile.skills.join(", ") || "None yet"}`}>
               Skills: {profile.skills.join(", ") || "None yet"}
             </span>
             {useSmartMatching && smartMatchLoading && (

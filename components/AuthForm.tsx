@@ -9,9 +9,7 @@ import {
   User, 
   ArrowRight, 
   Loader2, 
-  Github, 
   Facebook,
-  Linkedin,
   AlertCircle,
   CheckCircle2,
   Zap,
@@ -59,15 +57,12 @@ export default function AuthForm() {
     }
   }, []);
 
-  const handleSocialLogin = async (provider: 'google' | 'facebook' | 'linkedin' | 'github') => {
+  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     setLoading(true);
     setError(null);
     try {
       // Set a flag to show notification on redirect back
       sessionStorage.setItem('social_login_pending', provider);
-      
-      // Use linkedin_oidc for newer projects as it's the standard now
-      const effectiveProvider = provider === 'linkedin' ? 'linkedin_oidc' : provider;
       
       const redirectTarget = mode === "signup" ? "/?oauth_signup=true" : "/";
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`;
@@ -77,8 +72,8 @@ export default function AuthForm() {
         redirectTo,
       };
 
-      let { error } = await supabase.auth.signInWithOAuth({
-        provider: effectiveProvider as any,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
         options: oauthOptions,
       });
 
@@ -470,27 +465,11 @@ export default function AuthForm() {
             </button>
             <button 
               type="button"
-              onClick={() => handleSocialLogin('github')}
-              className="flex items-center justify-center gap-3 w-full bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl text-xs font-bold text-slate-600 uppercase tracking-wider transition-all"
-            >
-              <Github className="w-5 h-5" />
-              GitHub
-            </button>
-            <button 
-              type="button"
               onClick={() => handleSocialLogin('facebook')}
               className="flex items-center justify-center gap-3 w-full bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl text-xs font-bold text-slate-600 uppercase tracking-wider transition-all"
             >
               <Facebook className="w-5 h-5 text-[#1877F2]" />
               Facebook
-            </button>
-            <button 
-              type="button"
-              onClick={() => handleSocialLogin('linkedin')}
-              className="flex items-center justify-center gap-3 w-full bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl text-xs font-bold text-slate-600 uppercase tracking-wider transition-all"
-            >
-              <Linkedin className="w-5 h-5 text-[#0A66C2]" />
-              LinkedIn
             </button>
           </div>
         </div>

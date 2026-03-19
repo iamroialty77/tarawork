@@ -93,7 +93,7 @@ export default function JobCard({
       <div className="h-1 w-full bg-slate-100 group-hover:bg-indigo-500 transition-colors duration-300" />
       
       <div className="p-6">
-        <div className="flex justify-between items-start mb-4">
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex gap-4">
             {/* Company Logo Placeholder */}
             <div className="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-indigo-100 transition-colors">
@@ -103,7 +103,7 @@ export default function JobCard({
             </div>
             
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1 tracking-tight">
                   {job.title}
                 </h3>

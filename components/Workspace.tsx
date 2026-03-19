@@ -218,7 +218,7 @@ export default function Workspace({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+    <div className="mt-6 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {activeCall && (
         <VideoCall 
           projectId={selectedProject?.id} 
@@ -266,7 +266,7 @@ export default function Workspace({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1 p-1 bg-slate-800/50 rounded-lg w-full border border-white/5">
+        <div className="flex w-full gap-1 overflow-x-auto rounded-lg border border-white/5 bg-slate-800/50 p-1">
           {[
             { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
             { id: "active", label: "Projects", icon: Clock },
@@ -284,7 +284,7 @@ export default function Workspace({
                 if (tab.id === 'warroom') setShowWarRoom(true);
                 else setShowWarRoom(false);
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+              className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                 activeTab === tab.id ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
               }`}
             >
@@ -557,7 +557,7 @@ export default function Workspace({
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                  <div className="flex flex-col gap-4 rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-amber-100 flex items-center justify-center">
                         <Activity className="w-6 h-6 text-amber-500 animate-pulse" />
@@ -581,7 +581,7 @@ export default function Workspace({
                   {/* Kanban Board */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {["Todo", "In-Progress", "Done"].map((col) => (
-                      <div key={col} className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 min-h-[400px]">
+                      <div key={col} className="min-h-[45vh] rounded-2xl border border-slate-100 bg-slate-50/50 p-4 md:min-h-[400px]">
                         <div className="flex justify-between items-center mb-4 px-2">
                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{col}</h5>
                           <span className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-500">
@@ -1530,7 +1530,7 @@ export default function Workspace({
                       })()}
                     </div>
                     
-                    <div className="mt-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                    <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                           <Plus className="w-4 h-4 text-white" />
@@ -1574,7 +1574,7 @@ export default function Workspace({
             >
               {projects.length > 0 ? (
                 <>
-                  <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                  <div className="flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
                         <Video className="w-5 h-5 text-white" />
