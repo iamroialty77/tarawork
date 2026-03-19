@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Video, VideoOff, Mic, MicOff, PhoneOff, MessageSquare, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PREMIUM_CREDIT_COSTS } from "@/lib/creditConfig";
-import CreditConfirmationModal from "./ui/CreditConfirmationModal";
+import CreditConfirmationModal from "@/components/ui/CreditConfirmationModal";
 
 interface VideoCallProps {
   roomUrl?: string;

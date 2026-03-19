@@ -61,7 +61,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
 import LandingPage from "../components/LandingPage";
 import { buildPublicProfileUrl, getPremiumProfileDomain } from "../lib/profileUrl";
-import TooltipAction from "../components/ui/TooltipAction";
+import TooltipAction from "@/components/ui/TooltipAction";
 
 const SUPPORTED_JOB_CURRENCIES: CurrencyCode[] = ["USD", "AUD", "GBP", "PHP"];
 

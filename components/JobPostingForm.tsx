@@ -5,8 +5,8 @@ import { CurrencyCode, Job, JobType, Milestone, ProposalQuestion } from "../type
 import { supabase } from "../lib/supabase";
 import { Loader2, CheckCircle2, AlertCircle, Sparkles, Lock } from "lucide-react";
 import { cn } from "../lib/utils";
-import TooltipAction from "./ui/TooltipAction";
-import { CURRENCY_SYMBOLS, SUPPORTED_CURRENCIES, formatCurrencyAmount, getCurrencySymbol } from "../lib/currency";
+import TooltipAction from "@/components/ui/TooltipAction";
+import { CURRENCY_SYMBOLS, SUPPORTED_CURRENCIES, formatCurrencyAmount, getCurrencySymbol } from "@/lib/currency";
 
 interface JobPostingFormProps {
   onPublish?: () => void;

@@ -8,7 +8,7 @@ import AIAgent from "./AIAgent";
 import { Search, Filter, Sparkles, Loader2 } from "lucide-react";
 import { energyScore } from "../lib/utils";
 import { heuristicSmartMatchMany } from "../lib/smartMatch";
-import { FALLBACK_WEEKLY_USD_RATES, convertAmount, formatCurrencyAmount, isCurrencyCode } from "../lib/currency";
+import { FALLBACK_WEEKLY_USD_RATES, convertAmount, formatCurrencyAmount, isCurrencyCode } from "@/lib/currency";
 
 interface JobFeedProps {
   jobs: Job[];
