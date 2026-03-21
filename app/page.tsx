@@ -319,7 +319,7 @@ export default function Home() {
   const [vettingData, setVettingData] = useState<any>(null);
 
   const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
-  const [clientTab, setClientTab] = useState<"overview" | "post" | "postings" | "talents" | "profile">("overview");
+  const [clientTab, setClientTab] = useState<"overview" | "jobs" | "talents" | "profile">("overview");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -3056,14 +3056,13 @@ export default function Home() {
             <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none]">
               {[
                 { id: "overview", label: "Overview", icon: LayoutDashboard, tooltip: "View your hiring dashboard summary" },
-                { id: "post", label: "Post a Job", icon: PlusCircle, tooltip: "Post a new job listing" },
-                { id: "postings", label: "My Postings", icon: FileText, tooltip: "View your active proposals" },
+                { id: "jobs", label: "Jobs", icon: Briefcase, tooltip: "Post and manage your job listings" },
                 { id: "talents", label: "Find Talents", icon: Users, tooltip: "Browse freelancers by skills" },
                 { id: "profile", label: "Company Profile", icon: User, tooltip: "Edit your company profile" },
               ].map((tab) => (
                 <TooltipAction key={tab.id} text={tab.tooltip}>
                   <button
-                    onClick={() => setClientTab(tab.id as any)}
+                    onClick={() => setClientTab(tab.id as "overview" | "jobs" | "talents" | "profile")}
                     className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                       clientTab === tab.id 
                         ? "bg-slate-900 text-white shadow-lg" 
@@ -3152,15 +3151,15 @@ export default function Home() {
               </motion.div>
             )}
 
-            {clientTab === "post" && (
+            {clientTab === "jobs" && (
               <motion.div
-                key="post"
+                key="jobs"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="max-w-5xl"
+                className="space-y-6"
               >
-                <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/20 p-8">
+                <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/20 p-8 max-w-5xl">
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
@@ -3184,20 +3183,9 @@ export default function Home() {
                         },
                       }));
                     }}
-                    onPublish={() => { fetchEmployerJobs(user.id); setClientTab("postings"); }}
+                    onPublish={() => { fetchEmployerJobs(user.id); setClientTab("jobs"); }}
                   />
                 </div>
-              </motion.div>
-            )}
-
-            {clientTab === "postings" && (
-              <motion.div
-                key="postings"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
                 <div className="flex justify-between items-end">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900">Your Job Postings</h2>
