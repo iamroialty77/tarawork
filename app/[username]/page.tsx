@@ -1,6 +1,7 @@
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
 import { supabaseAdmin } from '@/lib/supabase_admin';
 import { FreelancerProfile, ServiceOffering } from '@/types/portfolio';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -425,6 +426,74 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
 
   if (!profile) {
     notFound();
+  }
+
+  const role = (profile.role || "").toLowerCase();
+  const isHirer = role === "employer" || role === "client" || role === "hirer";
+
+  if (isHirer) {
+    const { count: liveJobs } = await supabaseAdmin
+      .from("jobs")
+      .select("*", { count: "exact", head: true })
+      .eq("employer_id", profile.id)
+      .eq("status", "live");
+
+    const { data: hirerProfileMeta } = await supabaseAdmin
+      .from("profiles")
+      .select("aiInsights")
+      .eq("id", profile.id)
+      .maybeSingle();
+
+    const aiInsights = (hirerProfileMeta?.aiInsights as Record<string, unknown> | undefined) || {};
+    const reviewScore =
+      typeof aiInsights?.hirerReviewScore === "number"
+        ? aiInsights.hirerReviewScore
+        : null;
+    const reviewCount =
+      typeof aiInsights?.hirerReviewCount === "number"
+        ? aiInsights.hirerReviewCount
+        : 0;
+
+    return (
+      <main className="min-h-screen bg-slate-50 py-10 px-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="h-2 bg-slate-900" />
+            <div className="p-8 space-y-8">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">TaraWork Hirer Profile</p>
+                <h1 className="mt-2 text-3xl font-black text-slate-900">{profile.name || "Hirer"}</h1>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                  {profile.bio || "This hirer prefers to keep profile details concise. Review active jobs for current opportunities."}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Jobs</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900">{liveJobs || 0}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hirer Reviews</p>
+                  <p className="mt-1 text-sm font-black text-slate-900">
+                    {reviewScore !== null ? `${reviewScore.toFixed(1)}/5 (${reviewCount} reviews)` : "No reviews yet"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <Link
+                  href="/"
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
+                >
+                  Back to Marketplace
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return <PortfolioPreview profile={profile} isPublic={true} />;

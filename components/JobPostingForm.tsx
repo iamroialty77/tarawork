@@ -7,6 +7,7 @@ import { Loader2, CheckCircle2, AlertCircle, Sparkles, Lock } from "lucide-react
 import { cn } from "../lib/utils";
 import TooltipAction from "@/components/ui/TooltipAction";
 import { CURRENCY_SYMBOLS, SUPPORTED_CURRENCIES, formatCurrencyAmount, getCurrencySymbol } from "@/lib/currency";
+import { DEFAULT_JOB_CATEGORIES, fetchJobCategoryOptions } from "@/lib/jobCategories";
 
 interface JobPostingFormProps {
   onPublish?: () => void;
@@ -68,10 +69,23 @@ export default function JobPostingForm({
   const [durationPreset, setDurationPreset] = useState<DurationPreset>("1-3 months");
   const [customDurationText, setCustomDurationText] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>(preferredCurrency);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([...DEFAULT_JOB_CATEGORIES]);
 
   useEffect(() => {
     setSelectedCurrency(preferredCurrency);
   }, [preferredCurrency]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadCategories = async () => {
+      const categories = await fetchJobCategoryOptions();
+      if (isMounted) setCategoryOptions(categories);
+    };
+    void loadCategories();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const calculateScore = () => {
     let score = 0;
@@ -435,25 +449,11 @@ export default function JobPostingForm({
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
             >
-              <option value="General">General</option>
-              <option value="Developer">Developer</option>
-              <option value="Designer">Designer</option>
-              <option value="Graphic Design">Graphic Design</option>
-              <option value="Writer">Writer</option>
-              <option value="Marketing Specialist">Marketing Specialist</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Virtual Assistant">Virtual Assistant</option>
-              <option value="Admin/VA">Admin/VA</option>
-              <option value="Customer Support">Customer Support</option>
-              <option value="Sales">Sales</option>
-              <option value="Project Management">Project Management</option>
-              <option value="QA/Testing">QA/Testing</option>
-              <option value="Data Entry">Data Entry</option>
-              <option value="Finance/Accounting">Finance/Accounting</option>
-              <option value="IT & Networking">IT & Networking</option>
-              <option value="Writing & Content">Writing & Content</option>
-              <option value="Data & Automation">Data & Automation</option>
-              <option value="Other">Other</option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>

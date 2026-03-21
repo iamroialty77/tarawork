@@ -94,26 +94,28 @@ function MessagesContent() {
         if (existingConv) {
           setSelectedId(existingConv.id);
         } else {
-          // CHECK RESTRICTION: Mutual Follow OR Interaction
+          // CHECK RESTRICTION: Mutual follow for hirer -> VA outreach
+          const { data: targetProfile } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .eq('id', withUserId)
+            .maybeSingle();
+
           const { data: follow1 } = await supabase.from('follows').select('*').eq('follower_id', userId).eq('following_id', withUserId).maybeSingle();
           const { data: follow2 } = await supabase.from('follows').select('*').eq('follower_id', withUserId).eq('following_id', userId).maybeSingle();
           
           const isMutualFollow = follow1 && follow2;
-          
-          // Check for employer-Freelancer relationship (application)
-          const { data: application } = await supabase
-            .from('applications')
-            .select('freelancer_id, jobs(employer_id)')
-            .or(`and(freelancer_id.eq.${userId},jobs.employer_id.eq.${withUserId}),and(freelancer_id.eq.${withUserId},jobs.employer_id.eq.${userId})`)
-            .maybeSingle();
 
-          // Check for Team Membership (Squad)
-          // Simplified: If both are same role 'employer', assume they might be in a team for now, 
-          // or we can check the 'squad' JSONB if needed.
-          const isTeam = currentUser?.role === 'employer' && (await supabase.from('profiles').select('role').eq('id', withUserId).maybeSingle())?.data?.role === 'employer';
+          const isEmployerToFreelancer =
+            currentUser?.role === 'employer' &&
+            targetProfile?.role === 'freelancer';
 
-          if (!isMutualFollow && !application && !isTeam) {
-            setRestrictionError("You can only message people you mutually follow, or employers/freelancers who have an active project with you.");
+          if (!isMutualFollow) {
+            setRestrictionError(
+              isEmployerToFreelancer
+                ? "You can only message this freelancer after a mutual follow."
+                : "You can only message users you mutually follow."
+            );
             return;
           }
 

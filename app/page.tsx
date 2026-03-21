@@ -61,6 +61,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
 import LandingPage from "../components/LandingPage";
 import { buildPublicProfileUrl, getPremiumProfileDomain } from "../lib/profileUrl";
+import { getJobShareUrl } from "../lib/jobShare";
 import TooltipAction from "@/components/ui/TooltipAction";
 
 const SUPPORTED_JOB_CURRENCIES: CurrencyCode[] = ["USD", "AUD", "GBP", "PHP"];
@@ -1038,7 +1039,7 @@ export default function Home() {
       if (missingColumns.length > 0) {
         // If we know some columns are missing, we should probably just use a safe list
         // but for now, let's try to be specific if we can or just use the fallback logic
-        selectString = 'id, job_id, freelancer_id, status, created_at, profiles(*)';
+        selectString = 'id, job_id, freelancer_id, status, created_at';
         if (!missingColumns.includes('resume_url')) selectString += ', resume_url';
         if (!missingColumns.includes('portfolio_url')) selectString += ', portfolio_url';
         if (!missingColumns.includes('interview_url')) selectString += ', interview_url';
@@ -1066,12 +1067,12 @@ export default function Home() {
           // Try with only basic columns first
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('applications')
-            .select('id, job_id, freelancer_id, status, created_at, profiles(*)')
+            .select('id, job_id, freelancer_id, status, created_at')
             .eq('job_id', jobId)
             .order('created_at', { ascending: false });
           
           if (fallbackError) {
-            // If even profiles join fails, try the bare minimum without join
+            // If even first fallback fails, try the bare minimum
             const { data: bareData, error: bareError } = await supabase
               .from('applications')
               .select('id, job_id, freelancer_id, status, created_at')
@@ -1079,15 +1080,75 @@ export default function Home() {
               .order('created_at', { ascending: false });
             
             if (bareError) throw bareError;
-            setSelectedJobApplicants(bareData || []);
+            const bareApplicants = bareData || [];
+            const bareFreelancerIds = [...new Set(bareApplicants.map((item: any) => item.freelancer_id).filter(Boolean))];
+            let bareProfilesMap: Record<string, any> = {};
+            if (bareFreelancerIds.length > 0) {
+              const { data: bareProfiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', bareFreelancerIds);
+              if (bareProfiles) {
+                bareProfilesMap = bareProfiles.reduce((acc: Record<string, any>, row: any) => {
+                  acc[row.id] = row;
+                  return acc;
+                }, {});
+              }
+            }
+            setSelectedJobApplicants(
+              bareApplicants.map((item: any) => ({
+                ...item,
+                freelancer_profile: bareProfilesMap[item.freelancer_id] || null,
+              }))
+            );
           } else {
-            setSelectedJobApplicants(fallbackData || []);
+            const fallbackApplicants = fallbackData || [];
+            const fallbackFreelancerIds = [...new Set(fallbackApplicants.map((item: any) => item.freelancer_id).filter(Boolean))];
+            let fallbackProfilesMap: Record<string, any> = {};
+            if (fallbackFreelancerIds.length > 0) {
+              const { data: fallbackProfiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', fallbackFreelancerIds);
+              if (fallbackProfiles) {
+                fallbackProfilesMap = fallbackProfiles.reduce((acc: Record<string, any>, row: any) => {
+                  acc[row.id] = row;
+                  return acc;
+                }, {});
+              }
+            }
+            setSelectedJobApplicants(
+              fallbackApplicants.map((item: any) => ({
+                ...item,
+                freelancer_profile: fallbackProfilesMap[item.freelancer_id] || null,
+              }))
+            );
           }
         } else {
           throw error;
         }
       } else {
-        setSelectedJobApplicants(data || []);
+        const applications = data || [];
+        const freelancerIds = [...new Set(applications.map((item: any) => item.freelancer_id).filter(Boolean))];
+        let profilesMap: Record<string, any> = {};
+        if (freelancerIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', freelancerIds);
+          if (profilesData) {
+            profilesMap = profilesData.reduce((acc: Record<string, any>, row: any) => {
+              acc[row.id] = row;
+              return acc;
+            }, {});
+          }
+        }
+        setSelectedJobApplicants(
+          applications.map((item: any) => ({
+            ...item,
+            freelancer_profile: profilesMap[item.freelancer_id] || null,
+          }))
+        );
       }
       setShowApplicantsModal(true);
     } catch (err: any) {
@@ -3221,6 +3282,21 @@ export default function Home() {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            <TooltipAction text="Copy public share link for this job">
+                              <button
+                                onClick={() => {
+                                  const shareUrl = getJobShareUrl(job);
+                                  navigator.clipboard.writeText(shareUrl);
+                                  setToastMsg("Job share link copied.");
+                                  setShowToast(true);
+                                  setTimeout(() => setShowToast(false), 2500);
+                                }}
+                                className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg hover:bg-indigo-100 transition-all uppercase tracking-wider inline-flex items-center gap-1.5"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                                Share Link
+                              </button>
+                            </TooltipAction>
                             <TooltipAction text="Review applicants for this job">
                               <button 
                                 onClick={() => fetchApplicants(job.id, job.title)}
@@ -3865,8 +3941,8 @@ export default function Home() {
                     <div key={app.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group">
                       <div className="flex flex-col md:flex-row items-start gap-6">
                         <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                          {app.profiles?.avatar_url ? (
-                            <img src={app.profiles.avatar_url} className="w-full h-full object-cover" alt="" />
+                          {(app.freelancer_profile || app.profiles)?.avatar_url ? (
+                            <img src={(app.freelancer_profile || app.profiles).avatar_url} className="w-full h-full object-cover" alt="" />
                           ) : (
                             <Users className="w-8 h-8 text-indigo-400" />
                           )}
@@ -3874,14 +3950,14 @@ export default function Home() {
                         <div className="flex-1 min-w-0 space-y-4">
                           <div className="flex flex-wrap justify-between items-start gap-4">
                             <div>
-                              <h4 className="font-black text-slate-900 text-xl tracking-tight">{app.profiles?.name || "Unknown Freelancer"}</h4>
+                              <h4 className="font-black text-slate-900 text-xl tracking-tight">{(app.freelancer_profile || app.profiles)?.name || "Unknown Freelancer"}</h4>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-bold bg-white text-indigo-600 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-widest">{app.profiles?.category}</span>
-                                {app.profiles?.wellness && (
+                                <span className="text-[10px] font-bold bg-white text-indigo-600 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-widest">{(app.freelancer_profile || app.profiles)?.category}</span>
+                                {(app.freelancer_profile || app.profiles)?.wellness && (
                                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-amber-50 border-amber-100">
                                     <Zap className="w-3 h-3 text-amber-500" />
                                     <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">
-                                      {energyScore(app.profiles.wellness.energyRating, employerJobs.find(j => j.title === selectedJobTitle)?.energyRequirement)}% Compatibility
+                                      {energyScore((app.freelancer_profile || app.profiles).wellness.energyRating, employerJobs.find(j => j.title === selectedJobTitle)?.energyRequirement)}% Compatibility
                                     </span>
                                   </div>
                                 )}
@@ -3963,7 +4039,7 @@ export default function Home() {
                             <TooltipAction text="Open full freelancer profile">
                               <button 
                                 onClick={() => {
-                                  setSelectedFreelancer(app.profiles);
+                                  setSelectedFreelancer(app.freelancer_profile || app.profiles);
                                   setShowFreelancerModal(true);
                                 }}
                                 className="px-5 py-3 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest"

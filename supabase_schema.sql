@@ -108,6 +108,57 @@ DROP POLICY IF EXISTS "Authenticated users can post jobs." ON public.jobs;
 CREATE POLICY "Authenticated users can post jobs." ON public.jobs
     FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
+-- 2b. Create JOB_CATEGORIES table
+CREATE TABLE IF NOT EXISTS public.job_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.job_categories ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Job categories are viewable by everyone." ON public.job_categories;
+CREATE POLICY "Job categories are viewable by everyone." ON public.job_categories
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Only admins can manage job categories." ON public.job_categories;
+CREATE POLICY "Only admins can manage job categories." ON public.job_categories
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+INSERT INTO public.job_categories (name)
+VALUES
+    ('General'),
+    ('Developer'),
+    ('Designer'),
+    ('Graphic Design'),
+    ('Writer'),
+    ('Marketing Specialist'),
+    ('Marketing'),
+    ('Virtual Assistant'),
+    ('Admin/VA'),
+    ('Customer Support'),
+    ('Sales'),
+    ('Project Management'),
+    ('QA/Testing'),
+    ('Data Entry'),
+    ('Finance/Accounting'),
+    ('IT & Networking'),
+    ('Writing & Content'),
+    ('Data & Automation'),
+    ('Other')
+ON CONFLICT (name) DO NOTHING;
+
 
 -- 3. Create CONVERSATIONS table
 CREATE TABLE IF NOT EXISTS public.conversations (

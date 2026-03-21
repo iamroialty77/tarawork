@@ -9,7 +9,7 @@ import { Job } from "../../../types";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const getPublicJob = async (shareId: string): Promise<Job | null> => {
+const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?: string }) | null> => {
   const jobId = extractJobIdFromShareToken(shareId);
   if (!jobId) return null;
 
@@ -21,12 +21,29 @@ const getPublicJob = async (shareId: string): Promise<Job | null> => {
 
   if (error || !data) return null;
 
+  let hirerReviewLabel = "No hirer reviews yet";
+  if (data.employer_id) {
+    const { data: employerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("aiInsights")
+      .eq("id", data.employer_id)
+      .maybeSingle();
+
+    const aiInsights = employerProfile?.aiInsights as Record<string, unknown> | undefined;
+    const reviewScore = typeof aiInsights?.hirerReviewScore === "number" ? aiInsights.hirerReviewScore : null;
+    const reviewCount = typeof aiInsights?.hirerReviewCount === "number" ? aiInsights.hirerReviewCount : null;
+    if (reviewScore !== null) {
+      hirerReviewLabel = `${reviewScore.toFixed(1)}/5 hirer rating${reviewCount ? ` (${reviewCount} reviews)` : ""}`;
+    }
+  }
+
   return {
     ...data,
     skills: Array.isArray(data.skills) ? data.skills : [],
     energyRequirement: data.energy_requirement || "Balanced",
     paymentMethod: data.paymentMethod || "Flat-Rate",
     jobType: data.jobType || "Contract",
+    hirerReviewLabel,
   };
 };
 
@@ -89,6 +106,11 @@ export default async function PublicJobPage({
               </div>
             </section>
 
+            <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Hirer Reviews</p>
+              <p className="text-sm font-bold text-slate-900">{job.hirerReviewLabel}</p>
+            </section>
+
             <section>
               <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500 mb-3">Job Description</h2>
               <p className="text-slate-700 leading-relaxed whitespace-pre-line">{job.description}</p>
@@ -110,7 +132,7 @@ export default async function PublicJobPage({
 
             <footer className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-xs font-semibold text-slate-500">
-                Posted {formatRelativeTime(job.createdAt)} by {job.company || "Verified Employer"}
+                Posted {formatRelativeTime(job.createdAt)} by Anonymous Hirer
               </p>
               <div className="flex gap-3">
                 <Link

@@ -56,6 +56,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [escrows, setEscrows] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [jobCategories, setJobCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   
   const [healthStatus, setHealthStatus] = useState({
@@ -120,7 +123,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       // Fetch Jobs
       const { data: jobData } = await supabase
         .from('jobs')
-        .select('*, profiles(name)')
+        .select('*, hirer_profile:profiles!jobs_employer_id_fkey(name)')
         .order('createdAt', { ascending: false });
       if (jobData) setJobs(jobData);
 
@@ -145,6 +148,18 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         .order('created_at', { ascending: false })
         .limit(20);
       if (logData) setAuditLogs(logData);
+
+      const { data: categoryData } = await supabase
+        .from("job_categories")
+        .select("name")
+        .order("name", { ascending: true });
+      if (categoryData) {
+        setJobCategories(
+          categoryData
+            .map((item: any) => item.name)
+            .filter((name: string) => !!name)
+        );
+      }
 
     } catch (err) {
       console.error("Dashboard data fetch error:", err);
@@ -206,6 +221,37 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     }
   };
 
+  const editUserProfile = async (targetUser: any) => {
+    const nextName = prompt("Update full name:", targetUser.name || "")?.trim();
+    if (!nextName) return;
+
+    const nextRole = prompt("Update role (freelancer / employer / admin):", targetUser.role || "freelancer")?.trim();
+    if (!nextRole || !["freelancer", "employer", "admin"].includes(nextRole)) {
+      notify("Profile update cancelled: invalid role.");
+      return;
+    }
+
+    const nextCategory = prompt("Update category:", targetUser.category || "General")?.trim() || "General";
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        name: nextName,
+        role: nextRole,
+        category: nextCategory,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", targetUser.id);
+
+    if (error) {
+      notify("Error updating profile: " + error.message);
+      return;
+    }
+
+    notify("Profile updated successfully.");
+    fetchData();
+  };
+
   const updateJobStatus = async (jobId: string, status: string) => {
     const { error } = await supabase
       .from('jobs')
@@ -232,6 +278,31 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       notify("Job deleted successfully");
       fetchData();
     }
+  };
+
+  const addJobCategory = async () => {
+    const name = newCategory.trim();
+    if (!name) return;
+    setCategoryLoading(true);
+    const { error } = await supabase.from("job_categories").upsert({ name }, { onConflict: "name" });
+    setCategoryLoading(false);
+    if (error) {
+      notify("Error adding category: " + error.message);
+      return;
+    }
+    setNewCategory("");
+    notify("Category added.");
+    fetchData();
+  };
+
+  const removeJobCategory = async (name: string) => {
+    const { error } = await supabase.from("job_categories").delete().eq("name", name);
+    if (error) {
+      notify("Error removing category: " + error.message);
+      return;
+    }
+    notify("Category removed.");
+    fetchData();
   };
 
   const deleteEscrow = async (escrowId: string) => {
@@ -544,6 +615,14 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                         </td>
                         <td className="px-8 py-6 text-right">
                           <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => editUserProfile(user)}
+                              className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all flex items-center gap-1 px-3"
+                              title="Edit Profile"
+                            >
+                              <UserCheck className="w-4 h-4" />
+                              <span className="text-xs font-bold">Edit</span>
+                            </button>
                             {user.status !== 'approved' && (
                               <button 
                                 onClick={() => updateUserStatus(user.id, 'approved')}
@@ -593,6 +672,40 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
               <div className="p-8 border-b border-slate-50">
                 <h3 className="text-xl font-bold text-slate-900">Job Posting Moderation</h3>
                 <p className="text-sm text-slate-500 font-medium">Monitor marketplace content and take down invalid jobs.</p>
+                <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700">Job Categories</p>
+                  <p className="mt-1 text-xs font-medium text-indigo-700/80">Admins can manage the list used by the hirer job form.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {jobCategories.map((category) => (
+                      <div key={category} className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-2 py-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-700">{category}</span>
+                        <button
+                          onClick={() => removeJobCategory(category)}
+                          className="text-[10px] font-bold text-rose-600 hover:text-rose-700"
+                          title={`Remove ${category}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      type="text"
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      placeholder="Add category (e.g. SEO VA)"
+                      className="w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                    />
+                    <button
+                      onClick={addJobCategory}
+                      disabled={categoryLoading || !newCategory.trim()}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      {categoryLoading ? "Saving..." : "Add"}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -612,7 +725,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                           <div className="text-[10px] text-slate-400 font-mono">{job.id}</div>
                         </td>
                         <td className="px-8 py-6">
-                          <div className="text-sm font-bold text-slate-700">{job.profiles?.name || job.company}</div>
+                          <div className="text-sm font-bold text-slate-700">{job.hirer_profile?.name || job.company}</div>
                         </td>
                         <td className="px-8 py-6">
                           <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
