@@ -79,8 +79,22 @@ export default function Workspace({
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [connectedApps, setConnectedApps] = useState<Record<string, string[]>>({});
+  const [trelloConnected, setTrelloConnected] = useState(false);
+  const [trelloLoading, setTrelloLoading] = useState(false);
+  const [trelloBoards, setTrelloBoards] = useState<Array<{ id: string; name: string }>>([]);
+  const [trelloLists, setTrelloLists] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedBoardId, setSelectedBoardId] = useState("");
+  const [selectedListId, setSelectedListId] = useState("");
+  const [newTrelloCardName, setNewTrelloCardName] = useState("New task from TaraWork");
+  const [newTrelloCardDescription, setNewTrelloCardDescription] = useState("");
 
   const selectedMilestones = selectedProject?.milestones || [];
+
+  const showToastMessage = (message: string) => {
+    setToastMsg(message);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   // Mock wellness data - in a real app this would come from the user profile/wellness service
   const wellnessData: UserWellness = {
@@ -113,6 +127,174 @@ export default function Workspace({
     }
   }, [projects]);
 
+  useEffect(() => {
+    const run = async () => {
+      if (!currentUserId) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/trello/connection", { method: "GET" });
+        const payload = (await response.json()) as { connected?: boolean; error?: string };
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to load Trello connection.");
+        }
+
+        const isConnected = !!payload.connected;
+        setTrelloConnected(isConnected);
+        if (!isConnected) {
+          setTrelloBoards([]);
+          setTrelloLists([]);
+          setSelectedBoardId("");
+          setSelectedListId("");
+        }
+      } catch {
+        setTrelloConnected(false);
+        setTrelloBoards([]);
+        setTrelloLists([]);
+        setSelectedBoardId("");
+        setSelectedListId("");
+      }
+    };
+
+    void run();
+  }, [currentUserId]);
+
+  const startTrelloConnect = async () => {
+    try {
+      setTrelloLoading(true);
+      const nextPath = typeof window !== "undefined" ? window.location.pathname : "/";
+      const response = await fetch(`/api/trello/connect-url?next=${encodeURIComponent(nextPath)}`);
+      const payload = (await response.json()) as { authorizeUrl?: string; error?: string };
+
+      if (!response.ok || !payload.authorizeUrl) {
+        throw new Error(payload.error || "Unable to start Trello connection.");
+      }
+
+      window.location.href = payload.authorizeUrl;
+    } catch (error) {
+      showToastMessage(error instanceof Error ? error.message : "Unable to connect Trello.");
+      setTrelloLoading(false);
+    }
+  };
+
+  const disconnectTrello = async () => {
+    try {
+      setTrelloLoading(true);
+      const response = await fetch("/api/trello/connection", { method: "DELETE" });
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to disconnect Trello.");
+      }
+
+      setTrelloConnected(false);
+      setTrelloBoards([]);
+      setTrelloLists([]);
+      setSelectedBoardId("");
+      setSelectedListId("");
+      showToastMessage("Trello disconnected.");
+    } catch (error) {
+      showToastMessage(error instanceof Error ? error.message : "Unable to disconnect Trello.");
+    } finally {
+      setTrelloLoading(false);
+    }
+  };
+
+  const loadTrelloBoards = async () => {
+    try {
+      setTrelloLoading(true);
+      const response = await fetch("/api/trello/boards");
+      const payload = (await response.json()) as {
+        boards?: Array<{ id: string; name: string }>;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to load Trello boards.");
+      }
+
+      const boards = payload.boards || [];
+      setTrelloBoards(boards);
+      setSelectedBoardId(boards[0]?.id || "");
+      setTrelloLists([]);
+      setSelectedListId("");
+      showToastMessage(`Loaded ${boards.length} Trello board${boards.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      showToastMessage(error instanceof Error ? error.message : "Unable to load Trello boards.");
+    } finally {
+      setTrelloLoading(false);
+    }
+  };
+
+  const loadTrelloLists = async (boardId: string) => {
+    if (!boardId) {
+      return;
+    }
+
+    try {
+      setTrelloLoading(true);
+      const response = await fetch(`/api/trello/lists?idBoard=${encodeURIComponent(boardId)}`);
+      const payload = (await response.json()) as {
+        lists?: Array<{ id: string; name: string }>;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to load Trello lists.");
+      }
+
+      const lists = payload.lists || [];
+      setTrelloLists(lists);
+      setSelectedListId(lists[0]?.id || "");
+      showToastMessage(`Loaded ${lists.length} list${lists.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      showToastMessage(error instanceof Error ? error.message : "Unable to load Trello lists.");
+    } finally {
+      setTrelloLoading(false);
+    }
+  };
+
+  const createTrelloTestCard = async () => {
+    if (!selectedListId) {
+      showToastMessage("Select a Trello list first.");
+      return;
+    }
+
+    if (!newTrelloCardName.trim()) {
+      showToastMessage("Card name is required.");
+      return;
+    }
+
+    try {
+      setTrelloLoading(true);
+      const response = await fetch("/api/trello/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idList: selectedListId,
+          name: newTrelloCardName.trim(),
+          description: newTrelloCardDescription.trim() || undefined,
+        }),
+      });
+      const payload = (await response.json()) as { card?: { url?: string }; error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to create Trello card.");
+      }
+
+      showToastMessage("Trello card created successfully.");
+      if (payload.card?.url) {
+        window.open(payload.card.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      showToastMessage(error instanceof Error ? error.message : "Unable to create Trello card.");
+    } finally {
+      setTrelloLoading(false);
+    }
+  };
+
   const handleSaveLink = async (project: Project) => {
     if (onUpdateProject) {
       setIsSyncing(true);
@@ -124,14 +306,21 @@ export default function Workspace({
 
   const handleConnect = (appName: string) => {
     if (!selectedProject) return;
+
+    if (appName === "Trello") {
+      if (trelloConnected) {
+        showToastMessage("Trello is already connected.");
+      } else {
+        void startTrelloConnect();
+      }
+      return;
+    }
     
     const projectId = selectedProject.id;
     const projectApps = connectedApps[projectId] || [];
     
     if (projectApps.includes(appName)) {
-      setToastMsg(`${appName} is already connected.`);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      showToastMessage(`${appName} is already connected.`);
       return;
     }
     
@@ -140,9 +329,7 @@ export default function Workspace({
       [projectId]: [...projectApps, appName]
     });
     
-    setToastMsg(`Successfully connected to ${appName}!`);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+    showToastMessage(`Successfully connected to ${appName}!`);
   };
 
   const handleCreateProject = () => {
@@ -1495,7 +1682,9 @@ export default function Workspace({
                         const currentIntegrations = integrations[selectedProject.workspaceType as keyof typeof integrations] || integrations["General"];
 
                         return currentIntegrations.map((app, i) => {
-                          const isConnected = (connectedApps[selectedProject?.id || ""] || []).includes(app.name);
+                          const isConnected = app.name === "Trello"
+                            ? trelloConnected
+                            : (connectedApps[selectedProject?.id || ""] || []).includes(app.name);
                           
                           return (
                             <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all group cursor-pointer">
@@ -1528,6 +1717,131 @@ export default function Workspace({
                           );
                         });
                       })()}
+                    </div>
+
+                    <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                            <Trello className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h6 className="text-sm font-black text-slate-900 tracking-tight">Trello Live Integration</h6>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                              Status: {trelloConnected ? "Connected" : "Not Connected"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!trelloConnected ? (
+                            <button
+                              onClick={() => void startTrelloConnect()}
+                              disabled={trelloLoading}
+                              className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 disabled:opacity-60"
+                            >
+                              {trelloLoading ? "Connecting..." : "Connect Trello"}
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => void loadTrelloBoards()}
+                                disabled={trelloLoading}
+                                className="px-4 py-2 rounded-xl bg-white text-blue-700 border border-blue-200 text-[10px] font-black uppercase tracking-wider hover:bg-blue-100 disabled:opacity-60"
+                              >
+                                Refresh Boards
+                              </button>
+                              <button
+                                onClick={() => void disconnectTrello()}
+                                disabled={trelloLoading}
+                                className="px-4 py-2 rounded-xl bg-white text-slate-700 border border-slate-200 text-[10px] font-black uppercase tracking-wider hover:bg-slate-100 disabled:opacity-60"
+                              >
+                                Disconnect
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {trelloConnected && (
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                              Board
+                            </label>
+                            <select
+                              value={selectedBoardId}
+                              onChange={(e) => {
+                                const boardId = e.target.value;
+                                setSelectedBoardId(boardId);
+                                setTrelloLists([]);
+                                setSelectedListId("");
+                                void loadTrelloLists(boardId);
+                              }}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                            >
+                              <option value="">Select board</option>
+                              {trelloBoards.map((board) => (
+                                <option key={board.id} value={board.id}>
+                                  {board.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                              List
+                            </label>
+                            <select
+                              value={selectedListId}
+                              onChange={(e) => setSelectedListId(e.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                            >
+                              <option value="">Select list</option>
+                              {trelloLists.map((list) => (
+                                <option key={list.id} value={list.id}>
+                                  {list.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                              Card Name
+                            </label>
+                            <input
+                              value={newTrelloCardName}
+                              onChange={(e) => setNewTrelloCardName(e.target.value)}
+                              placeholder="Card title"
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                            />
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                              Description
+                            </label>
+                            <textarea
+                              value={newTrelloCardDescription}
+                              onChange={(e) => setNewTrelloCardDescription(e.target.value)}
+                              rows={3}
+                              placeholder="Optional card details"
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs resize-none"
+                            />
+                          </div>
+
+                          <div className="md:col-span-2 flex justify-end">
+                            <button
+                              onClick={() => void createTrelloTestCard()}
+                              disabled={trelloLoading || !selectedListId}
+                              className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 disabled:opacity-60"
+                            >
+                              {trelloLoading ? "Processing..." : "Create Trello Card"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between">
