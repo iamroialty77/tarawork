@@ -85,6 +85,8 @@ export default function Workspace({
   const [trelloLists, setTrelloLists] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedBoardId, setSelectedBoardId] = useState("");
   const [selectedListId, setSelectedListId] = useState("");
+  const [newTrelloBoardName, setNewTrelloBoardName] = useState("");
+  const [newTrelloBoardDescription, setNewTrelloBoardDescription] = useState("");
   const [newTrelloCardName, setNewTrelloCardName] = useState("New task from TaraWork");
   const [newTrelloCardDescription, setNewTrelloCardDescription] = useState("");
 
@@ -223,6 +225,47 @@ export default function Workspace({
       showToastMessage(`Loaded ${boards.length} Trello board${boards.length === 1 ? "" : "s"}.`);
     } catch (error) {
       showToastMessage(error instanceof Error ? error.message : "Unable to load Trello boards.");
+    } finally {
+      setTrelloLoading(false);
+    }
+  };
+
+  const createTrelloBoard = async () => {
+    const name = newTrelloBoardName.trim();
+    if (!name) {
+      showToastMessage("Board name is required.");
+      return;
+    }
+
+    try {
+      setTrelloLoading(true);
+      const response = await fetch("/api/trello/boards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          description: newTrelloBoardDescription.trim() || undefined,
+          permissionLevel: "private",
+          defaultLists: true,
+          defaultLabels: true,
+        }),
+      });
+      const payload = (await response.json()) as { board?: { id: string; name: string }; error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to create Trello board.");
+      }
+
+      showToastMessage(`Board "${payload.board?.name || name}" created.`);
+      setNewTrelloBoardName("");
+      setNewTrelloBoardDescription("");
+      await loadTrelloBoards();
+      if (payload.board?.id) {
+        setSelectedBoardId(payload.board.id);
+        await loadTrelloLists(payload.board.id);
+      }
+    } catch (error) {
+      showToastMessage(error instanceof Error ? error.message : "Unable to create Trello board.");
     } finally {
       setTrelloLoading(false);
     }
@@ -1764,6 +1807,35 @@ export default function Workspace({
 
                       {trelloConnected && (
                         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="md:col-span-2 rounded-xl border border-blue-200 bg-white p-3">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                              Create New Board
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <input
+                                value={newTrelloBoardName}
+                                onChange={(e) => setNewTrelloBoardName(e.target.value)}
+                                placeholder="Board name"
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                              />
+                              <input
+                                value={newTrelloBoardDescription}
+                                onChange={(e) => setNewTrelloBoardDescription(e.target.value)}
+                                placeholder="Board description (optional)"
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                              />
+                            </div>
+                            <div className="mt-2 flex justify-end">
+                              <button
+                                onClick={() => void createTrelloBoard()}
+                                disabled={trelloLoading || !newTrelloBoardName.trim()}
+                                className="px-4 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-blue-700 disabled:opacity-60"
+                              >
+                                {trelloLoading ? "Processing..." : "Create Board"}
+                              </button>
+                            </div>
+                          </div>
+
                           <div>
                             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
                               Board
