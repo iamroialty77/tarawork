@@ -525,6 +525,27 @@ export default function ProfileForm({
   const labelClassName =
     "mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500";
   const servicesOffered = normalizeServices(profile.servicesOffered);
+  const applicationProfile = profile.aiInsights?.applicationProfile || {};
+
+  const handleApplicationProfileChange = (
+    field: "resumeUrl" | "portfolioUrl" | "interviewUrl" | "coverLetter",
+    value: string,
+  ) => {
+    setProfile({
+      ...profile,
+      aiInsights: {
+        ...(profile.aiInsights || {
+          gapAnalysis: [],
+          compatibilityScore: 0,
+          cultureMatch: [],
+        }),
+        applicationProfile: {
+          ...applicationProfile,
+          [field]: value,
+        },
+      },
+    });
+  };
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
@@ -804,6 +825,57 @@ export default function ProfileForm({
                     accept=".pdf"
                     onChange={handleResumeUpload}
                   />
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                  <div className="mb-4">
+                    <h4 className="text-base font-bold text-slate-950">Prove Your Legitimacy</h4>
+                    <p className="text-sm text-slate-500">
+                      One-time setup ito sa My Profile. Ito na ang gagamitin sa bawat job application.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className={labelClassName}>Resume URL (Required)</label>
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/your-resume"
+                        className={inputClassName}
+                        value={applicationProfile.resumeUrl || ""}
+                        onChange={(e) => handleApplicationProfileChange("resumeUrl", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClassName}>Portfolio URL (Required)</label>
+                      <input
+                        type="url"
+                        placeholder="https://github.com/your-portfolio"
+                        className={inputClassName}
+                        value={applicationProfile.portfolioUrl || ""}
+                        onChange={(e) => handleApplicationProfileChange("portfolioUrl", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClassName}>Interview Link (Optional)</label>
+                      <input
+                        type="url"
+                        placeholder="https://loom.com/your-intro"
+                        className={inputClassName}
+                        value={applicationProfile.interviewUrl || ""}
+                        onChange={(e) => handleApplicationProfileChange("interviewUrl", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClassName}>Default Message to Employer (Optional)</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Short intro na automatic kasama sa applications mo."
+                        className={inputClassName}
+                        value={applicationProfile.coverLetter || ""}
+                        onChange={(e) => handleApplicationProfileChange("coverLetter", e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">

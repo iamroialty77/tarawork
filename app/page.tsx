@@ -149,15 +149,7 @@ export default function Home() {
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [selectedJobIdForApply, setSelectedJobIdForApply] = useState<string | null>(null);
   const [pendingApplyJobId, setPendingApplyJobId] = useState<string | null>(null);
-  const [applyData, setApplyData] = useState({
-    resumeUrl: "",
-    portfolioUrl: "",
-    interviewUrl: "",
-    coverLetter: ""
-  });
   const [notifications, setNotifications] = useState<any[]>([]);
   const [userFollows, setUserFollows] = useState<string[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -1177,15 +1169,34 @@ export default function Home() {
     }
   };
 
-  const handleApply = (jobId: string) => {
+  const getApplicationProfileData = (source: UserProfile) => {
+    const applicationProfile = source.aiInsights?.applicationProfile || {};
+    return {
+      resumeUrl: (applicationProfile.resumeUrl || "").trim(),
+      portfolioUrl: (applicationProfile.portfolioUrl || "").trim(),
+      interviewUrl: (applicationProfile.interviewUrl || "").trim(),
+      coverLetter: (applicationProfile.coverLetter || "").trim(),
+    };
+  };
+
+  const handleApply = async (jobId: string) => {
     if (!user) {
       setToastMsg("Please login to apply for jobs.");
       setShowToast(true);
       return;
     }
-    
-    setSelectedJobIdForApply(jobId);
-    setShowApplyModal(true);
+
+    const applicationProfile = getApplicationProfileData(profile);
+    if (!applicationProfile.resumeUrl || !applicationProfile.portfolioUrl) {
+      setFreelancerTab("profile");
+      setToastMsg(
+        "Please complete Prove Your Legitimacy in My Profile first (Resume + Portfolio links required).",
+      );
+      setShowToast(true);
+      return;
+    }
+
+    await submitApplication(jobId);
   };
 
   const startUpgradeCheckout = async (productType: "pro" | "credit_topup") => {
@@ -1271,7 +1282,16 @@ export default function Home() {
       setToastMsg("Only freelancer accounts can apply for jobs.");
       setShowToast(true);
     } else {
-      handleApply(selectedJob.id);
+      const applicationProfile = getApplicationProfileData(profile);
+      if (!applicationProfile.resumeUrl || !applicationProfile.portfolioUrl) {
+        setFreelancerTab("profile");
+        setToastMsg(
+          "Please complete Prove Your Legitimacy in My Profile first (Resume + Portfolio links required).",
+        );
+        setShowToast(true);
+      } else {
+        void submitApplication(selectedJob.id);
+      }
     }
 
     const url = new URL(window.location.href);
@@ -1280,11 +1300,12 @@ export default function Home() {
     setPendingApplyJobId(null);
   }, [pendingApplyJobId, jobs, profile.role]);
 
-  const submitApplication = async () => {
-    if (!user || !selectedJobIdForApply) return;
-    
-    if (!applyData.resumeUrl || !applyData.portfolioUrl) {
-      setToastMsg("Please provide both Resume and Portfolio links to proceed.");
+  const submitApplication = async (jobId: string) => {
+    if (!user) return;
+
+    const applicationProfile = getApplicationProfileData(profile);
+    if (!applicationProfile.resumeUrl || !applicationProfile.portfolioUrl) {
+      setToastMsg("Please complete your Resume and Portfolio links in My Profile.");
       setShowToast(true);
       return;
     }
@@ -1292,20 +1313,20 @@ export default function Home() {
     try {
       setIsSaving(true);
       const insertData: any = { 
-        job_id: selectedJobIdForApply,
+        job_id: jobId,
         freelancer_id: user.id,
         status: 'pending'
       };
 
       // Conditionally add columns based on whether we suspect they are missing
       if (!missingColumns.includes('seeker_id')) insertData.seeker_id = user.id;
-      if (!missingColumns.includes('resume_url')) insertData.resume_url = applyData.resumeUrl;
-      if (!missingColumns.includes('portfolio_url')) insertData.portfolio_url = applyData.portfolioUrl;
-      if (!missingColumns.includes('cover_letter')) insertData.cover_letter = applyData.coverLetter;
+      if (!missingColumns.includes('resume_url')) insertData.resume_url = applicationProfile.resumeUrl;
+      if (!missingColumns.includes('portfolio_url')) insertData.portfolio_url = applicationProfile.portfolioUrl;
+      if (!missingColumns.includes('cover_letter')) insertData.cover_letter = applicationProfile.coverLetter;
 
       // Only add interview_url if it's provided and not known to be missing
-      if (applyData.interviewUrl && !missingColumns.includes('interview_url')) {
-        insertData.interview_url = applyData.interviewUrl;
+      if (applicationProfile.interviewUrl && !missingColumns.includes('interview_url')) {
+        insertData.interview_url = applicationProfile.interviewUrl;
       }
 
       const { error } = await supabase
@@ -1326,7 +1347,7 @@ export default function Home() {
 
           // Retry with absolute minimal columns
           const minimalData: any = { 
-            job_id: selectedJobIdForApply,
+            job_id: jobId,
             freelancer_id: user.id,
             status: 'pending'
           };
@@ -1335,8 +1356,8 @@ export default function Home() {
           if (!error.message?.includes('seeker_id')) minimalData.seeker_id = user.id;
 
           // Only add cover_letter if provided and not causing issues
-          if (applyData.coverLetter && !error.message?.includes('cover_letter')) {
-            minimalData.cover_letter = applyData.coverLetter;
+          if (applicationProfile.coverLetter && !error.message?.includes('cover_letter')) {
+            minimalData.cover_letter = applicationProfile.coverLetter;
           }
 
           const { error: retryError } = await supabase
@@ -1345,18 +1366,14 @@ export default function Home() {
           
           if (retryError) throw retryError;
           
-          setAppliedJobs(prev => ({ ...prev, [selectedJobIdForApply]: 'pending' }));
+          setAppliedJobs(prev => ({ ...prev, [jobId]: 'pending' }));
           setToastMsg("Application submitted! (Note: Some advanced fields were skipped because your database schema is not up-to-date)");
-          setShowApplyModal(false);
-          setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
         } else {
           throw error;
         }
       } else {
-        setAppliedJobs(prev => ({ ...prev, [selectedJobIdForApply]: 'pending' }));
+        setAppliedJobs(prev => ({ ...prev, [jobId]: 'pending' }));
         setToastMsg("Application submitted! employer will review your credentials.");
-        setShowApplyModal(false);
-        setApplyData({ resumeUrl: "", portfolioUrl: "", interviewUrl: "", coverLetter: "" });
       }
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
@@ -4149,107 +4166,6 @@ export default function Home() {
                   className="w-full rounded-xl bg-slate-900 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-white hover:bg-black disabled:opacity-60"
                 >
                   {settingsLoading ? "Updating..." : "Change Password"}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Apply for Job Modal */}
-      <AnimatePresence>
-        {showApplyModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowApplyModal(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100"
-            >
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 tracking-tight">Prove Your Legitimacy</h3>
-                  <p className="text-sm font-medium text-slate-500">Provide your credentials to the employer.</p>
-                </div>
-                <button 
-                  onClick={() => setShowApplyModal(false)}
-                  className="p-2 hover:bg-slate-50 rounded-xl transition-all"
-                >
-                  <XCircle className="w-6 h-6 text-slate-300 hover:text-slate-500" />
-                </button>
-              </div>
-
-              <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh]">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5" />
-                    Resume URL (PDF/Drive)
-                  </label>
-                  <input 
-                    type="url"
-                    placeholder="https://drive.google.com/your-resume"
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    value={applyData.resumeUrl}
-                    onChange={(e) => setApplyData({...applyData, resumeUrl: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Code className="w-3.5 h-3.5" />
-                    Portfolio URL (GitHub/Behance)
-                  </label>
-                  <input 
-                    type="url"
-                    placeholder="https://github.com/your-portfolio"
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    value={applyData.portfolioUrl}
-                    onChange={(e) => setApplyData({...applyData, portfolioUrl: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    Interview Video/Link (Optional)
-                  </label>
-                  <input 
-                    type="url"
-                    placeholder="https://loom.com/your-intro"
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    value={applyData.interviewUrl}
-                    onChange={(e) => setApplyData({...applyData, interviewUrl: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Short Message to employer
-                  </label>
-                  <textarea 
-                    rows={4}
-                    placeholder="Tell the employer why you're a good fit..."
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
-                    value={applyData.coverLetter}
-                    onChange={(e) => setApplyData({...applyData, coverLetter: e.target.value})}
-                  />
-                </div>
-
-                <button 
-                  onClick={submitApplication}
-                  disabled={isSaving}
-                  className="w-full bg-slate-900 text-white py-4 rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-xl shadow-slate-900/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isSaving ? "Submitting..." : "Submit My Application"}
-                  {!isSaving && <ArrowUpRight className="w-4 h-4" />}
                 </button>
               </div>
             </motion.div>

@@ -68,6 +68,12 @@ export interface AIAnalysis {
     responseTime: string;
     clientSentiment: "Positive" | "Neutral" | "Negative";
   };
+  applicationProfile?: {
+    resumeUrl?: string;
+    portfolioUrl?: string;
+    interviewUrl?: string;
+    coverLetter?: string;
+  };
   preferredCurrency?: CurrencyCode;
 }
 
