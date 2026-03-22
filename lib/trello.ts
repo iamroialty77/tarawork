@@ -13,7 +13,7 @@ export class TrelloApiError extends Error {
 }
 
 type TrelloRequestConfig = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   query?: Record<string, string | undefined>;
   credentials?: TrelloCredentials;
@@ -24,6 +24,17 @@ export type CreateTrelloCardInput = {
   name: string;
   description?: string;
   due?: string;
+  idMembers?: string[];
+  idLabels?: string[];
+};
+
+export type UpdateTrelloCardInput = {
+  idCard: string;
+  name?: string;
+  description?: string;
+  due?: string;
+  idList?: string;
+  closed?: boolean;
   idMembers?: string[];
   idLabels?: string[];
 };
@@ -168,5 +179,123 @@ export async function getTrelloMember(credentials: TrelloCredentials) {
     query: {
       fields: "id,username,fullName,url",
     },
+  });
+}
+
+export async function updateTrelloCard(input: UpdateTrelloCardInput, credentials?: TrelloCredentials) {
+  return trelloRequest<{
+    id: string;
+    name: string;
+    url: string;
+    idList: string;
+    closed: boolean;
+  }>({
+    method: "PUT",
+    path: `/cards/${input.idCard}`,
+    credentials,
+    query: {
+      name: input.name,
+      desc: input.description,
+      due: input.due,
+      idList: input.idList,
+      closed: typeof input.closed === "boolean" ? String(input.closed) : undefined,
+      idMembers: toCsv(input.idMembers),
+      idLabels: toCsv(input.idLabels),
+    },
+  });
+}
+
+export async function addCommentToTrelloCard(
+  idCard: string,
+  text: string,
+  credentials?: TrelloCredentials,
+) {
+  return trelloRequest<{
+    id: string;
+    type: string;
+    date: string;
+  }>({
+    method: "POST",
+    path: `/cards/${idCard}/actions/comments`,
+    credentials,
+    query: {
+      text,
+    },
+  });
+}
+
+export async function addAttachmentToTrelloCard(
+  {
+    idCard,
+    url,
+    name,
+    setCover,
+  }: { idCard: string; url: string; name?: string; setCover?: boolean },
+  credentials?: TrelloCredentials,
+) {
+  return trelloRequest<{
+    id: string;
+    name: string;
+    url: string;
+  }>({
+    method: "POST",
+    path: `/cards/${idCard}/attachments`,
+    credentials,
+    query: {
+      url,
+      name,
+      setCover: typeof setCover === "boolean" ? String(setCover) : undefined,
+    },
+  });
+}
+
+export async function listTrelloWebhooks(credentials: TrelloCredentials) {
+  return trelloRequest<
+    Array<{
+      id: string;
+      idModel: string;
+      description: string | null;
+      callbackURL: string;
+      active: boolean;
+      consecutiveFailures: number;
+      firstConsecutiveFailDate: string | null;
+    }>
+  >({
+    path: `/tokens/${credentials.token}/webhooks`,
+    credentials,
+  });
+}
+
+export async function createTrelloWebhook(
+  {
+    callbackURL,
+    idModel,
+    description,
+  }: { callbackURL: string; idModel: string; description?: string },
+  credentials: TrelloCredentials,
+) {
+  return trelloRequest<{
+    id: string;
+    idModel: string;
+    callbackURL: string;
+    active: boolean;
+    description: string | null;
+  }>({
+    method: "POST",
+    path: "/webhooks",
+    credentials,
+    query: {
+      callbackURL,
+      idModel,
+      description,
+    },
+  });
+}
+
+export async function deleteTrelloWebhook(idWebhook: string, credentials: TrelloCredentials) {
+  return trelloRequest<{ _value?: string }>({
+    method: "DELETE",
+    path: `/webhooks/${idWebhook}`,
+    credentials,
   });
 }

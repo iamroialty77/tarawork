@@ -1,6 +1,6 @@
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import { supabaseAdmin } from "@/lib/supabase_admin";
-import { getEnvTrelloCredentials, type TrelloCredentials } from "@/lib/trello";
+import type { TrelloCredentials } from "@/lib/trello";
 
 type StoredConnection = {
   user_id: string;
@@ -13,6 +13,23 @@ type StoredConnection = {
   created_at: string;
   updated_at: string;
 };
+
+export class TrelloConnectionRequiredError extends Error {
+  constructor(message = "Trello account is not connected for this user.") {
+    super(message);
+    this.name = "TrelloConnectionRequiredError";
+  }
+}
+
+function getTrelloApiKey() {
+  const key = process.env.TRELLO_API_KEY;
+
+  if (!key) {
+    throw new Error("TRELLO_API_KEY is not configured.");
+  }
+
+  return key;
+}
 
 export async function getStoredTrelloConnection(userId: string) {
   const { data, error } = await supabaseAdmin
@@ -36,14 +53,17 @@ export async function getTrelloCredentialsForUser(userId: string): Promise<Trell
   }
 
   return {
-    key: getEnvTrelloCredentials().key,
+    key: getTrelloApiKey(),
     token: decryptSecret(connection.access_token_encrypted),
   };
 }
 
-export async function getTrelloCredentialsForUserOrEnv(userId: string): Promise<TrelloCredentials> {
+export async function getTrelloCredentialsForUserOrThrow(userId: string): Promise<TrelloCredentials> {
   const userCredentials = await getTrelloCredentialsForUser(userId);
-  return userCredentials ?? getEnvTrelloCredentials();
+  if (!userCredentials) {
+    throw new TrelloConnectionRequiredError();
+  }
+  return userCredentials;
 }
 
 export async function saveTrelloConnection({

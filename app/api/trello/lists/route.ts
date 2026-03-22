@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { TrelloApiError, getTrelloBoardLists } from "@/lib/trello";
 import { getAuthenticatedUser } from "@/lib/supabase_server";
-import { getTrelloCredentialsForUserOrEnv } from "@/lib/trelloConnection";
+import { getTrelloCredentialsForUserOrThrow, TrelloConnectionRequiredError } from "@/lib/trelloConnection";
 
 export const runtime = "nodejs";
 
@@ -19,10 +19,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "idBoard is required." }, { status: 400 });
     }
 
-    const credentials = await getTrelloCredentialsForUserOrEnv(user.id);
+    const credentials = await getTrelloCredentialsForUserOrThrow(user.id);
     const lists = await getTrelloBoardLists(idBoard, credentials);
     return NextResponse.json({ lists });
   } catch (error) {
+    if (error instanceof TrelloConnectionRequiredError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     if (error instanceof TrelloApiError) {
       return NextResponse.json({ error: error.message, details: error.details }, { status: error.status });
     }
