@@ -28,6 +28,14 @@ export type CreateTrelloCardInput = {
   idLabels?: string[];
 };
 
+export type CreateTrelloBoardInput = {
+  name: string;
+  description?: string;
+  permissionLevel?: "private" | "org" | "public";
+  defaultLists?: boolean;
+  defaultLabels?: boolean;
+};
+
 export type UpdateTrelloCardInput = {
   idCard: string;
   name?: string;
@@ -123,6 +131,27 @@ export async function getTrelloBoards(credentials?: TrelloCredentials) {
     query: {
       fields: "id,name,url,closed",
       filter: "open",
+    },
+  });
+}
+
+export async function createTrelloBoard(input: CreateTrelloBoardInput, credentials?: TrelloCredentials) {
+  return trelloRequest<{
+    id: string;
+    name: string;
+    url: string;
+    desc: string;
+    closed: boolean;
+  }>({
+    method: "POST",
+    path: "/boards",
+    credentials,
+    query: {
+      name: input.name,
+      desc: input.description,
+      prefs_permissionLevel: input.permissionLevel || "private",
+      defaultLists: typeof input.defaultLists === "boolean" ? String(input.defaultLists) : "true",
+      defaultLabels: typeof input.defaultLabels === "boolean" ? String(input.defaultLabels) : "true",
     },
   });
 }
