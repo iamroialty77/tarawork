@@ -3,7 +3,6 @@
 import { UserProfile, FreelancerCategory, PortfolioItem, ExperienceItem, ServiceOffering } from "../types";
 import { useState, useEffect, useRef } from "react";
 import {
-  Camera,
   User,
   FileText,
   Sparkles,
@@ -153,7 +152,6 @@ export default function ProfileForm({
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const [serviceInput, setServiceInput] = useState<ServiceOffering>(DEFAULT_SERVICE_ENTRY);
   const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | "credit_topup" | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
   const premiumProfile = profile.premiumProfile || {
@@ -173,7 +171,6 @@ export default function ProfileForm({
   };
   const isPro = premiumProfile.tier === "pro";
   const isFreelancer = profile.role === "freelancer";
-  const proLockedByBilling = !!premiumProfile.billing?.proLocked && premiumProfile.tier === "pro";
   const proExpiryDate = premiumProfile.billing?.proExpiresAt ? new Date(premiumProfile.billing.proExpiresAt) : null;
   const hasValidProExpiry = !!proExpiryDate && !Number.isNaN(proExpiryDate.getTime());
   const premiumDaysLeft = hasValidProExpiry && proExpiryDate
@@ -372,19 +369,6 @@ export default function ProfileForm({
       ...profile,
       portfolio: (profile.portfolio || []).filter((item) => item.id !== id),
     });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // In a real app, you'd upload to Supabase Storage here
-      // For now, we'll use a local URL or just simulate
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile({ ...profile, avatar_url: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -594,72 +578,8 @@ export default function ProfileForm({
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
-      <div className="rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-5 sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="relative shrink-0">
-              <div className="h-20 w-20 overflow-hidden rounded-3xl bg-gradient-to-tr from-indigo-500 to-sky-500 p-1 shadow-lg">
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Profile" className="h-full w-full rounded-[1.15rem] object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-[1.15rem] bg-white">
-                    <User className="h-8 w-8 text-slate-300" />
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-md transition-all hover:scale-105 hover:text-indigo-600"
-              >
-                <Camera className="h-4 w-4" />
-              </button>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-            </div>
-
-            <div className="space-y-2">
-              <div className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {isFreelancer ? "Freelancer profile" : "Client profile"}
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-950">{profile.name || "Set your profile"}</h2>
-                  {premiumProfile.verifiedBadge && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Verified
-                    </span>
-                  )}
-                  {isPro && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">
-                      <Star className="h-3.5 w-3.5" />
-                      Pro
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Profile URL</p>
-              <p className="mt-2 truncate text-sm font-semibold text-slate-800">
-                {(typeof window !== "undefined" ? window.location.host : "www.tarawork.online")}/{isPro ? `@${profile.username || "username"}` : profile.username || "username"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Status</p>
-              <p className="mt-2 text-sm font-semibold text-slate-800">
-                {isSaving ? "Saving..." : isFreelancer ? "Open to work" : "Ready to hire"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {isFreelancer && isPro && (
-        <div className="mt-5 flex justify-center">
+        <div className="flex justify-center">
           <PremiumProIdentityCard profile={profile} />
         </div>
       )}
