@@ -79,6 +79,58 @@ const ProjectCard = ({ project, isPro = false }: { project: PortfolioProject; is
   </div>
 );
 
+const extractBaseRate = (hourlyRate?: string) => {
+  const raw = (hourlyRate || "").trim();
+  if (!raw) return "$50/hr";
+  if (/\/\s*hr/i.test(raw)) return raw;
+  const numeric = raw.replace(/[^\d.,]/g, "");
+  if (!numeric) return raw;
+  if (raw.includes("$")) return `$${numeric}/hr`;
+  return `${raw}/hr`;
+};
+
+const PremiumProfessionalCard = ({ profile }: { profile: FreelancerProfile }) => {
+  const hourlyRateLabel = extractBaseRate(profile.hourlyRate);
+  const roleLabel = profile.role || "Freelancer Professional";
+  const locationLabel = "Manila, Philippines";
+
+  return (
+    <div className="relative mx-auto w-full max-w-[420px]">
+      <div className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-[radial-gradient(circle_at_20%_20%,rgba(250,204,21,0.22),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(59,130,246,0.16),transparent_45%)] blur-2xl" />
+      <div className="relative overflow-hidden rounded-[2.2rem] border border-amber-200/35 bg-gradient-to-b from-[#2a0638] via-[#3a0950] to-[#260633] px-8 pb-10 pt-20 shadow-[0_28px_80px_rgba(15,23,42,0.45)]">
+        <div className="absolute inset-x-0 top-0 h-20 bg-[linear-gradient(90deg,rgba(147,197,253,0.2),rgba(191,219,254,0.08),rgba(147,197,253,0.2))]" />
+        <div className="absolute left-1/2 top-6 h-28 w-28 -translate-x-1/2 overflow-hidden rounded-full border-[5px] border-amber-300 shadow-[0_10px_32px_rgba(245,158,11,0.35)]">
+          <Image
+            src={profile.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=VerifiedPro"}
+            alt={profile.name}
+            fill
+            className="object-cover"
+          />
+        </div>
+
+        <div className="mt-12 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-amber-950 shadow-lg shadow-amber-300/40">
+            <ShieldCheck size={12} />
+            Verified Pro
+          </div>
+
+          <h3 className="mt-4 text-3xl font-black tracking-tight text-white">{profile.name}</h3>
+          <p className="mt-1 text-base font-medium text-slate-200">{roleLabel}</p>
+          <p className="mt-2 inline-flex items-center gap-1 text-sm text-slate-300">
+            <MapPin size={14} />
+            {locationLabel}
+          </p>
+
+          <div className="mx-auto mt-7 h-px w-full max-w-[280px] bg-white/20" />
+
+          <p className="mt-6 text-[11px] font-black uppercase tracking-[0.2em] text-slate-300">Basic Rate</p>
+          <p className="mt-1 text-4xl font-black text-white">{hourlyRateLabel}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro?: boolean }) => {
   const skillItems =
     profile.portfolio?.skills && profile.portfolio.skills.length > 0
@@ -308,8 +360,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           <main className="lg:w-2/3 space-y-20">
             {isPro && (
               <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white via-amber-50 to-orange-100 p-8 shadow-2xl shadow-amber-500/10">
+                <PremiumProfessionalCard profile={profile} />
+
                 <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="max-w-2xl">
+                  <div className="max-w-2xl mt-10">
                     <div className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">
                       <Star size={12} />
                       Premium Profile
