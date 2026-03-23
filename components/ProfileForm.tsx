@@ -9,6 +9,7 @@ import {
   Sparkles,
   ShieldCheck,
   Star,
+  MapPin,
   FolderKanban,
   Briefcase,
   BarChart3,
@@ -47,6 +48,16 @@ const DEFAULT_SERVICE_ENTRY: ServiceOffering = {
 };
 const SERVICE_CURRENCIES = ["PHP", "USD", "EUR", "SGD", "AUD"];
 
+const formatPremiumRate = (hourlyRate?: string) => {
+  const value = (hourlyRate || "").trim();
+  if (!value) return "$50/hr";
+  if (/\/\s*hr/i.test(value)) return value;
+  const numeric = value.replace(/[^\d.,]/g, "");
+  if (!numeric) return value;
+  if (value.includes("$")) return `$${numeric}/hr`;
+  return `${value}/hr`;
+};
+
 const normalizeAboutSections = (profile: UserProfile) => {
   const sections = profile.aboutSections || EMPTY_ABOUT_SECTIONS;
   return {
@@ -77,6 +88,40 @@ const normalizeServices = (services: ServiceOffering[] | undefined): ServiceOffe
     .filter((service): service is ServiceOffering => !!service)
     .slice(0, MAX_SERVICES);
 };
+
+const PremiumProIdentityCard = ({ profile }: { profile: UserProfile }) => (
+  <div className="relative w-full max-w-sm rounded-[2.2rem] border border-amber-200/30 bg-gradient-to-b from-[#2b0638] via-[#3b0951] to-[#260631] px-7 pb-8 pt-16 shadow-[0_24px_70px_rgba(15,23,42,0.45)]">
+    <div className="absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(147,197,253,0.18),rgba(191,219,254,0.08),rgba(147,197,253,0.18))]" />
+    <div className="absolute left-1/2 top-4 h-24 w-24 -translate-x-1/2 overflow-hidden rounded-full border-4 border-amber-300 shadow-[0_10px_28px_rgba(245,158,11,0.35)]">
+      {profile.avatar_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-slate-100">
+          <User className="h-8 w-8 text-slate-400" />
+        </div>
+      )}
+    </div>
+
+    <div className="mt-12 text-center">
+      <div className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-950">
+        <ShieldCheck className="h-3 w-3" />
+        Verified Pro
+      </div>
+      <h3 className="mt-3 text-2xl font-black tracking-tight text-white">{profile.name || "Freelancer"}</h3>
+      <p className="mt-1 text-sm font-semibold text-slate-200">
+        {profile.category && profile.category !== "General" ? `${profile.category} Professional` : "Freelancer Professional"}
+      </p>
+      <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-300">
+        <MapPin className="h-3.5 w-3.5" />
+        Manila, Philippines
+      </p>
+      <div className="mx-auto mt-5 h-px w-full max-w-[220px] bg-white/20" />
+      <p className="mt-5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-300">Basic Rate</p>
+      <p className="mt-1 text-3xl font-black text-white">{formatPremiumRate(profile.hourlyRate)}</p>
+    </div>
+  </div>
+);
 
 export default function ProfileForm({ 
   initialProfile, 
@@ -612,6 +657,12 @@ export default function ProfileForm({
           </div>
         </div>
       </div>
+
+      {isFreelancer && isPro && (
+        <div className="mt-5 flex justify-center">
+          <PremiumProIdentityCard profile={profile} />
+        </div>
+      )}
 
       <div className="mt-5 flex flex-wrap gap-2">
         {tabs.map((tab) => {
