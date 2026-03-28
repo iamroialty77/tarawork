@@ -11,6 +11,7 @@ import { useSearchParams } from "next/navigation";
 function MessagesContent() {
   const searchParams = useSearchParams();
   const withUserId = searchParams.get('with');
+  const isOfficialOutreach = searchParams.get('official') === '1';
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
@@ -110,7 +111,14 @@ function MessagesContent() {
             currentUser?.role === 'employer' &&
             targetProfile?.role === 'freelancer';
 
-          if (!isMutualFollow) {
+          const isFreelancerToEmployer =
+            currentUser?.role === 'freelancer' &&
+            targetProfile?.role === 'employer';
+
+          const allowOfficialOutreach =
+            isOfficialOutreach && (isEmployerToFreelancer || isFreelancerToEmployer);
+
+          if (!isMutualFollow && !allowOfficialOutreach) {
             setRestrictionError(
               isEmployerToFreelancer
                 ? "You can only message this freelancer after a mutual follow."

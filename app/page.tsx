@@ -53,7 +53,10 @@ import {
   Verified,
   Trophy,
   Coins,
+  Bookmark,
+  Building2,
   Menu,
+  UserPlus,
   X
 } from "lucide-react";
 import Link from "next/link";
@@ -124,6 +127,31 @@ const normalizeServicesOffered = (services: unknown): ServiceOffering[] => {
     .slice(0, 6);
 };
 
+type AppNotification = {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  link?: string | null;
+  is_read?: boolean;
+  created_at: string;
+};
+
+type InviteNotificationMeta = {
+  employerName: string;
+  companyName: string;
+};
+
+const parseInviteNotificationMeta = (notification: AppNotification): InviteNotificationMeta => {
+  const message = typeof notification.message === "string" ? notification.message : "";
+  const inviteMatch = message.match(/^(.+?)\sfrom\s(.+?)\sinvited you/i);
+  return {
+    employerName: inviteMatch?.[1]?.trim() || "Employer",
+    companyName: inviteMatch?.[2]?.trim() || "Company",
+  };
+};
+
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -150,7 +178,9 @@ export default function Home() {
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
   const [pendingApplyJobId, setPendingApplyJobId] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);
+  const [invitedTalentIds, setInvitedTalentIds] = useState<string[]>([]);
   const [userFollows, setUserFollows] = useState<string[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [userEscrows, setUserEscrows] = useState<any[]>([]);
@@ -212,6 +242,19 @@ export default function Home() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const effectiveView = profile.role === "admin" ? adminViewMode : view;
   const isEmployerView = effectiveView === "client" || profile.role === "employer";
+  const savedTalentsStorageKey = user?.id ? `tarawork:saved-talents:${user.id}` : "";
+  const invitedTalentsStorageKey = user?.id ? `tarawork:invited-talents:${user.id}` : "";
+  const invitationNotifications = useMemo(
+    () => notifications.filter((notification) => notification.type === "invite"),
+    [notifications],
+  );
+  const savedTalents = useMemo(
+    () =>
+      freelancers.filter(
+        (freelancer) => !!freelancer.id && savedTalentIds.includes(freelancer.id),
+      ),
+    [freelancers, savedTalentIds],
+  );
 
   const handleViewSwitch = (nextView: "freelancer" | "client" | "admin") => {
     setView(nextView);
@@ -222,6 +265,58 @@ export default function Home() {
       }
     }
   };
+
+  useEffect(() => {
+    if (!savedTalentsStorageKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(savedTalentsStorageKey);
+      if (!raw) {
+        setSavedTalentIds([]);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setSavedTalentIds(parsed.filter((entry): entry is string => typeof entry === "string"));
+      } else {
+        setSavedTalentIds([]);
+      }
+    } catch {
+      setSavedTalentIds([]);
+    }
+  }, [savedTalentsStorageKey]);
+
+  useEffect(() => {
+    if (!invitedTalentsStorageKey) return;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(invitedTalentsStorageKey);
+      if (!raw) {
+        setInvitedTalentIds([]);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setInvitedTalentIds(parsed.filter((entry): entry is string => typeof entry === "string"));
+      } else {
+        setInvitedTalentIds([]);
+      }
+    } catch {
+      setInvitedTalentIds([]);
+    }
+  }, [invitedTalentsStorageKey]);
+
+  useEffect(() => {
+    if (!savedTalentsStorageKey) return;
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(savedTalentsStorageKey, JSON.stringify(savedTalentIds));
+  }, [savedTalentIds, savedTalentsStorageKey]);
+
+  useEffect(() => {
+    if (!invitedTalentsStorageKey) return;
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(invitedTalentsStorageKey, JSON.stringify(invitedTalentIds));
+  }, [invitedTalentIds, invitedTalentsStorageKey]);
 
   useEffect(() => {
     // Handle email confirmation success message
@@ -1572,6 +1667,54 @@ export default function Home() {
     }
   };
 
+  const toggleSavedTalent = (freelancerId?: string) => {
+    if (!freelancerId) return;
+    const isSaved = savedTalentIds.includes(freelancerId);
+    setSavedTalentIds((prev) =>
+      isSaved ? prev.filter((id) => id !== freelancerId) : [freelancerId, ...prev],
+    );
+    setToastMsg(isSaved ? "Talent removed from saved list." : "Talent saved to your hiring shortlist.");
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2200);
+  };
+
+  const sendTalentInvite = async (freelancer: UserProfile) => {
+    if (!user || !freelancer.id) return;
+    const freelancerId = freelancer.id;
+    if (invitedTalentIds.includes(freelancerId)) {
+      setToastMsg("Invitation already sent to this freelancer.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2200);
+      return;
+    }
+
+    const employerName = profile.name?.trim() || user.email?.split("@")[0] || "Employer";
+    const companyName = profile.companyName?.trim() || "Independent Company";
+    const inviteMessage = `${employerName} from ${companyName} invited you to discuss an opportunity.`;
+
+    const { error } = await supabase.from("notifications").insert([
+      {
+        user_id: freelancerId,
+        title: "Official Talent Invitation",
+        message: inviteMessage,
+        type: "invite",
+        link: `/messages?with=${user.id}&official=1`,
+      },
+    ]);
+
+    if (error) {
+      setToastMsg(`Error: ${error.message || "Failed to send invitation."}`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+      return;
+    }
+
+    setInvitedTalentIds((prev) => [freelancerId, ...prev]);
+    setToastMsg(`Invitation sent to ${freelancer.name}.`);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+  };
+
   const markNotificationRead = async (id: string) => {
     try {
       const { error } = await supabase
@@ -2703,6 +2846,64 @@ export default function Home() {
                         )}
                       </div>
 
+                      <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
+                        <div className="flex justify-between items-center mb-6">
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                              <UserPlus className="w-5 h-5 text-indigo-600" />
+                              Invitation Inbox
+                            </h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Official invites from employers</p>
+                          </div>
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                            {invitationNotifications.length} Invites
+                          </span>
+                        </div>
+
+                        {invitationNotifications.length === 0 ? (
+                          <div className="py-10 flex flex-col items-center justify-center text-center space-y-3 border-2 border-dashed border-slate-100 rounded-2xl">
+                            <div className="w-14 h-14 rounded-full bg-slate-50 text-slate-300 flex items-center justify-center">
+                              <UserPlus className="w-7 h-7" />
+                            </div>
+                            <p className="font-bold text-slate-900">No invitations yet</p>
+                            <p className="text-xs text-slate-500 max-w-sm">When an employer sends an invite from Find Talents, it will appear here and in your notification bell.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {invitationNotifications.slice(0, 5).map((notification) => {
+                              const inviteMeta = parseInviteNotificationMeta(notification);
+                              return (
+                                <div key={notification.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5 hover:border-indigo-100 hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{inviteMeta.employerName}</p>
+                                      <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-slate-600">
+                                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                        {inviteMeta.companyName}
+                                      </p>
+                                    </div>
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                                      {new Date(notification.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <p className="mt-3 text-sm font-medium text-slate-600 leading-relaxed">{notification.message}</p>
+                                  <Link
+                                    href={notification.link || "/messages"}
+                                    onClick={() => {
+                                      void markNotificationRead(notification.id);
+                                    }}
+                                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black transition-all"
+                                  >
+                                    Open Invitation Chat
+                                    <ArrowUpRight className="w-3 h-3" />
+                                  </Link>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
                           <div>
@@ -3411,6 +3612,48 @@ export default function Home() {
                   </div>
                 </div>
 
+                {savedTalents.length > 0 && (
+                  <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Saved Talents</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-600">Your hiring shortlist for quick follow-up.</p>
+                      </div>
+                      <span className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-700">
+                        {savedTalents.length} Saved
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {savedTalents.slice(0, 4).map((freelancer) => (
+                        <div key={freelancer.id} className="rounded-xl border border-indigo-100 bg-white p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-black text-slate-900">{freelancer.name}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{freelancer.category}</p>
+                            </div>
+                            <button
+                              onClick={() => toggleSavedTalent(freelancer.id)}
+                              className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedFreelancer(freelancer);
+                              setShowFreelancerModal(true);
+                            }}
+                            className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700"
+                          >
+                            View Profile
+                            <ArrowUpRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredFreelancers.map((freelancer) => {
                     const trustSignals = getFreelancerTrustSignals(freelancer);
@@ -3430,6 +3673,12 @@ export default function Home() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
+                              {savedTalentIds.includes(freelancer.id || "") && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-widest">
+                                  <Bookmark className="w-3 h-3" />
+                                  Saved
+                                </span>
+                              )}
                               {trustSignals.isPremium && (
                                 <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 uppercase tracking-widest">
                                   <Medal className="w-3 h-3" />
@@ -3515,17 +3764,26 @@ export default function Home() {
                               Fast response eligible
                             </p>
                           </div>
-                          <TooltipAction text="Open freelancer profile details">
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => {
-                                setSelectedFreelancer(freelancer);
-                                setShowFreelancerModal(true);
-                              }}
-                              className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
+                              onClick={() => toggleSavedTalent(freelancer.id)}
+                              className="px-3 py-2 border border-slate-200 bg-white text-slate-600 text-[10px] font-bold rounded-lg hover:bg-slate-50 transition-all uppercase tracking-widest inline-flex items-center gap-1.5"
                             >
-                              View Profile
+                              <Bookmark className={cn("w-3.5 h-3.5", savedTalentIds.includes(freelancer.id || "") && "fill-current text-indigo-600")} />
+                              {savedTalentIds.includes(freelancer.id || "") ? "Saved" : "Save"}
                             </button>
-                          </TooltipAction>
+                            <TooltipAction text="Open freelancer profile details">
+                              <button
+                                onClick={() => {
+                                  setSelectedFreelancer(freelancer);
+                                  setShowFreelancerModal(true);
+                                }}
+                                className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
+                              >
+                                View Profile
+                              </button>
+                            </TooltipAction>
+                          </div>
                         </div>
                       </div>
                     );
@@ -3758,6 +4016,25 @@ export default function Home() {
                         Network Action
                       </h4>
                       <div className="flex flex-col gap-3">
+                        {isEmployerView && (
+                          <button
+                            onClick={() => void sendTalentInvite(selectedFreelancer)}
+                            disabled={invitedTalentIds.includes(selectedFreelancer.id || "")}
+                            className="w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 disabled:bg-indigo-900/40 disabled:text-indigo-200 disabled:cursor-not-allowed"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                            {invitedTalentIds.includes(selectedFreelancer.id || "") ? "Invited" : "Invite"}
+                          </button>
+                        )}
+                        {isEmployerView && (
+                          <button
+                            onClick={() => toggleSavedTalent(selectedFreelancer.id)}
+                            className="w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-50"
+                          >
+                            <Bookmark className={cn("w-4 h-4", savedTalentIds.includes(selectedFreelancer.id || "") && "fill-current text-indigo-600")} />
+                            {savedTalentIds.includes(selectedFreelancer.id || "") ? "Saved Talent" : "Save Talent"}
+                          </button>
+                        )}
                         <button 
                           onClick={() => toggleFollow(selectedFreelancer.id!)}
                           className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
@@ -3780,7 +4057,10 @@ export default function Home() {
                         </button>
                         <button 
                           onClick={() => {
-                            router.push(`/messages?with=${selectedFreelancer.id!}`);
+                            const messagingUrl = isEmployerView
+                              ? `/messages?with=${selectedFreelancer.id!}&official=1`
+                              : `/messages?with=${selectedFreelancer.id!}`;
+                            router.push(messagingUrl);
                           }}
                           className="w-full py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
                         >
@@ -3788,7 +4068,9 @@ export default function Home() {
                           Message
                         </button>
                         <p className="text-[9px] text-slate-500 text-center font-bold uppercase tracking-widest mt-2">
-                          Note: Mutual follows are required for networking messages.
+                          {isEmployerView
+                            ? "Invite appears in freelancer notifications and dashboard inbox."
+                            : "Note: Mutual follows are required for networking messages."}
                         </p>
                       </div>
                     </div>
@@ -3836,7 +4118,11 @@ export default function Home() {
                       <h4 className="text-sm font-bold mb-2">Quick Action</h4>
                       <p className="text-xs text-indigo-200 mb-6 leading-relaxed">Ready to discuss your project with {(selectedFreelancer.name || "User").split(' ')[0]}?</p>
                       <Link 
-                        href={`/messages?with=${selectedFreelancer.id!}`}
+                        href={
+                          isEmployerView
+                            ? `/messages?with=${selectedFreelancer.id!}&official=1`
+                            : `/messages?with=${selectedFreelancer.id!}`
+                        }
                         className="w-full bg-white text-indigo-600 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all uppercase tracking-widest"
                       >
                         <Mail className="w-4 h-4" />
