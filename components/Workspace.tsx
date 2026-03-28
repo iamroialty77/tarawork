@@ -1093,7 +1093,7 @@ export default function Workspace({
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                             <Lock className="w-3 h-3" />
-                            Escrow Active
+                            Payment Active
                           </div>
                           {wellnessData.currentWorkload > wellnessData.weeklyCapacity * 0.9 && (
                             <div className="flex items-center gap-1 text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 uppercase tracking-tighter animate-pulse">
@@ -1433,14 +1433,14 @@ export default function Workspace({
                         <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
                           <DollarSign className="w-5 h-5 text-white" />
                         </div>
-                        <h4 className="text-sm font-black text-emerald-900 uppercase tracking-tight">Payout Security</h4>
+                        <h4 className="text-sm font-black text-emerald-900 uppercase tracking-tight">Payout Tracking</h4>
                       </div>
                       <p className="text-xs text-emerald-800 leading-relaxed mb-6">
-                        Funds for the current milestone are <span className="font-black">Secured in TARA Escrow</span>. Payment will be released automatically upon milestone approval.
+                        Funds for the current milestone are prepared and tracked. Payment is released once the milestone is approved.
                       </p>
                       <div className="p-4 bg-white/60 rounded-2xl border border-emerald-200">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-[10px] font-bold text-emerald-700 uppercase">Escrow Status</span>
+                          <span className="text-[10px] font-bold text-emerald-700 uppercase">Payment Status</span>
                           <span className="text-[10px] font-black text-emerald-600">100% FUNDED</span>
                         </div>
                         <div className="w-full h-1.5 bg-emerald-200 rounded-full overflow-hidden">
@@ -1475,7 +1475,7 @@ export default function Workspace({
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-bold flex items-center gap-2">
                           <Github className="w-5 h-5 text-slate-900" />
-                          GitHub Sync & Auto-Escrow
+                          GitHub Sync & Auto-Payout
                         </h4>
                         <span className="text-[10px] font-black bg-indigo-600 text-white px-2 py-1 rounded">DEV MODE</span>
                       </div>
@@ -1498,7 +1498,7 @@ export default function Workspace({
                             <div className="text-right">
                               <p className="text-sm font-bold text-slate-900">{m.amount}</p>
                               <p className={`text-[10px] font-bold ${m.status === 'Merged' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                {m.status === 'Merged' ? '✓ ESCROW RELEASED' : 'PENDING AUTO-RELEASE'}
+                                {m.status === 'Merged' ? '✓ PAYMENT RELEASED' : 'PENDING AUTO-RELEASE'}
                               </p>
                             </div>
                           </div>

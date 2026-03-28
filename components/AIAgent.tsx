@@ -125,7 +125,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
     "Executing semantic clause integrity scan...",
     "Auditing liability caps and indemnity thresholds...",
     "Verifying IP ownership and transfer protocols...",
-    "Cross-referencing payment schedules with escrow logic...",
+    "Cross-referencing payment schedules with payout logic...",
     "Synthesizing final AI Legal Governance Report..."
   ];
 
@@ -544,12 +544,12 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
       // 1. IP Ownership Audit
       dynamicInsights.push("IP Safeguard: Semantic analysis confirms 100% intellectual property transfer to Client upon milestone settlement.");
       
-      // 2. Budget & Escrow Verification
+      // 2. Budget & Payment Verification
       if (budget >= 100000) {
         score += 5;
-        dynamicInsights.push(`High-Value Governance: Contractual budget of ₱${budget.toLocaleString()} is fully integrated with TARA multi-sig escrow protocols.`);
+        dynamicInsights.push(`High-Value Governance: Contractual budget of ₱${budget.toLocaleString()} is configured with milestone payout governance.`);
       } else {
-        dynamicInsights.push("Payment Integrity: Standard escrow protection active. Funds are secured per milestone delivery.");
+        dynamicInsights.push("Payment Integrity: Standard milestone payout controls are active for delivery-based releases.");
       }
       
       // 3. Termination Logic

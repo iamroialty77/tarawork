@@ -245,7 +245,7 @@ export default function JobPostingForm({
             .insert([legacyJobData]);
           if (fallbackInsertError) throw fallbackInsertError;
         } else if (error.message.includes("relation \"jobs\" does not exist")) {
-          throw new Error("Initialization Required: The 'jobs' table is not yet set up on the platform. As a professional platform, proper database configuration is required for the security of your escrow funds. Please check Admin Dashboard > System Health.");
+          throw new Error("Initialization Required: The 'jobs' table is not yet set up on the platform. Please check Admin Dashboard > System Health.");
         } else {
           throw error;
         }
@@ -641,7 +641,7 @@ export default function JobPostingForm({
           />
         </div>
         <p className="mt-3 text-xs text-gray-400 leading-relaxed">
-          <strong>Pro-tip:</strong> Projects with a clear budget attract higher quality talent. Your funds will be securely held in <strong>Tara Escrow</strong> and only released when you approve milestones.
+          <strong>Pro-tip:</strong> Projects with a clear budget attract higher quality talent and increase proposal quality.
         </p>
       </div>
 
@@ -650,9 +650,9 @@ export default function JobPostingForm({
           <Lock className="w-6 h-6" />
         </div>
         <div>
-          <h4 className="font-bold text-indigo-900 text-sm">Escrow Protection Enabled</h4>
+          <h4 className="font-bold text-indigo-900 text-sm">Payment Terms Enabled</h4>
           <p className="text-xs text-indigo-700/80 mt-1 leading-relaxed">
-            All payments on Tara are protected. Once you hire a freelancer, the budget is moved to a secure escrow account. This proves to the freelancer that you have the budget, and protects your money until the work is delivered.
+            Payments and milestones are clearly tracked after hiring so both employer and freelancer can follow the same delivery timeline.
           </p>
         </div>
       </div>
@@ -664,7 +664,7 @@ export default function JobPostingForm({
               <label className="block text-sm font-black text-gray-900 uppercase tracking-widest">Project Milestones</label>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Break down your payments</p>
             </div>
-            <span className="text-[10px] font-black px-2 py-1 bg-indigo-600 text-white rounded">ESCROW ENABLED</span>
+            <span className="text-[10px] font-black px-2 py-1 bg-indigo-600 text-white rounded">PAYMENT READY</span>
           </div>
 
           <div className="space-y-3">

@@ -421,7 +421,7 @@ export default function TeamManager({ squad, onCreateSquad, onUpdateSquad }: Tea
               </div>
             </div>
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Escrow Status</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Payment Status</p>
               <div className="flex items-center gap-2">
                 <div className="text-2xl font-black text-slate-900">Secured</div>
                 <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">Automatic</span>

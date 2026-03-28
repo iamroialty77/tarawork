@@ -7,9 +7,9 @@ export interface Transaction {
   id: string;
   amount: number;
   currency: string;
-  status: 'pending' | 'completed' | 'escrow_locked';
+  status: 'pending' | 'completed' | 'payment_locked';
   timestamp: string;
-  type: 'payout' | 'deposit' | 'escrow_release';
+  type: 'payout' | 'deposit' | 'payment_release';
 }
 
 export const financialService = {
@@ -28,10 +28,10 @@ export const financialService = {
   },
 
   /**
-   * Release funds from escrow based on milestone verification.
+   * Release milestone payout once verification passes.
    */
-  async releaseEscrow(milestoneId: string): Promise<boolean> {
-    console.log(`Releasing escrow for milestone ${milestoneId}`);
+  async releaseMilestonePayment(milestoneId: string): Promise<boolean> {
+    console.log(`Releasing payment for milestone ${milestoneId}`);
     return true;
   },
 

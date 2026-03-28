@@ -3,7 +3,7 @@ import { financialService } from '../../../../lib/services/financialService';
 
 /**
  * Event-Driven Hook: GitHub Webhook Handler
- * This route listens for merge events to automate payment release.
+ * This route listens for merge events to automate milestone payment release.
  * In production, use a Message Queue (RabbitMQ/Redis) to process heavy loads.
  */
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       console.log(`[Webhook] Merge detected for milestone: ${milestoneId}`);
       
       // 2. Trigger Payment Release via Financial Service
-      const success = await financialService.releaseEscrow(milestoneId);
+      const success = await financialService.releaseMilestonePayment(milestoneId);
       
       return NextResponse.json({ 
         message: 'Milestone payment released automatically',

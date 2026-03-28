@@ -40,10 +40,6 @@ export async function POST(req: NextRequest) {
     // - Delete Portfolio Items
     await supabaseAdmin.from('portfolio_items').delete().eq('profile_id', userId)
 
-    // - Delete Escrows & Disputes (optional? maybe keep for financial records? 
-    // but user wants TOTAL delete, so we should clean up)
-    await supabaseAdmin.from('escrows').delete().or(`employer_id.eq.${userId},freelancer_id.eq.${userId}`)
-
     // 3. Delete Profile (This should be done before auth delete if no cascade exists)
     const { error: profileDeleteError } = await supabaseAdmin
       .from('profiles')

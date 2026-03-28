@@ -174,7 +174,6 @@ export default function Home() {
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
-  const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
   const [pendingApplyJobId, setPendingApplyJobId] = useState<string | null>(null);
@@ -183,7 +182,6 @@ export default function Home() {
   const [invitedTalentIds, setInvitedTalentIds] = useState<string[]>([]);
   const [userFollows, setUserFollows] = useState<string[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [userEscrows, setUserEscrows] = useState<any[]>([]);
   const [selectedJobApplicants, setSelectedJobApplicants] = useState<any[]>([]);
   const [selectedJobTitle, setSelectedJobTitle] = useState("");
   const jobsRef = useRef<HTMLDivElement>(null);
@@ -1483,43 +1481,25 @@ export default function Home() {
     if (!user) return;
     try {
       setIsSaving(true);
-      
-      // 1. Update application status
-      const { error: appError } = await supabase
-        .from('applications')
-        .update({ status: 'hired' })
-        .eq('id', applicationId);
-      
-      if (appError) throw appError;
 
-      // 2. Create Escrow entry
-      const { error: escrowError } = await supabase
-        .from('escrows')
-        .insert([{
-          job_id: jobId,
-          employer_id: user.id,
-          freelancer_id: freelancerId,
-          amount: budget,
-          status: 'funded',
-          description: `Budget for ${jobTitle}`
-        }]);
-      
-      if (escrowError) throw escrowError;
+      const response = await fetch("/api/employer/approve-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicationId,
+          freelancerId,
+          jobId,
+          jobTitle,
+          budget,
+        }),
+      });
 
-      // 3. Send Notification to freelancer
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .insert([{
-          user_id: freelancerId,
-          title: 'Project Approved!',
-          message: `Congratulations! You have been approved for the project: ${jobTitle}. Budget is now in escrow.`,
-          type: 'success',
-          link: '/dashboard'
-        }]);
-      
-      if (notifError) throw notifError;
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to approve application");
+      }
 
-      setToastMsg("freelancer approved and budget funded in escrow!");
+      setToastMsg("Freelancer approved successfully.");
       setShowToast(true);
       
       // Refresh applicants list locally
@@ -1730,21 +1710,6 @@ export default function Home() {
     }
   };
 
-  const fetchUserEscrows = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('escrows')
-        .select('*, jobs(*)')
-        .eq('freelancer_id', userId);
-      
-      if (!error && data) {
-        setUserEscrows(data);
-      }
-    } catch (err) {
-      console.error("Error fetching user escrows:", err);
-    }
-  };
-
   const fetchUnreadCount = async (userId: string) => {
     try {
       const { count, error } = await supabase
@@ -1889,7 +1854,6 @@ export default function Home() {
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
         await fetchFollows(session.user.id);
-        await fetchUserEscrows(session.user.id);
         await fetchPortfolioInquiries(session.user.id);
         
         // Subscribe to notifications
@@ -1918,18 +1882,6 @@ export default function Home() {
           })
           .subscribe();
 
-        // Subscribe to escrows
-        const escrowChannel = supabase
-          .channel('escrow-changes')
-          .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'escrows' 
-          }, () => {
-            fetchUserEscrows(session.user.id);
-          })
-          .subscribe();
-        
         // Subscribe to messages for unread count
         const channel = supabase
           .channel('unread-count')
@@ -2682,7 +2634,9 @@ export default function Home() {
                       <div className="bg-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
                         <div className="relative z-10">
                           <h3 className="text-2xl font-black mb-2 tracking-tight">Focus on your workspace</h3>
-                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">You have {userEscrows.length} approved projects with funds in escrow.</p>
+                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">
+                            Keep your ongoing projects organized and delivered on schedule.
+                          </p>
                           <div className="flex flex-wrap gap-3">
                             <button 
                               onClick={() => setFreelancerTab("workspace")}
@@ -2691,56 +2645,10 @@ export default function Home() {
                               Go to Workspace
                               <ArrowUpRight className="w-4 h-4" />
                             </button>
-                            {userEscrows.length > 0 && (
-                              <div className="bg-indigo-500/30 px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2">
-                                <DollarSign className="w-4 h-4 text-emerald-400" />
-                                <span className="text-xs font-bold text-white">
-                                  ${userEscrows.reduce((sum, e) => sum + Number(e.amount), 0).toLocaleString()} Total Escrow
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
                         <Zap className="absolute -right-8 -bottom-8 w-48 h-48 text-white/10 rotate-12" />
                       </div>
-
-                      {userEscrows.length > 0 && (
-                        <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-                          <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                              <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                              Approved Projects & Escrow
-                            </h3>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Budget Visibility</span>
-                          </div>
-                          <div className="space-y-4">
-                            {userEscrows.map((escrow) => (
-                              <div key={escrow.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-wrap justify-between items-center gap-4 hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-slate-100 shadow-sm">
-                                    <Briefcase className="w-6 h-6 text-indigo-500" />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-bold text-slate-900">{escrow.jobs?.title || "Project Title"}</h4>
-                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1 mt-1">
-                                      <Lock className="w-3 h-3" />
-                                      Funds in Escrow: ${Number(escrow.amount).toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Status: {escrow.status}
-                                  </span>
-                                  <button className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-black transition-all">
-                                    Submit Work
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
                       {/* --- PORTFOLIO INQUIRIES SECTION --- */}
                       <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
@@ -2975,8 +2883,8 @@ export default function Home() {
                         <ShieldCheck className="w-6 h-6 text-emerald-600" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-emerald-900">Safe-Vault Protection</h4>
-                        <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Your payment is protected. Funds are kept in our secure vault before work begins.</p>
+                        <h4 className="font-bold text-emerald-900">Verified Project Terms</h4>
+                        <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Each approved project includes clear scope and payment terms for both sides.</p>
                       </div>
                     </div>
                     <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex gap-4">
@@ -2984,8 +2892,8 @@ export default function Home() {
                         <DollarSign className="w-6 h-6 text-indigo-600" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-indigo-900">Escrow Milestone</h4>
-                        <p className="text-xs text-indigo-700 mt-1 leading-relaxed">We ensure that each milestone has corresponding funds reserved for you.</p>
+                        <h4 className="font-bold text-indigo-900">Milestone Visibility</h4>
+                        <p className="text-xs text-indigo-700 mt-1 leading-relaxed">Track milestones and status updates in one place while collaborating with your client.</p>
                       </div>
                     </div>
                     <div className="bg-slate-900 p-6 rounded-2xl flex gap-4 text-white">
@@ -4325,7 +4233,7 @@ export default function Home() {
                               </button>
                             </TooltipAction>
                             {app.status === 'pending' && (
-                              <TooltipAction text="Approve applicant and fund escrow">
+                              <TooltipAction text="Approve applicant">
                                 <button 
                                   onClick={() => {
                                     const job = employerJobs.find(j => j.title === selectedJobTitle);
@@ -4335,7 +4243,7 @@ export default function Home() {
                                   className="px-6 py-3 bg-indigo-600 text-white text-[10px] font-bold rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-500/20 active:scale-95"
                                 >
                                   <CheckCircle2 className="w-4 h-4" />
-                                  Approve & Fund Budget
+                                  Approve Applicant
                                 </button>
                               </TooltipAction>
                             )}
@@ -4484,81 +4392,6 @@ export default function Home() {
         )}
       </AnimatePresence>
       
-      {/* Escrow How it Works Modal */}
-      <AnimatePresence>
-        {showEscrowModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowEscrowModal(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100"
-            >
-              <div className="bg-slate-900 p-8 text-white relative">
-                <div className="relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-indigo-400 text-[10px] font-bold mb-4 uppercase tracking-wider">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Trust & Safety
-                  </div>
-                  <h3 className="text-2xl font-black tracking-tight">Tara Safe-Vault System</h3>
-                  <p className="text-slate-400 text-sm mt-2 font-medium">How we protect your payments and work.</p>
-                </div>
-                <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl"></div>
-              </div>
-              
-              <div className="p-8 space-y-6">
-                {[
-                  { 
-                    title: "Funds are Locked", 
-                    desc: "When a project starts, the employer deposits funds into Tara's secure Escrow account. This confirms the budget is ready.",
-                    icon: Lock
-                  },
-                  { 
-                    title: "Work is Verified", 
-                    desc: "The freelancer submits milestones. employers review the work before any payment is released.",
-                    icon: CheckCircle2
-                  },
-                  { 
-                    title: "Secure Release", 
-                    desc: "Once approved, funds move from Escrow to the freelancer's wallet instantly. No delays.",
-                    icon: DollarSign
-                  },
-                  { 
-                    title: "Dispute Protection", 
-                    desc: "If something goes wrong, our Admin team reviews the Chat Logs and Evidence to ensure a fair resolution.",
-                    icon: Scale
-                  }
-                ].map((step, i) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
-                      <step.icon className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm">{step.title}</h4>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed font-medium">{step.desc}</p>
-                    </div>
-                  </div>
-                ))}
-
-                <button 
-                  onClick={() => setShowEscrowModal(false)}
-                  className="w-full bg-slate-900 text-white py-4 rounded-2xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-[0.98]"
-                >
-                  Understood, Got it!
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       <footer className="bg-slate-50 border-t border-slate-200 py-16 mt-20">
         <div className="max-w-full px-4 sm:px-10 text-center">
           <button 
