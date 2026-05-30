@@ -127,6 +127,18 @@ const normalizeServicesOffered = (services: unknown): ServiceOffering[] => {
     .slice(0, 6);
 };
 
+const normalizeUserRole = (
+  value: unknown,
+  fallback: UserProfile["role"] = "freelancer",
+): UserProfile["role"] => {
+  if (typeof value !== "string") return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "admin") return "admin";
+  if (normalized === "employer" || normalized === "client") return "employer";
+  if (normalized === "freelancer") return "freelancer";
+  return fallback;
+};
+
 type AppNotification = {
   id: string;
   user_id: string;
@@ -415,6 +427,12 @@ export default function Home() {
     setPendingApplyJobId(applyId);
   }, []);
 
+  useEffect(() => {
+    if (!pendingApplyJobId || user || typeof window === "undefined") return;
+    const next = `${window.location.pathname}${window.location.search}`;
+    router.replace(`/auth?next=${encodeURIComponent(next)}`);
+  }, [pendingApplyJobId, router, user]);
+
   const fetchProfile = async (userId: string, userAuth?: any, prevProfile?: UserProfile) => {
     try {
       const { data, error } = await supabase
@@ -435,9 +453,16 @@ export default function Home() {
       }
 
       if (data) {
+        const fallbackRole = normalizeUserRole(
+          prevProfile?.role || userAuth?.user_metadata?.role,
+          "freelancer",
+        );
+        const resolvedRole = normalizeUserRole(data.role, fallbackRole);
+
         // Normalize profile data to ensure arrays are not null/undefined
         const normalizedData: UserProfile = {
           ...data,
+          role: resolvedRole,
           skills: Array.isArray(data.skills) ? data.skills : [],
           experience:
             Array.isArray(data.experience)
@@ -471,6 +496,13 @@ export default function Home() {
             },
           },
         };
+
+        if (data.role !== resolvedRole) {
+          void supabase
+            .from("profiles")
+            .update({ role: resolvedRole, updated_at: new Date().toISOString() })
+            .eq("id", userId);
+        }
 
         // --- SMART PORTFOLIO FETCHING ---
         let portfolioItems: PortfolioItem[] = [];
@@ -607,11 +639,11 @@ export default function Home() {
         }
       } else {
         // Create initial profile if it doesn't exist
-        const role = userAuth?.user_metadata?.role || "freelancer";
+        const role = normalizeUserRole(userAuth?.user_metadata?.role, "freelancer");
         const initialData: UserProfile = {
           id: userId,
           name: userAuth?.user_metadata?.full_name || userAuth?.email?.split('@')[0] || "User",
-          role: role as any,
+          role,
           category: "Developer" as const,
           skills: [],
           experience: [],
@@ -1276,6 +1308,9 @@ export default function Home() {
     if (!user) {
       setToastMsg("Please login to apply for jobs.");
       setShowToast(true);
+      if (typeof window !== "undefined") {
+        router.push(`/auth?next=${encodeURIComponent(`/?apply=${jobId}`)}`);
+      }
       return;
     }
 

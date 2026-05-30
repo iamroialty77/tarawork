@@ -49,6 +49,11 @@ Open `http://localhost:3000`.
 
 ### 5. Make and validate changes
 - Edit app code in `app/`, `components/`, `lib/`, `types/`.
+- Verify database connectivity:
+
+```bash
+npm run db:check
+```
 - Run lint checks:
 
 ```bash

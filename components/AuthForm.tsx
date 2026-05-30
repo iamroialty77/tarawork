@@ -31,17 +31,27 @@ export default function AuthForm() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showSMTPHelp, setShowSMTPHelp] = useState(false);
   const [referringId, setReferringId] = useState<string | null>(null);
+  const [nextPath, setNextPath] = useState("/dashboard");
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const refId = params.get('referring_freelancer_id');
       const action = params.get('action');
+      const next = params.get('next');
+      const requestedRole = params.get('role');
       
       if (refId) setReferringId(refId);
+      if (next) setNextPath(next);
       if (action === 'hire') {
         setMode('signup');
         setRole('employer');
+      }
+      if (action === 'signup') {
+        setMode('signup');
+      }
+      if (requestedRole === 'freelancer' || requestedRole === 'employer') {
+        setRole(requestedRole);
       }
 
       // Check for password reset mode
@@ -64,7 +74,7 @@ export default function AuthForm() {
       // Set a flag to show notification on redirect back
       sessionStorage.setItem('social_login_pending', provider);
       
-      const redirectTarget = mode === "signup" ? "/?oauth_signup=true" : "/";
+      const redirectTarget = nextPath;
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`;
       const oauthOptions: {
         redirectTo: string;
@@ -121,17 +131,23 @@ export default function AuthForm() {
       }
 
       if (mode === "signup") {
+        if (password !== confirmPassword) {
+          setError("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
+
         const { error, data } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               full_name: fullName,
-              role: role,
+              role,
               referring_freelancer_id: referringId,
               username: email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
             },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
           },
         });
         
@@ -166,8 +182,7 @@ export default function AuthForm() {
         });
         if (error) throw error;
         setSuccess("Logged in successfully!");
-        // Redirect or refresh state here if needed
-        window.location.href = "/";
+        window.location.href = nextPath;
       }
     } catch (err: any) {
       console.error("Auth error:", err);
@@ -331,9 +346,11 @@ export default function AuthForm() {
                     </div>
                   </div>
 
-                  {mode === "update_password" && (
+                  {(mode === "signup" || mode === "update_password") && (
                     <div>
-                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Confirm New Password</label>
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+                        {mode === "signup" ? "Confirm Password" : "Confirm New Password"}
+                      </label>
                       <div className="relative group">
                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                         <input
