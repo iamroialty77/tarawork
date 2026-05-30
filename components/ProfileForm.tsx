@@ -29,7 +29,6 @@ interface ProfileFormProps {
 }
 
 type TabKey = "basics" | "professional" | "premium" | "portfolio";
-type AboutSectionKey = "whoIHelp" | "whatISpecializeIn" | "resultsIHaveDelivered" | "howIWork";
 
 const ABOUT_SECTION_MAX = 200;
 const MAX_SERVICES = 6;
@@ -257,16 +256,15 @@ export default function ProfileForm({
     });
   };
 
-  const handleAboutSectionChange = (key: AboutSectionKey, value: string) => {
-    const trimmed = value.slice(0, ABOUT_SECTION_MAX);
-    const nextSections = {
-      ...(profile.aboutSections || EMPTY_ABOUT_SECTIONS),
-      [key]: trimmed,
-    };
+  const handleBioChange = (value: string) => {
+    const trimmed = value.slice(0, ABOUT_SECTION_MAX * 3);
     setProfile({
       ...profile,
-      aboutSections: nextSections,
-      bio: nextSections.whatISpecializeIn || "",
+      bio: trimmed,
+      aboutSections: {
+        ...(profile.aboutSections || EMPTY_ABOUT_SECTIONS),
+        whatISpecializeIn: trimmed,
+      },
     });
   };
 
@@ -540,9 +538,9 @@ export default function ProfileForm({
   const tabs: Array<{ key: TabKey; label: string; icon: typeof User }> = isFreelancer
     ? [
         { key: "basics", label: "Basics", icon: User },
+        { key: "portfolio", label: "Portfolio", icon: FolderKanban },
         { key: "professional", label: "Professional", icon: Briefcase },
         { key: "premium", label: "Analytics", icon: BarChart3 },
-        { key: "portfolio", label: "Portfolio", icon: FolderKanban },
       ]
     : [
         { key: "basics", label: "Basics", icon: User },
@@ -616,7 +614,18 @@ export default function ProfileForm({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className={labelClassName}>Portfolio Username</label>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className={labelClassName}>Professional Profile URL</label>
+                  {isFreelancer && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("portfolio")}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
+                    >
+                      Open Portfolio
+                    </button>
+                  )}
+                </div>
                 <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   <span className="border-r border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
                     {typeof window !== "undefined" ? window.location.host : "tarawork.network"}/
@@ -629,6 +638,9 @@ export default function ProfileForm({
                     onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
                   />
                 </div>
+                <p className="mt-2 text-sm text-slate-500">
+                  Your public profile link: <span className="font-semibold text-slate-700">/{profile.username || "your-name"}</span>
+                </p>
               </div>
 
               <div>
@@ -653,49 +665,24 @@ export default function ProfileForm({
                 />
               </div>
 
-              <div className="sm:col-span-2 grid grid-cols-1 gap-4">
-                {[
-                  {
-                    key: "whoIHelp" as const,
-                    label: "Who I Help",
-                    placeholder: "Early-stage SaaS founders launching MVPs",
-                  },
-                  {
-                    key: "whatISpecializeIn" as const,
-                    label: "What I Specialize In",
-                    placeholder: "High-performance React apps and scalable APIs",
-                  },
-                  {
-                    key: "resultsIHaveDelivered" as const,
-                    label: "Results I've Delivered",
-                    placeholder: "Built dashboards used by 10,000+ users",
-                  },
-                  {
-                    key: "howIWork" as const,
-                    label: "How I Work",
-                    placeholder: "Clear timelines. Weekly updates. Clean documentation.",
-                  },
-                ].map((field) => {
-                  const value = profile.aboutSections?.[field.key] || "";
-                  return (
-                    <div key={field.key}>
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <label className={labelClassName}>{field.label}</label>
-                        <span className="text-[11px] font-bold text-slate-400">
-                          {value.length}/{ABOUT_SECTION_MAX}
-                        </span>
-                      </div>
-                      <textarea
-                        className={inputClassName}
-                        rows={2}
-                        maxLength={ABOUT_SECTION_MAX}
-                        placeholder={field.placeholder}
-                        value={value}
-                        onChange={(e) => handleAboutSectionChange(field.key, e.target.value)}
-                      />
-                    </div>
-                  );
-                })}
+              <div className="sm:col-span-2">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className={labelClassName}>Bio</label>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    {(profile.bio || "").length}/{ABOUT_SECTION_MAX * 3}
+                  </span>
+                </div>
+                <textarea
+                  className={inputClassName}
+                  rows={5}
+                  maxLength={ABOUT_SECTION_MAX * 3}
+                  placeholder="Write a clear professional summary: who you help, what you do well, and the kind of work you want."
+                  value={profile.bio || ""}
+                  onChange={(e) => handleBioChange(e.target.value)}
+                />
+                <p className="mt-2 text-sm text-slate-500">
+                  This is the main summary shown across your freelancer profile.
+                </p>
               </div>
             </div>
           </div>
@@ -800,14 +787,14 @@ export default function ProfileForm({
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
                   <div className="mb-4">
-                    <h4 className="text-base font-bold text-slate-950">Prove Your Legitimacy</h4>
+                    <h4 className="text-base font-bold text-slate-950">Application Extras</h4>
                     <p className="text-sm text-slate-500">
-                      One-time setup ito sa My Profile. Ito na ang gagamitin sa bawat job application.
+                      Optional links you can keep on file. These do not block job applications.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className={labelClassName}>Resume URL (Required)</label>
+                      <label className={labelClassName}>Resume URL (Optional)</label>
                       <input
                         type="url"
                         placeholder="https://drive.google.com/your-resume"
@@ -817,7 +804,7 @@ export default function ProfileForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClassName}>Portfolio URL (Required)</label>
+                      <label className={labelClassName}>Portfolio URL (Optional)</label>
                       <input
                         type="url"
                         placeholder="https://github.com/your-portfolio"
@@ -837,7 +824,7 @@ export default function ProfileForm({
                       />
                     </div>
                     <div>
-                      <label className={labelClassName}>Default Message to Employer (Optional)</label>
+                      <label className={labelClassName}>Default Cover Letter (Optional)</label>
                       <textarea
                         rows={3}
                         placeholder="Short intro na automatic kasama sa applications mo."
@@ -1227,18 +1214,34 @@ export default function ProfileForm({
         )}
 
         {activeTab === "portfolio" && isFreelancer && (
-          <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-            <div className="mb-5">
-              <h3 className="text-lg font-bold text-slate-950">Portfolio</h3>
-              <p className="text-sm text-slate-500">Projects at work samples sa hiwalay na panel para mas malinis ang page.</p>
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-950">Portfolio</h3>
+                  <p className="text-sm text-slate-500">Showcase work samples, case studies, and your public profile link in one place.</p>
+                </div>
+                <div className="rounded-2xl border border-indigo-100 bg-white px-4 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Public Profile</p>
+                  <p className="mt-1 break-all text-sm font-semibold text-slate-900">
+                    {typeof window !== "undefined" ? `${window.location.origin}/${profile.username || "your-name"}` : `tarawork.network/${profile.username || "your-name"}`}
+                  </p>
+                </div>
+              </div>
             </div>
-            <PortfolioManager
-              items={profile.portfolio || []}
-              onAdd={addPortfolioItemLocal}
-              onUpdate={updatePortfolioItemLocal}
-              onRemove={removePortfolioItemLocal}
-              isOwner={true}
-            />
+            <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+              <div className="mb-5">
+                <h3 className="text-lg font-bold text-slate-950">Portfolio Projects</h3>
+                <p className="text-sm text-slate-500">Keep your best work easy to review and easy to update.</p>
+              </div>
+              <PortfolioManager
+                items={profile.portfolio || []}
+                onAdd={addPortfolioItemLocal}
+                onUpdate={updatePortfolioItemLocal}
+                onRemove={removePortfolioItemLocal}
+                isOwner={true}
+              />
+            </div>
           </div>
         )}
 

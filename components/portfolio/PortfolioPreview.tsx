@@ -135,17 +135,11 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
   const skillItems =
     profile.portfolio?.skills && profile.portfolio.skills.length > 0
       ? profile.portfolio.skills.map((skill) => skill.name)
-      : (profile.bio || "")
-          .split(",")
-          .map((skill) => skill.trim())
-          .filter(Boolean);
+      : Array.isArray(profile.skills)
+        ? profile.skills.filter(Boolean)
+        : [];
   const socialLinks = profile.portfolio?.links || [];
-  const aboutSections = [
-    { label: "Who I Help", value: profile.aboutSections?.whoIHelp || "" },
-    { label: "What I Specialize In", value: profile.aboutSections?.whatISpecializeIn || profile.portfolio?.about_me || profile.bio || "" },
-    { label: "Results I've Delivered", value: profile.aboutSections?.resultsIHaveDelivered || "" },
-    { label: "How I Work", value: profile.aboutSections?.howIWork || "" },
-  ].filter((item) => item.value.trim().length > 0);
+  const bio = profile.bio || profile.aboutSections?.whatISpecializeIn || profile.portfolio?.about_me || "";
 
   return (
   <div className={`space-y-12 ${isPro ? "rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-sm" : ""}`}>
@@ -191,17 +185,12 @@ const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro
 
     <div className="space-y-6">
       <h4 className={`text-[11px] uppercase tracking-[0.2em] font-semibold ${isPro ? "text-slate-400" : "text-gray-400"}`}>About</h4>
-      {aboutSections.length > 0 ? (
-        <div className="space-y-3">
-          {aboutSections.map((section) => (
-            <div key={section.label} className={`${isPro ? "rounded-2xl border border-white/10 bg-white/5 p-4" : "rounded-2xl border border-gray-100 bg-gray-50 p-4"}`}>
-              <p className={`text-[10px] font-black uppercase tracking-[0.18em] ${isPro ? "text-slate-400" : "text-gray-400"}`}>{section.label}</p>
-              <p className={`mt-2 text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>{section.value}</p>
-            </div>
-          ))}
+      {bio.trim().length > 0 ? (
+        <div className={`${isPro ? "rounded-2xl border border-white/10 bg-white/5 p-4" : "rounded-2xl border border-gray-100 bg-gray-50 p-4"}`}>
+          <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>{bio}</p>
         </div>
       ) : (
-        <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>No profile sections available yet.</p>
+        <p className={`text-sm leading-relaxed ${isPro ? "text-slate-200" : "text-gray-600"}`}>No bio available yet.</p>
       )}
     </div>
 

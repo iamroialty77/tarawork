@@ -1314,16 +1314,6 @@ export default function Home() {
       return;
     }
 
-    const applicationProfile = getApplicationProfileData(profile);
-    if (!applicationProfile.resumeUrl || !applicationProfile.portfolioUrl) {
-      setFreelancerTab("profile");
-      setToastMsg(
-        "Please complete Prove Your Legitimacy in My Profile first (Resume + Portfolio links required).",
-      );
-      setShowToast(true);
-      return;
-    }
-
     await submitApplication(jobId);
   };
 
@@ -1410,16 +1400,7 @@ export default function Home() {
       setToastMsg("Only freelancer accounts can apply for jobs.");
       setShowToast(true);
     } else {
-      const applicationProfile = getApplicationProfileData(profile);
-      if (!applicationProfile.resumeUrl || !applicationProfile.portfolioUrl) {
-        setFreelancerTab("profile");
-        setToastMsg(
-          "Please complete Prove Your Legitimacy in My Profile first (Resume + Portfolio links required).",
-        );
-        setShowToast(true);
-      } else {
-        void submitApplication(selectedJob.id);
-      }
+      void submitApplication(selectedJob.id);
     }
 
     const url = new URL(window.location.href);
@@ -1432,11 +1413,6 @@ export default function Home() {
     if (!user) return;
 
     const applicationProfile = getApplicationProfileData(profile);
-    if (!applicationProfile.resumeUrl || !applicationProfile.portfolioUrl) {
-      setToastMsg("Please complete your Resume and Portfolio links in My Profile.");
-      setShowToast(true);
-      return;
-    }
 
     try {
       setIsSaving(true);
@@ -1448,9 +1424,9 @@ export default function Home() {
 
       // Conditionally add columns based on whether we suspect they are missing
       if (!missingColumns.includes('seeker_id')) insertData.seeker_id = user.id;
-      if (!missingColumns.includes('resume_url')) insertData.resume_url = applicationProfile.resumeUrl;
-      if (!missingColumns.includes('portfolio_url')) insertData.portfolio_url = applicationProfile.portfolioUrl;
-      if (!missingColumns.includes('cover_letter')) insertData.cover_letter = applicationProfile.coverLetter;
+      if (applicationProfile.resumeUrl && !missingColumns.includes('resume_url')) insertData.resume_url = applicationProfile.resumeUrl;
+      if (applicationProfile.portfolioUrl && !missingColumns.includes('portfolio_url')) insertData.portfolio_url = applicationProfile.portfolioUrl;
+      if (applicationProfile.coverLetter && !missingColumns.includes('cover_letter')) insertData.cover_letter = applicationProfile.coverLetter;
 
       // Only add interview_url if it's provided and not known to be missing
       if (applicationProfile.interviewUrl && !missingColumns.includes('interview_url')) {
@@ -4077,29 +4053,14 @@ export default function Home() {
                     <div className="lg:col-span-2 space-y-8">
                       <div>
                         <h4 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-widest">About</h4>
-                        {[
-                          { label: "Who I Help", value: selectedFreelancer.aboutSections?.whoIHelp },
-                          { label: "What I Specialize In", value: selectedFreelancer.aboutSections?.whatISpecializeIn || selectedFreelancer.bio },
-                          { label: "Results I've Delivered", value: selectedFreelancer.aboutSections?.resultsIHaveDelivered },
-                          { label: "How I Work", value: selectedFreelancer.aboutSections?.howIWork },
-                        ].some((item) => (item.value || "").trim().length > 0) ? (
-                          <div className="grid gap-3">
-                            {[
-                              { label: "Who I Help", value: selectedFreelancer.aboutSections?.whoIHelp },
-                              { label: "What I Specialize In", value: selectedFreelancer.aboutSections?.whatISpecializeIn || selectedFreelancer.bio },
-                              { label: "Results I've Delivered", value: selectedFreelancer.aboutSections?.resultsIHaveDelivered },
-                              { label: "How I Work", value: selectedFreelancer.aboutSections?.howIWork },
-                            ]
-                              .filter((item) => (item.value || "").trim().length > 0)
-                              .map((item) => (
-                                <div key={item.label} className="rounded-xl border border-slate-200 bg-white p-4">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
-                                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-700">{item.value}</p>
-                                </div>
-                              ))}
+                        {(selectedFreelancer.bio || selectedFreelancer.aboutSections?.whatISpecializeIn || "").trim().length > 0 ? (
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <p className="mt-1 text-sm font-medium leading-relaxed text-slate-700">
+                              {selectedFreelancer.bio || selectedFreelancer.aboutSections?.whatISpecializeIn}
+                            </p>
                           </div>
                         ) : (
-                          <p className="text-slate-600 leading-relaxed font-medium">No detailed profile sections provided yet.</p>
+                          <p className="text-slate-600 leading-relaxed font-medium">No bio provided yet.</p>
                         )}
                       </div>
 
