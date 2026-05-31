@@ -74,9 +74,17 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
     }
   }
 
-  // 2. Fallback to old portfolio_items if portfolios is empty OR if the relation didn't load
-  if (profile && (!profile.portfolios || profile.portfolios.length === 0)) {
-    console.log(`[Portfolio] No "portfolios" relation data for ${profile.name} (ID: ${profile.id}), checking old portfolio_items...`);
+  // 2. Backfill featured projects from old portfolio_items when the new relation is empty.
+  if (
+    profile &&
+    (
+      !profile.portfolios ||
+      profile.portfolios.length === 0 ||
+      !Array.isArray(profile.portfolios?.[0]?.portfolio_projects) ||
+      profile.portfolios[0].portfolio_projects.length === 0
+    )
+  ) {
+    console.log(`[Portfolio] No featured projects found for ${profile.name} (ID: ${profile.id}), checking old portfolio_items...`);
     const { data: oldItems, error: oldError } = await supabaseAdmin
       .from('portfolio_items')
       .select('*')
@@ -86,17 +94,7 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
 
     if (oldItems && oldItems.length > 0) {
       console.log(`[Portfolio] Found ${oldItems.length} items in old table. Mapping to new structure.`);
-      profile.portfolios = [{ 
-        id: 'fallback-' + (profile.id?.toString().substring(0, 8) || '0000'),
-                about_me: profile.bio || '',
-                tagline: 'Professional Portfolio',
-                theme_settings: {
-                  aesthetic: 'minimalist',
-                  primaryColor: '#000000',
-                  aboutSections: normalizeAboutSections(profile.aiInsights?.aboutSections, profile.bio || ''),
-                  servicesOffered: normalizeServicesOffered(profile.aiInsights?.servicesOffered),
-                },
-        portfolio_projects: oldItems.map((item: any) => ({
+      const mappedOldProjects = oldItems.map((item: any) => ({
           id: item.id, 
           title: item.title || 'Untitled Project', 
           description: item.description || '', 
@@ -104,10 +102,26 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
           project_url: item.project_url || '', 
           technologies: Array.isArray(item.technologies) ? item.technologies : 
                         (typeof item.technologies === 'string' ? item.technologies.split(',').map((s: string) => s.trim()) : [])
-        })),
-        portfolio_skills: [],
-        portfolio_links: []
-      }] as any;
+        }));
+
+      if (profile.portfolios?.[0]) {
+        profile.portfolios[0].portfolio_projects = mappedOldProjects;
+      } else {
+        profile.portfolios = [{
+          id: 'fallback-' + (profile.id?.toString().substring(0, 8) || '0000'),
+          about_me: profile.bio || '',
+          tagline: 'Professional Portfolio',
+          theme_settings: {
+            aesthetic: 'minimalist',
+            primaryColor: '#000000',
+            aboutSections: normalizeAboutSections(profile.aiInsights?.aboutSections, profile.bio || ''),
+            servicesOffered: normalizeServicesOffered(profile.aiInsights?.servicesOffered),
+          },
+          portfolio_projects: mappedOldProjects,
+          portfolio_skills: [],
+          portfolio_links: []
+        }] as any;
+      }
     }
   }
 
