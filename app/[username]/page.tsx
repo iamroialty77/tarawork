@@ -42,8 +42,44 @@ const normalizeServicesOffered = (services: unknown): ServiceOffering[] => {
     .slice(0, 6);
 };
 
+const normalizePortfolioProject = (project: any) => ({
+  ...project,
+  title: project?.title || 'Untitled Project',
+  description: project?.description || '',
+  image_url: project?.image_url || '',
+  project_url: project?.project_url || '',
+  technologies: Array.isArray(project?.technologies)
+    ? project.technologies
+    : typeof project?.technologies === 'string'
+      ? project.technologies.split(',').map((tech: string) => tech.trim()).filter(Boolean)
+      : [],
+});
+
+const getPortfolioProjects = (portfolio: any) => {
+  if (!portfolio || !Array.isArray(portfolio.portfolio_projects)) return [];
+  return portfolio.portfolio_projects.map(normalizePortfolioProject);
+};
+
+const selectDisplayPortfolio = (portfolios: any[] | undefined) => {
+  if (!Array.isArray(portfolios) || portfolios.length === 0) return undefined;
+  return portfolios.find((portfolio) => getPortfolioProjects(portfolio).length > 0) || portfolios[0];
+};
+
+const mergePortfolioProjects = (portfolios: any[] | undefined) => {
+  if (!Array.isArray(portfolios)) return [];
+
+  const seen = new Set<string>();
+  return portfolios.flatMap(getPortfolioProjects).filter((project: any) => {
+    const key = String(project.id || `${project.title}-${project.project_url || project.description}`);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 async function fetchProfileWithFallback(query: any, identifier: string) {
-  let { data: profile, error } = await query;
+  const { data, error } = await query;
+  let profile = data;
 
   if (error) {
     console.warn(`[Portfolio] Database query error for "${identifier}":`, error.message);
@@ -75,14 +111,10 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
   }
 
   // 2. Backfill featured projects from old portfolio_items when the new relation is empty.
+  const existingProjects = mergePortfolioProjects(profile?.portfolios);
   if (
     profile &&
-    (
-      !profile.portfolios ||
-      profile.portfolios.length === 0 ||
-      !Array.isArray(profile.portfolios?.[0]?.portfolio_projects) ||
-      profile.portfolios[0].portfolio_projects.length === 0
-    )
+    existingProjects.length === 0
   ) {
     console.log(`[Portfolio] No featured projects found for ${profile.name} (ID: ${profile.id}), checking old portfolio_items...`);
     const { data: oldItems, error: oldError } = await supabaseAdmin
@@ -94,15 +126,7 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
 
     if (oldItems && oldItems.length > 0) {
       console.log(`[Portfolio] Found ${oldItems.length} items in old table. Mapping to new structure.`);
-      const mappedOldProjects = oldItems.map((item: any) => ({
-          id: item.id, 
-          title: item.title || 'Untitled Project', 
-          description: item.description || '', 
-          image_url: item.image_url || '', 
-          project_url: item.project_url || '', 
-          technologies: Array.isArray(item.technologies) ? item.technologies : 
-                        (typeof item.technologies === 'string' ? item.technologies.split(',').map((s: string) => s.trim()) : [])
-        }));
+      const mappedOldProjects = oldItems.map(normalizePortfolioProject);
 
       if (profile.portfolios?.[0]) {
         profile.portfolios[0].portfolio_projects = mappedOldProjects;
@@ -293,7 +317,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
 
     if (candidates && candidates.length > 0) {
       console.log(`[Portfolio] Analyzing ${candidates.length} candidates for a match...`);
-      for (let p of candidates) {
+      for (const p of candidates) {
         const cleanName = p.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
         const cleanDbUsername = p.username?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
         const cleanRequested = normalizedUsername.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -368,7 +392,8 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
 
 // Helper to map DB profile to FreelancerProfile interface
 function mapProfile(profile: any): FreelancerProfile {
-  const portfolioData = profile.portfolios?.[0];
+  const portfolioData = selectDisplayPortfolio(profile.portfolios);
+  const mergedProjects = mergePortfolioProjects(profile.portfolios);
   const premiumProfile = portfolioData?.theme_settings?.premiumProfile;
   const aboutSections = normalizeAboutSections(
     portfolioData?.theme_settings?.aboutSections || profile.aiInsights?.aboutSections,
@@ -437,7 +462,7 @@ function mapProfile(profile: any): FreelancerProfile {
       tagline: portfolioData.tagline,
       custom_domain: portfolioData.custom_domain,
       theme_settings: portfolioData.theme_settings,
-      projects: portfolioData.portfolio_projects || [],
+      projects: mergedProjects.length > 0 ? mergedProjects : getPortfolioProjects(portfolioData),
       skills: portfolioData.portfolio_skills || [],
       links: Array.isArray(portfolioData.portfolio_links) && portfolioData.portfolio_links.length > 0
         ? portfolioData.portfolio_links

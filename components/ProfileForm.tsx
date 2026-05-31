@@ -7,8 +7,6 @@ import {
   FileText,
   Sparkles,
   FolderKanban,
-  Briefcase,
-  Settings2,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
@@ -23,7 +21,7 @@ interface ProfileFormProps {
   isSaving?: boolean;
 }
 
-type TabKey = "basics" | "professional" | "portfolio";
+type TabKey = "basics" | "portfolio";
 
 const ABOUT_SECTION_MAX = 200;
 const MAX_SERVICES = 6;
@@ -113,12 +111,6 @@ export default function ProfileForm({
       bio: aboutSections.whatISpecializeIn || initialProfile.bio,
     });
   }, [initialProfile]);
-
-  useEffect(() => {
-    if (!isFreelancer && activeTab === "portfolio") {
-      setActiveTab("professional");
-    }
-  }, [activeTab, isFreelancer]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -415,11 +407,9 @@ export default function ProfileForm({
     ? [
         { key: "basics", label: "Basics", icon: User },
         { key: "portfolio", label: "Portfolio", icon: FolderKanban },
-        { key: "professional", label: "Professional", icon: Briefcase },
       ]
     : [
         { key: "basics", label: "Basics", icon: User },
-        { key: "professional", label: "Company", icon: Settings2 },
       ];
 
   const inputClassName =
@@ -429,6 +419,7 @@ export default function ProfileForm({
   const servicesOffered = normalizeServices(profile.servicesOffered);
   const applicationProfile = profile.aiInsights?.applicationProfile || {};
   const sectionCardClassName = "rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6";
+  const visibleActiveTab: TabKey = !isFreelancer && activeTab === "portfolio" ? "basics" : activeTab;
 
   const handleApplicationProfileChange = (
     field: "contactEmail" | "contactPhone" | "resumeUrl" | "portfolioUrl" | "interviewUrl" | "coverLetter",
@@ -455,7 +446,7 @@ export default function ProfileForm({
       <div className="mt-5 flex flex-wrap gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.key;
+          const isActive = visibleActiveTab === tab.key;
           return (
             <button
               key={tab.key}
@@ -475,91 +466,96 @@ export default function ProfileForm({
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-5">
-        {activeTab === "basics" && (
-          <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <h3 className="text-lg font-bold text-slate-950">Basic information</h3>
-              <TooltipAction label="Basic information help" tooltip="These are the main details shown first on your profile." />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className={labelClassName}>Professional Profile URL</label>
-                  {isFreelancer && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("portfolio")}
-                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
-                    >
-                      Open Portfolio
-                    </button>
-                  )}
-                </div>
-                <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                  <span className="border-r border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    {typeof window !== "undefined" ? window.location.host : "tarawork.network"}/
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="username"
-                    className="min-w-0 flex-1 px-4 py-3 text-sm text-slate-900 outline-none"
-                    value={profile.username || ""}
-                    onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
-                  />
-                </div>
-                <div className="mt-2 text-sm font-medium text-slate-600">
-                  /{profile.username || "your-name"}
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClassName}>Account Role</label>
-                <select
-                  className={inputClassName}
-                  value={profile.role}
-                  onChange={(e) => handleFieldChange({ role: e.target.value as "freelancer" | "employer" })}
-                >
-                  <option value="freelancer">Freelancer</option>
-                  <option value="employer">Client</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={labelClassName}>Full Name</label>
-                <input
-                  type="text"
-                  className={inputClassName}
-                  value={profile.name}
-                  onChange={(e) => handleFieldChange({ name: e.target.value })}
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className={labelClassName}>Bio</label>
-                  <span className="text-[11px] font-bold text-slate-400">
-                    {(profile.bio || "").length}/{ABOUT_SECTION_MAX * 3}
-                  </span>
-                </div>
-                <textarea
-                  className={inputClassName}
-                  rows={5}
-                  maxLength={ABOUT_SECTION_MAX * 3}
-                  placeholder="Write a clear professional summary: who you help, what you do well, and the kind of work you want."
-                  value={profile.bio || ""}
-                  onChange={(e) => handleBioChange(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "professional" && (
+        {visibleActiveTab === "basics" && (
           <div className="space-y-5">
-            <div className={sectionCardClassName}>
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-slate-950">{isFreelancer ? "Professional details" : "Company details"}</h3>
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
+                <div className="mb-5 flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Profile</p>
+                    <h3 className="mt-1 text-lg font-bold text-slate-950">Basic Information</h3>
+                  </div>
+                  <TooltipAction label="Basic information help" tooltip="These are the main details shown first on your profile." />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <label className={labelClassName}>Professional Profile URL</label>
+                      {isFreelancer && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("portfolio")}
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
+                        >
+                          Open Portfolio
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <span className="border-r border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                        {typeof window !== "undefined" ? window.location.host : "tarawork.network"}/
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="username"
+                        className="min-w-0 flex-1 px-4 py-3 text-sm text-slate-900 outline-none"
+                        value={profile.username || ""}
+                        onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
+                      />
+                    </div>
+                    <div className="mt-2 text-sm font-medium text-slate-600">
+                      /{profile.username || "your-name"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClassName}>Account Role</label>
+                    <select
+                      className={inputClassName}
+                      value={profile.role}
+                      onChange={(e) => handleFieldChange({ role: e.target.value as "freelancer" | "employer" })}
+                    >
+                      <option value="freelancer">Freelancer</option>
+                      <option value="employer">Client</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClassName}>Full Name</label>
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      value={profile.name}
+                      onChange={(e) => handleFieldChange({ name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <label className={labelClassName}>Bio</label>
+                      <span className="text-[11px] font-bold text-slate-400">
+                        {(profile.bio || "").length}/{ABOUT_SECTION_MAX * 3}
+                      </span>
+                    </div>
+                    <textarea
+                      className={inputClassName}
+                      rows={5}
+                      maxLength={ABOUT_SECTION_MAX * 3}
+                      placeholder="Write a clear professional summary: who you help, what you do well, and the kind of work you want."
+                      value={profile.bio || ""}
+                      onChange={(e) => handleBioChange(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
+                <div className="mb-5 flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Work Details</p>
+                    <h3 className="mt-1 text-lg font-bold text-slate-950">{isFreelancer ? "Professional Details" : "Company Details"}</h3>
+                  </div>
                 <TooltipAction
                   label="Professional details help"
                   tooltip={
@@ -622,6 +618,7 @@ export default function ProfileForm({
                   </div>
                 </div>
               )}
+            </div>
             </div>
 
             {isFreelancer && (
@@ -985,7 +982,7 @@ export default function ProfileForm({
           </div>
         )}
 
-        {activeTab === "portfolio" && isFreelancer && (
+        {visibleActiveTab === "portfolio" && isFreelancer && (
           <div className="space-y-5">
             <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1017,7 +1014,7 @@ export default function ProfileForm({
           </div>
         )}
 
-        {activeTab === "basics" && (
+        {visibleActiveTab === "basics" && (
           <button
             type="submit"
             disabled={isSaving}
