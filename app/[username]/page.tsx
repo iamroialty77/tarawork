@@ -1,6 +1,6 @@
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
 import { supabaseAdmin } from '@/lib/supabase_admin';
-import { FreelancerProfile, ServiceOffering } from '@/types/portfolio';
+import { ClientReview, FreelancerProfile, ServiceOffering } from '@/types/portfolio';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -40,6 +40,37 @@ const normalizeServicesOffered = (services: unknown): ServiceOffering[] => {
     })
     .filter((service): service is ServiceOffering => !!service)
     .slice(0, 6);
+};
+
+const normalizeClientReviews = (reviews: unknown): ClientReview[] => {
+  if (!Array.isArray(reviews)) return [];
+  return reviews
+    .map((review, index): ClientReview | null => {
+      if (!review || typeof review !== 'object') return null;
+      const source = review as Record<string, unknown>;
+      const ratingRaw =
+        typeof source.rating === 'number'
+          ? source.rating
+          : typeof source.rating === 'string'
+            ? Number(source.rating)
+            : 0;
+      const rating = Number.isFinite(ratingRaw) ? Math.min(5, Math.max(0, ratingRaw)) : 0;
+      const clientName = typeof source.clientName === 'string' ? source.clientName.trim() : '';
+      const projectTitle = typeof source.projectTitle === 'string' ? source.projectTitle.trim() : '';
+      const comment = typeof source.comment === 'string' ? source.comment.trim() : '';
+
+      if (!clientName && !projectTitle && !comment && rating === 0) return null;
+
+      return {
+        id: typeof source.id === 'string' && source.id.trim() ? source.id.trim() : `review-${index}`,
+        clientName: clientName || 'Client',
+        projectTitle: projectTitle || 'Completed project',
+        rating,
+        comment: comment || 'No written comment provided.',
+        date: typeof source.date === 'string' && source.date.trim() ? source.date.trim() : '',
+      };
+    })
+    .filter((review): review is ClientReview => !!review);
 };
 
 const normalizePortfolioProject = (project: any) => ({
@@ -402,6 +433,9 @@ function mapProfile(profile: any): FreelancerProfile {
   const servicesOffered = normalizeServicesOffered(
     portfolioData?.theme_settings?.servicesOffered || profile.aiInsights?.servicesOffered,
   );
+  const clientReviews = normalizeClientReviews(
+    portfolioData?.theme_settings?.clientReviews || profile.aiInsights?.clientReviews,
+  );
   const applicationProfile =
     profile.aiInsights?.applicationProfile && typeof profile.aiInsights.applicationProfile === 'object'
       ? profile.aiInsights.applicationProfile
@@ -450,6 +484,7 @@ function mapProfile(profile: any): FreelancerProfile {
     skills: Array.isArray(profile.skills) ? profile.skills.filter(Boolean) : [],
     aboutSections,
     servicesOffered,
+    clientReviews,
     hourlyRate: profile.hourlyRate,
     category: profile.category,
     contactEmail: applicationProfile.contactEmail || '',

@@ -12,6 +12,8 @@ import {
   X,
   Send,
   CheckCircle2,
+  Star,
+  MessageSquareText,
 } from 'lucide-react';
 import { FreelancerProfile, PortfolioProject } from '@/types/portfolio';
 import { supabase } from '@/lib/supabase';
@@ -115,7 +117,7 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
 );
 
 export default function PortfolioPreview({ profile, isPublic = true }: PortfolioPreviewProps) {
-  const [activeSection, setActiveSection] = useState<'services' | 'projects'>('services');
+  const [activeSection, setActiveSection] = useState<'services' | 'projects' | 'feedback'>('services');
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -135,6 +137,11 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const servicesOffered = normalizeServicesForDisplay(profile.servicesOffered);
   const socialLinks = profile.portfolio?.links || [];
   const projects = profile.portfolio?.projects || [];
+  const clientReviews = profile.clientReviews || [];
+  const averageRating =
+    clientReviews.length > 0
+      ? clientReviews.reduce((total, review) => total + review.rating, 0) / clientReviews.length
+      : 0;
   const displayRate = getDisplayRate(profile, servicesOffered);
   const contactEmail = profile.contactEmail?.trim();
   const contactPhone = profile.contactPhone?.trim();
@@ -341,6 +348,17 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             >
               Featured Projects
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveSection('feedback')}
+              className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+                activeSection === 'feedback'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              Client Feedback
+            </button>
           </div>
 
           {activeSection === 'services' ? (
@@ -371,7 +389,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 </div>
               )}
             </section>
-          ) : (
+          ) : activeSection === 'projects' ? (
             <section className="space-y-6">
               <div className="flex items-end justify-between">
                 <h2 className="text-3xl font-bold tracking-tight text-slate-900">Featured Projects</h2>
@@ -388,6 +406,77 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-20 text-slate-500">
                   <Briefcase size={40} strokeWidth={1} className="mb-4" />
                   <p>No projects showcased yet.</p>
+                </div>
+              )}
+            </section>
+          ) : (
+            <section className="space-y-6">
+              <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600">Client Feedback</p>
+                  <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Reviews from clients</h2>
+                </div>
+                <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Rating</p>
+                    <p className="mt-1 text-2xl font-black text-slate-900">{averageRating ? averageRating.toFixed(1) : '0.0'}</p>
+                  </div>
+                  <div>
+                    <div className="flex">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star
+                          key={index}
+                          className={`h-4 w-4 ${
+                            index < Math.round(averageRating)
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'fill-slate-200 text-slate-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-1 text-xs font-bold text-slate-400">{clientReviews.length} review{clientReviews.length === 1 ? '' : 's'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {clientReviews.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {clientReviews.map((review) => (
+                    <article key={review.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">{review.clientName}</h3>
+                          <p className="mt-1 text-sm font-medium text-slate-500">{review.projectTitle}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5">
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          <span className="text-xs font-black text-amber-700">{review.rating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star
+                            key={index}
+                            className={`h-4 w-4 ${
+                              index < Math.round(review.rating)
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'fill-slate-200 text-slate-200'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="mt-4 text-sm leading-relaxed text-slate-700">{review.comment}</p>
+                      {review.date ? (
+                        <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{review.date}</p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-20 text-center text-slate-500">
+                  <MessageSquareText size={40} strokeWidth={1} className="mb-4 text-slate-400" />
+                  <p className="font-semibold text-slate-700">No client feedback yet.</p>
+                  <p className="mt-2 max-w-md text-sm">Client ratings and comments will appear here after completed work is reviewed by employers or clients.</p>
                 </div>
               )}
             </section>

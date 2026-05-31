@@ -7,6 +7,8 @@ import {
   FileText,
   Sparkles,
   FolderKanban,
+  MessageSquareText,
+  Star,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
@@ -21,7 +23,7 @@ interface ProfileFormProps {
   isSaving?: boolean;
 }
 
-type TabKey = "basics" | "portfolio";
+type TabKey = "basics" | "portfolio" | "reviews";
 
 const ABOUT_SECTION_MAX = 200;
 const MAX_SERVICES = 6;
@@ -38,6 +40,46 @@ const DEFAULT_SERVICE_ENTRY: ServiceOffering = {
   typicalTurnaround: "",
 };
 const SERVICE_CURRENCIES = ["PHP", "USD", "EUR", "SGD", "AUD"];
+
+type ClientReview = {
+  id: string;
+  clientName: string;
+  projectTitle: string;
+  rating: number;
+  comment: string;
+  date: string;
+};
+
+const normalizeClientReviews = (reviews: unknown): ClientReview[] => {
+  if (!Array.isArray(reviews)) return [];
+
+  return reviews
+    .map((review, index) => {
+      if (!review || typeof review !== "object") return null;
+      const source = review as Record<string, unknown>;
+      const clientName = typeof source.clientName === "string" ? source.clientName.trim() : "";
+      const projectTitle = typeof source.projectTitle === "string" ? source.projectTitle.trim() : "";
+      const comment = typeof source.comment === "string" ? source.comment.trim() : "";
+      const ratingRaw =
+        typeof source.rating === "number"
+          ? source.rating
+          : typeof source.rating === "string"
+            ? Number(source.rating)
+            : 0;
+      const rating = Number.isFinite(ratingRaw) ? Math.min(5, Math.max(0, ratingRaw)) : 0;
+      if (!clientName && !projectTitle && !comment && rating === 0) return null;
+
+      return {
+        id: typeof source.id === "string" && source.id.trim() ? source.id.trim() : `review-${index}`,
+        clientName: clientName || "Client",
+        projectTitle: projectTitle || "Completed project",
+        rating,
+        comment: comment || "No written comment provided.",
+        date: typeof source.date === "string" && source.date.trim() ? source.date.trim() : "",
+      };
+    })
+    .filter((review): review is ClientReview => !!review);
+};
 
 const normalizeAboutSections = (profile: UserProfile) => {
   const sections = profile.aboutSections || EMPTY_ABOUT_SECTIONS;
@@ -407,9 +449,11 @@ export default function ProfileForm({
     ? [
         { key: "basics", label: "Basics", icon: User },
         { key: "portfolio", label: "Portfolio", icon: FolderKanban },
+        { key: "reviews", label: "Reviews", icon: MessageSquareText },
       ]
     : [
         { key: "basics", label: "Basics", icon: User },
+        { key: "reviews", label: "Reviews", icon: MessageSquareText },
       ];
 
   const inputClassName =
@@ -418,6 +462,11 @@ export default function ProfileForm({
     "mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500";
   const servicesOffered = normalizeServices(profile.servicesOffered);
   const applicationProfile = profile.aiInsights?.applicationProfile || {};
+  const clientReviews = normalizeClientReviews((profile.aiInsights as Record<string, unknown> | undefined)?.clientReviews);
+  const averageRating =
+    clientReviews.length > 0
+      ? clientReviews.reduce((total, review) => total + review.rating, 0) / clientReviews.length
+      : 0;
   const sectionCardClassName = "rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6";
   const visibleActiveTab: TabKey = !isFreelancer && activeTab === "portfolio" ? "basics" : activeTab;
 
@@ -1011,6 +1060,88 @@ export default function ProfileForm({
                 isOwner={true}
               />
             </div>
+          </div>
+        )}
+
+        {visibleActiveTab === "reviews" && (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Client Feedback</p>
+                  <h3 className="mt-1 text-xl font-bold text-slate-950">Reviews</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:min-w-[320px]">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Average Rating</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-2xl font-black text-slate-950">{averageRating ? averageRating.toFixed(1) : "0.0"}</span>
+                      <div className="flex">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Star
+                            key={index}
+                            className={`h-4 w-4 ${
+                              index < Math.round(averageRating)
+                                ? "fill-amber-400 text-amber-400"
+                                : "fill-slate-200 text-slate-200"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Total Reviews</p>
+                    <p className="mt-2 text-2xl font-black text-slate-950">{clientReviews.length}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {clientReviews.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {clientReviews.map((review) => (
+                  <div key={review.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h4 className="text-base font-bold text-slate-950">{review.clientName}</h4>
+                        <p className="mt-1 text-sm font-medium text-slate-500">{review.projectTitle}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-xs font-black text-amber-700">{review.rating.toFixed(1)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star
+                          key={index}
+                          className={`h-4 w-4 ${
+                            index < Math.round(review.rating)
+                              ? "fill-amber-400 text-amber-400"
+                              : "fill-slate-200 text-slate-200"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-4 text-sm leading-relaxed text-slate-700">{review.comment}</p>
+                    {review.date && (
+                      <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{review.date}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-amber-500 shadow-sm">
+                  <Star className="h-5 w-5" />
+                </div>
+                <h4 className="mt-4 text-lg font-bold text-slate-950">No client reviews yet</h4>
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
+                  Client star ratings and comments will appear here after completed work is reviewed.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

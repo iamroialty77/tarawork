@@ -38,6 +38,15 @@ export interface PortfolioLink {
   icon?: string;
 }
 
+export interface ClientReview {
+  id: string;
+  clientName: string;
+  projectTitle: string;
+  rating: number;
+  comment: string;
+  date?: string;
+}
+
 export interface Portfolio {
   id: string;
   profile_id: string;
@@ -63,6 +72,7 @@ export interface FreelancerProfile {
   skills?: string[];
   aboutSections?: ProfileAboutSections;
   servicesOffered?: ServiceOffering[];
+  clientReviews?: ClientReview[];
   hourlyRate?: string;
   category?: string;
   contactEmail?: string;
