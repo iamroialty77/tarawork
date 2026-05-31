@@ -1,10 +1,13 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { CircleHelp } from "lucide-react";
 
 interface TooltipActionProps {
-  text: string;
-  children: ReactNode;
+  text?: string;
+  tooltip?: string;
+  label?: string;
+  children?: ReactNode;
   delayMs?: number;
   block?: boolean;
 }
@@ -22,10 +25,14 @@ const isTouchDevice = () => {
 
 export default function TooltipAction({
   text,
+  tooltip,
+  label,
   children,
   delayMs = 300,
   block = false,
 }: TooltipActionProps) {
+  const tooltipText = text || tooltip || "";
+  const ariaLabel = label || "More information";
   const [visible, setVisible] = useState(false);
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,13 +77,21 @@ export default function TooltipAction({
         showOnTap();
       }}
     >
-      {children}
+      {children || (
+        <button
+          type="button"
+          aria-label={ariaLabel}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-700"
+        >
+          <CircleHelp className="h-4 w-4" />
+        </button>
+      )}
       {visible && (
         <span
           role="tooltip"
           className="pointer-events-none absolute -top-9 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white shadow-lg"
         >
-          {text}
+          {tooltipText}
         </span>
       )}
     </span>

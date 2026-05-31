@@ -60,6 +60,7 @@ export interface FreelancerProfile {
   role: string;
   avatar_url?: string;
   bio?: string;
+  skills?: string[];
   aboutSections?: ProfileAboutSections;
   servicesOffered?: ServiceOffering[];
   hourlyRate?: string;

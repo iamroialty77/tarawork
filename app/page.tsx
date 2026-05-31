@@ -313,9 +313,9 @@ export default function Home() {
   const profileCompletion = useMemo(() => {
     const checkpoints = [
       profile.bio?.trim(),
-      profile.skills?.length > 0,
+      (profile.skills?.length ?? 0) > 0,
       profile.username?.trim(),
-      profile.portfolio?.length > 0,
+      (profile.portfolio?.length ?? 0) > 0,
       profile.hourlyRate?.trim(),
     ];
     const completed = checkpoints.filter(Boolean).length;

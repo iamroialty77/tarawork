@@ -134,7 +134,7 @@ const PremiumProfessionalCard = ({ profile }: { profile: FreelancerProfile }) =>
 const Sidebar = ({ profile, isPro = false }: { profile: FreelancerProfile; isPro?: boolean }) => {
   const skillItems =
     profile.portfolio?.skills && profile.portfolio.skills.length > 0
-      ? profile.portfolio.skills.map((skill) => skill.name)
+      ? profile.portfolio.skills.map((skill: { name: string }) => skill.name)
       : Array.isArray(profile.skills)
         ? profile.skills.filter(Boolean)
         : [];
