@@ -655,43 +655,45 @@ export default function ProfileForm({
                     <h4 className="text-base font-bold text-slate-950">Application Extras</h4>
                     <TooltipAction label="Application extras help" tooltip="These optional links can be attached to applications when available. They do not block applying." />
                   </div>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className={labelClassName}>Resume URL (Optional)</label>
-                      <input
-                        type="url"
-                        placeholder="https://drive.google.com/your-resume"
-                        className={inputClassName}
-                        value={applicationProfile.resumeUrl || ""}
-                        onChange={(e) => handleApplicationProfileChange("resumeUrl", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClassName}>Portfolio URL (Optional)</label>
-                      <input
-                        type="url"
-                        placeholder="https://github.com/your-portfolio"
-                        className={inputClassName}
-                        value={applicationProfile.portfolioUrl || ""}
-                        onChange={(e) => handleApplicationProfileChange("portfolioUrl", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClassName}>Interview Link (Optional)</label>
-                      <input
-                        type="url"
-                        placeholder="https://loom.com/your-intro"
-                        className={inputClassName}
-                        value={applicationProfile.interviewUrl || ""}
-                        onChange={(e) => handleApplicationProfileChange("interviewUrl", e.target.value)}
-                      />
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="space-y-3">
+                      <div>
+                        <label className={labelClassName}>Resume URL (Optional)</label>
+                        <input
+                          type="url"
+                          placeholder="https://drive.google.com/your-resume"
+                          className={inputClassName}
+                          value={applicationProfile.resumeUrl || ""}
+                          onChange={(e) => handleApplicationProfileChange("resumeUrl", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClassName}>Portfolio URL (Optional)</label>
+                        <input
+                          type="url"
+                          placeholder="https://github.com/your-portfolio"
+                          className={inputClassName}
+                          value={applicationProfile.portfolioUrl || ""}
+                          onChange={(e) => handleApplicationProfileChange("portfolioUrl", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClassName}>Interview Link (Optional)</label>
+                        <input
+                          type="url"
+                          placeholder="https://loom.com/your-intro"
+                          className={inputClassName}
+                          value={applicationProfile.interviewUrl || ""}
+                          onChange={(e) => handleApplicationProfileChange("interviewUrl", e.target.value)}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className={labelClassName}>Default Cover Letter (Optional)</label>
                       <textarea
-                        rows={3}
+                        rows={8}
                         placeholder="Short intro na automatic kasama sa applications mo."
-                        className={inputClassName}
+                        className={`${inputClassName} min-h-[214px]`}
                         value={applicationProfile.coverLetter || ""}
                         onChange={(e) => handleApplicationProfileChange("coverLetter", e.target.value)}
                       />
@@ -704,44 +706,54 @@ export default function ProfileForm({
                     <h4 className="text-base font-bold text-slate-950">Skills</h4>
                     <TooltipAction label="Skills help" tooltip="Add the skills you want employers to see and that jobs should match against." />
                   </div>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <input
-                      type="text"
-                      className={inputClassName}
-                      value={skillInput}
-                      onChange={(e) => setSkillInput(e.target.value)}
-                      placeholder="e.g. React"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addSkill();
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={addSkill}
-                      className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black"
-                    >
-                      Add Skill
-                    </button>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {profile.skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700"
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                      <input
+                        type="text"
+                        className={inputClassName}
+                        value={skillInput}
+                        onChange={(e) => setSkillInput(e.target.value)}
+                        placeholder="e.g. React"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addSkill();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={addSkill}
+                        className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black"
                       >
-                        {skill}
-                        <button
-                          type="button"
-                          onClick={() => removeSkill(skill)}
-                          className="text-indigo-400 transition-colors hover:text-indigo-700"
-                        >
-                          &times;
-                        </button>
-                      </span>
-                    ))}
+                        Add Skill
+                      </button>
+                    </div>
+                    <div className="max-h-40 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3">
+                      {profile.skills.length === 0 ? (
+                        <div className="flex h-full min-h-24 items-center justify-center text-sm font-medium text-slate-500">
+                          No skills added.
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {profile.skills.map((skill) => (
+                            <span
+                              key={skill}
+                              className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700"
+                            >
+                              {skill}
+                              <button
+                                type="button"
+                                onClick={() => removeSkill(skill)}
+                                className="text-indigo-400 transition-colors hover:text-indigo-700"
+                              >
+                                &times;
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -756,8 +768,8 @@ export default function ProfileForm({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
-                    <div className="md:col-span-2">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="space-y-3">
                       <input
                         type="text"
                         className={inputClassName}
@@ -765,31 +777,27 @@ export default function ProfileForm({
                         value={serviceInput.serviceName}
                         onChange={(e) => setServiceInput((prev) => ({ ...prev, serviceName: e.target.value }))}
                       />
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        min={0}
-                        className={inputClassName}
-                        placeholder="Starting Price"
-                        value={serviceInput.startingPrice}
-                        onChange={(e) => setServiceInput((prev) => ({ ...prev, startingPrice: Number(e.target.value) || 0 }))}
-                      />
-                    </div>
-                    <div>
-                      <select
-                        className={inputClassName}
-                        value={serviceInput.currency}
-                        onChange={(e) => setServiceInput((prev) => ({ ...prev, currency: e.target.value }))}
-                      >
-                        {SERVICE_CURRENCIES.map((currency) => (
-                          <option key={currency} value={currency}>
-                            {currency}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="number"
+                          min={0}
+                          className={inputClassName}
+                          placeholder="Starting Price"
+                          value={serviceInput.startingPrice}
+                          onChange={(e) => setServiceInput((prev) => ({ ...prev, startingPrice: Number(e.target.value) || 0 }))}
+                        />
+                        <select
+                          className={inputClassName}
+                          value={serviceInput.currency}
+                          onChange={(e) => setServiceInput((prev) => ({ ...prev, currency: e.target.value }))}
+                        >
+                          {SERVICE_CURRENCIES.map((currency) => (
+                            <option key={currency} value={currency}>
+                              {currency}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <input
                         type="text"
                         className={inputClassName}
@@ -797,27 +805,25 @@ export default function ProfileForm({
                         value={serviceInput.typicalTurnaround}
                         onChange={(e) => setServiceInput((prev) => ({ ...prev, typicalTurnaround: e.target.value }))}
                       />
+                      <button
+                        type="button"
+                        onClick={addServiceEntry}
+                        disabled={servicesOffered.length >= MAX_SERVICES}
+                        className="w-full rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Add Service
+                      </button>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addServiceEntry}
-                    disabled={servicesOffered.length >= MAX_SERVICES}
-                    className="mt-3 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Add Service
-                  </button>
-
-                  <div className="mt-4 space-y-3">
-                    {servicesOffered.length === 0 && (
-                      <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-5 text-sm font-medium text-slate-500">
+                    <div className="max-h-72 space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3">
+                      {servicesOffered.length === 0 && (
+                        <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm font-medium text-slate-500">
                         No services added.
-                      </div>
-                    )}
-                    {servicesOffered.map((service, index) => (
-                      <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
-                          <div className="md:col-span-2">
+                        </div>
+                      )}
+                      {servicesOffered.map((service, index) => (
+                        <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div className="sm:col-span-2">
                             <label className={labelClassName}>Service Name</label>
                             <input
                               type="text"
@@ -850,7 +856,7 @@ export default function ProfileForm({
                               ))}
                             </select>
                           </div>
-                          <div className="md:col-span-2">
+                            <div className="sm:col-span-2">
                             <label className={labelClassName}>Typical Turnaround</label>
                             <input
                               type="text"
@@ -869,8 +875,9 @@ export default function ProfileForm({
                             Delete Service
                           </button>
                         </div>
-                      </div>
-                    ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -879,36 +886,31 @@ export default function ProfileForm({
                     <h4 className="text-base font-bold text-slate-950">Experience</h4>
                     <TooltipAction label="Experience help" tooltip="Add the strongest roles, outcomes, tools, and scope you want clients to review." />
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <input
-                      type="text"
-                      className={inputClassName}
-                      placeholder="Company"
-                      value={experienceInput.company}
-                      onChange={(e) => setExperienceInput((prev) => ({ ...prev, company: e.target.value }))}
-                    />
-                    <input
-                      type="text"
-                      className={inputClassName}
-                      placeholder="Role / Position"
-                      value={experienceInput.role}
-                      onChange={(e) => setExperienceInput((prev) => ({ ...prev, role: e.target.value }))}
-                    />
-                    <input
-                      type="text"
-                      className={inputClassName}
-                      placeholder="Duration (e.g. Jan 2023 - Dec 2024)"
-                      value={experienceInput.duration}
-                      onChange={(e) => setExperienceInput((prev) => ({ ...prev, duration: e.target.value }))}
-                    />
-                    <button
-                      type="button"
-                      onClick={addExperience}
-                      className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black"
-                    >
-                      Add Experience
-                    </button>
-                    <div className="sm:col-span-2">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <input
+                          type="text"
+                          className={inputClassName}
+                          placeholder="Company"
+                          value={experienceInput.company}
+                          onChange={(e) => setExperienceInput((prev) => ({ ...prev, company: e.target.value }))}
+                        />
+                        <input
+                          type="text"
+                          className={inputClassName}
+                          placeholder="Role / Position"
+                          value={experienceInput.role}
+                          onChange={(e) => setExperienceInput((prev) => ({ ...prev, role: e.target.value }))}
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        className={inputClassName}
+                        placeholder="Duration (e.g. Jan 2023 - Dec 2024)"
+                        value={experienceInput.duration}
+                        onChange={(e) => setExperienceInput((prev) => ({ ...prev, duration: e.target.value }))}
+                      />
                       <textarea
                         className={inputClassName}
                         rows={3}
@@ -916,16 +918,22 @@ export default function ProfileForm({
                         value={experienceInput.description}
                         onChange={(e) => setExperienceInput((prev) => ({ ...prev, description: e.target.value }))}
                       />
+                      <button
+                        type="button"
+                        onClick={addExperience}
+                        className="w-full rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black"
+                      >
+                        Add Experience
+                      </button>
                     </div>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {(profile.experience || []).length === 0 && (
-                      <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-5 text-sm font-medium text-slate-500">
+                    <div className="max-h-72 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3">
+                      {(profile.experience || []).length === 0 && (
+                        <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm font-medium text-slate-500">
                         No experience added.
-                      </div>
-                    )}
-                    {(profile.experience || []).map((item) => (
-                      <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        </div>
+                      )}
+                      {(profile.experience || []).map((item) => (
+                        <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-bold text-slate-900">{item.role}</p>
@@ -943,7 +951,8 @@ export default function ProfileForm({
                           </button>
                         </div>
                       </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </>
