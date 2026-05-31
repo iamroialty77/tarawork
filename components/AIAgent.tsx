@@ -449,7 +449,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
         score += 10;
         dynamicInsights.push(`Growth Trajectory: Successfully integrated ${verifiedSkills.length} verified technical nodes into your profile's knowledge graph.`);
       } else {
-        dynamicInsights.push("Visibility Protocol: High-intent skills are unverified. This is currently throttling your profile's exposure to premium clients.");
+        dynamicInsights.push("Visibility Protocol: High-intent skills are unverified. This is currently limiting your profile's exposure to high-fit clients.");
       }
       
       // 2. Narrative SEO (Bio)
@@ -481,7 +481,7 @@ export default function AIAgent({ isOpen, onClose, mode, targetData, onComplete 
       setSummary(score > 85 
         ? "Elite Professional Rank: Your profile metrics indicate readiness for high-stakes enterprise contracts." 
         : score > 70 
-        ? "Mid-Market Leader: You are well-positioned for consistent project acquisition. Optimizing your SEO will unlock premium rate tiers."
+        ? "Mid-Market Leader: You are well-positioned for consistent project acquisition. Optimizing your SEO can support stronger rate positioning."
         : "Strategic Realignment Required: Current profile markers are insufficient for top-tier competition. Follow the AI roadmap to scale.");
     } else if (mode === "smart-match") {
       const { job, profile } = (targetData as any) || {};

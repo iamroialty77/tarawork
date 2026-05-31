@@ -194,35 +194,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="plans" className="bg-slate-900 px-4 py-16 text-white sm:px-6">
-        <div className="mx-auto w-full max-w-6xl">
-          <div className="text-center">
-            <h2 className="text-3xl font-black sm:text-4xl">Free and Premium Plans</h2>
-          </div>
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/15 bg-white/5 p-6">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-300">Free</p>
-              <ul className="mt-4 space-y-2 text-sm text-slate-200">
-                <li>Basic portfolio</li>
-                <li>Core profile setup</li>
-                <li>Job applications</li>
-                <li>Standard visibility</li>
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 via-white/10 to-white/5 p-6">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Premium</p>
-              <p className="mt-3 text-4xl font-black">P499</p>
-              <ul className="mt-4 space-y-2 text-sm text-white">
-                <li>Verified badge</li>
-                <li>Custom domain</li>
-                <li>Featured placement</li>
-                <li>Portfolio analytics</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="contact" className="px-4 py-16 sm:px-6">
         <div className="mx-auto w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
           <div className="text-center">

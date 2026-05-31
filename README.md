@@ -19,9 +19,6 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 DATABASE_URL=your_postgres_connection_string
 OPENAI_API_KEY=your_openai_api_key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-PAYMONGO_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-PAYMONGO_WEBHOOK_SECRET=whsk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-PAYMONGO_PAYMENT_METHODS=gcash,card,grab_pay
 ```
 
 ### 3. Initialize database
@@ -29,17 +26,6 @@ PAYMONGO_PAYMENT_METHODS=gcash,card,grab_pay
 2. Run `supabase_schema.sql`.
 3. (Optional) Run `seed_test_data.sql` for sample data.
 4. Verify realtime includes: `applications`, `jobs`, `messages`.
-5. If your DB is already existing, run `docs/paymongo_webhook_upgrade.sql` (includes `credit_topup` product support).
-6. Run `docs/premium_credits_upgrade.sql` to enable premium credit wallet + ledger RPCs.
-7. Configure PayMongo webhook URL to `https://your-domain.com/api/paymongo/webhook`.
-8. Enable webhook events:
-   - `checkout_session.payment.paid`
-   - `checkout_session.payment.failed`
-   - `subscription.invoice.paid`
-   - `subscription.invoice.payment_failed`
-   - `subscription.unpaid`
-   - `subscription.past_due`
-   - `subscription.cancelled`
 
 ### 4. Start development
 ```bash
@@ -77,4 +63,3 @@ npm run start
 
 - Admin routes use `SUPABASE_SERVICE_ROLE_KEY` and must remain server-side only.
 - Resume parsing endpoint (`app/api/parse-resume/route.ts`) degrades gracefully if `OPENAI_API_KEY` is missing.
-- PayMongo webhook processing is idempotent and logs events in `paymongo_events`.

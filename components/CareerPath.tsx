@@ -170,7 +170,7 @@ export default function CareerPath({ profile, allJobs, onGenerateRoadmap }: Care
                         <div className="max-w-xl">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
                                 <Star className="w-3 h-3 fill-current" />
-                                Premium Career Path
+                                Career Path
                             </div>
                             <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight leading-[1.1]">
                                 AI Engineered <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Roadmap</span>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { UserProfile } from "@/types";
-import { consumePremiumCredits } from "@/lib/credits";
 
 interface CareerRoadmapPayload {
   profile?: UserProfile;
@@ -31,10 +30,6 @@ interface CareerRoadmapResponse {
   fallback?: boolean;
   error?: string;
   errorCode?: string;
-  credits?: {
-    spent: number;
-    remaining: number;
-  };
 }
 
 const cleanJsonBlock = (text: string) => {
@@ -105,8 +100,8 @@ const generateFallbackRoadmap = (
     },
     {
       id: "module-5",
-      title: "Specialization and Premium Positioning",
-      description: "Package your expertise into premium service offers and prepare for higher-value engagements.",
+      title: "Specialization and Market Positioning",
+      description: "Package your expertise into focused service offers and prepare for higher-value engagements.",
       duration: "2-4 weeks",
       level: "Expert"
     }
@@ -196,37 +191,6 @@ export async function POST(req: NextRequest) {
     if (!profile) {
       return NextResponse.json({ error: "Invalid payload: profile is required." }, { status: 400 });
     }
-    const userId = body.userId || profile.id;
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Missing userId.", errorCode: "missing_user_id" },
-        { status: 400 },
-      );
-    }
-    const creditSpend = await consumePremiumCredits({
-      userId,
-      action: "career_roadmap",
-      metadata: { profileCategory: profile.category || "General" },
-    });
-
-    if (!creditSpend.ok) {
-      const statusCode =
-        creditSpend.code === "not_premium"
-          ? 403
-          : creditSpend.code === "insufficient_credits"
-            ? 402
-            : 500;
-      return NextResponse.json(
-        {
-          error: creditSpend.message,
-          errorCode: creditSpend.code,
-          requiredCredits: creditSpend.cost,
-          remainingCredits: creditSpend.balance ?? 0,
-        },
-        { status: statusCode },
-      );
-    }
-
     const fallback = generateFallbackRoadmap(profile, body.marketContext);
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -234,10 +198,6 @@ export async function POST(req: NextRequest) {
         ...fallback,
         error: "GEMINI_API_KEY is missing",
         errorCode: "missing_key",
-        credits: {
-          spent: creditSpend.cost,
-          remaining: creditSpend.balance,
-        },
       });
     }
 
@@ -314,10 +274,6 @@ export async function POST(req: NextRequest) {
       const mappedError = mapGeminiError(geminiRes.status, providerMessage);
       return NextResponse.json({
         ...generateFallbackRoadmap(profile, body.marketContext, mappedError),
-        credits: {
-          spent: creditSpend.cost,
-          remaining: creditSpend.balance,
-        },
       });
     }
 
@@ -333,10 +289,6 @@ export async function POST(req: NextRequest) {
           message: "Gemini returned empty response",
           code: "empty_response"
         }),
-        credits: {
-          spent: creditSpend.cost,
-          remaining: creditSpend.balance,
-        },
       });
     }
 
@@ -348,13 +300,7 @@ export async function POST(req: NextRequest) {
     }
 
     const roadmap = normalizeRoadmap(parsed, fallback);
-    return NextResponse.json({
-      ...roadmap,
-      credits: {
-        spent: creditSpend.cost,
-        remaining: creditSpend.balance,
-      },
-    });
+    return NextResponse.json(roadmap);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unable to generate roadmap";
     return NextResponse.json(

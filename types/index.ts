@@ -139,10 +139,6 @@ export interface SmartMatchResponse {
   fallback?: boolean;
   error?: string;
   errorCode?: string;
-  credits?: {
-    spent: number;
-    remaining: number;
-  };
 }
 
 export interface VerifiedSkill {

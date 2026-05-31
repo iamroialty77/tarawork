@@ -62,7 +62,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
 import LandingPage from "../components/LandingPage";
-import { buildPublicProfileUrl, getPremiumProfileDomain } from "../lib/profileUrl";
+import { buildPublicProfileUrl } from "../lib/profileUrl";
 import { getJobShareUrl } from "../lib/jobShare";
 import TooltipAction from "@/components/ui/TooltipAction";
 
@@ -198,7 +198,7 @@ export default function Home() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [freelancerSearchTerm, setFreelancerSearchTerm] = useState("");
   const [debouncedFreelancerSearchTerm, setDebouncedFreelancerSearchTerm] = useState("");
-  const [talentsFilter, setTalentsFilter] = useState<"all" | "premium" | "verified">("all");
+  const [talentsFilter, setTalentsFilter] = useState<"all">("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
@@ -262,10 +262,6 @@ export default function Home() {
   });
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showUpgradePlans, setShowUpgradePlans] = useState(false);
-  const [planCheckoutLoading, setPlanCheckoutLoading] = useState<"pro" | "credit_topup" | null>(null);
-  const [headerCreditBalance, setHeaderCreditBalance] = useState(0);
-  const [headerCreditsLoading, setHeaderCreditsLoading] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -483,66 +479,6 @@ export default function Home() {
     }
   }, [profile.role]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paymentStatus = params.get("payment");
-    const product = params.get("product");
-
-    if (!paymentStatus) {
-      return;
-    }
-
-    if (paymentStatus === "success") {
-      setToastMsg(
-        product === "verification"
-          ? "Payment received. Verification will activate after PayMongo webhook confirmation."
-          : product === "credit_topup"
-            ? "Payment received. Credit top-up will reflect after PayMongo webhook confirmation."
-          : "Payment received. Freelancer Pro will activate after PayMongo webhook confirmation.",
-      );
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 5000);
-    }
-
-    if (paymentStatus === "cancelled") {
-      setToastMsg("Payment was cancelled.");
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-    }
-
-    const cleanedParams = new URLSearchParams(window.location.search);
-    cleanedParams.delete("payment");
-    cleanedParams.delete("product");
-    const nextQuery = cleanedParams.toString();
-    const newUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
-    window.history.replaceState({}, document.title, newUrl);
-  }, []);
-
-  useEffect(() => {
-    const userId = user?.id || profile.id;
-    if (!userId || profile.role !== "freelancer") return;
-
-    let mounted = true;
-    const loadHeaderCredits = async () => {
-      setHeaderCreditsLoading(true);
-      try {
-        const response = await fetch(`/api/credits/balance?userId=${encodeURIComponent(userId)}`);
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload?.error || "Unable to load credits.");
-        if (mounted) setHeaderCreditBalance(Number(payload?.balance || 0));
-      } catch {
-        if (mounted) setHeaderCreditBalance(0);
-      } finally {
-        if (mounted) setHeaderCreditsLoading(false);
-      }
-    };
-
-    void loadHeaderCredits();
-    return () => {
-      mounted = false;
-    };
-  }, [user?.id, profile.id, profile.role, profile.premiumProfile?.tier]);
-
   const [isSaving, setIsSaving] = useState(false);
 
   const [isVetting, setIsVetting] = useState(false);
@@ -706,7 +642,7 @@ export default function Home() {
               analyticsEnabled: isActivePro ? premiumProfile.analyticsEnabled ?? false : false,
               customDomain:
                 isActivePro
-                  ? pData.custom_domain || premiumProfile.customDomain || getPremiumProfileDomain(normalizedData.username, normalizedData.id)
+                  ? pData.custom_domain || premiumProfile.customDomain || buildPublicProfileUrl({ username: normalizedData.username, id: normalizedData.id })
                   : "",
               videoIntroUrl: isActivePro ? premiumProfile.videoIntroUrl || "" : "",
               introHeadline: premiumProfile.introHeadline || pData.tagline || "",
@@ -950,7 +886,7 @@ export default function Home() {
             ? "pro"
             : requestedTier;
         const resolvedCustomDomain =
-          finalTier === "pro" ? getPremiumProfileDomain(nextProfile.username, nextProfile.id || user.id) : "";
+          finalTier === "pro" ? buildPublicProfileUrl({ username: nextProfile.username, id: nextProfile.id || user.id }) : "";
         const normalizedBilling = {
           proStatus:
             isExpiredBillingPro
@@ -1466,41 +1402,6 @@ export default function Home() {
     openApplicationModal(jobId);
   };
 
-  const startUpgradeCheckout = async (productType: "pro" | "credit_topup") => {
-    if (!profile.id) {
-      setToastMsg("Save your profile first so billing can link to your account.");
-      setShowToast(true);
-      return;
-    }
-
-    setPlanCheckoutLoading(productType);
-
-    try {
-      const response = await fetch("/api/paymongo/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productType,
-          userId: profile.id,
-          name: profile.name,
-        }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok || !payload.checkoutUrl) {
-        throw new Error(payload.error || "Unable to start checkout.");
-      }
-
-      window.location.href = payload.checkoutUrl;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to start checkout.";
-      setToastMsg(message);
-      setShowToast(true);
-    } finally {
-      setPlanCheckoutLoading(null);
-    }
-  };
-
   const handlePasswordUpdate = async () => {
     if (newPassword.length < 8) {
       setToastMsg("Password must be at least 8 characters.");
@@ -1907,19 +1808,14 @@ export default function Home() {
   };
 
   const getFreelancerTrustSignals = (freelancer: UserProfile) => {
-    const premiumProfile = freelancer.premiumProfile;
-    const analytics = premiumProfile?.analytics;
-    const isPremium = premiumProfile?.tier === "pro";
-    const isVerified = !!premiumProfile?.verifiedBadge || !!premiumProfile?.verifiedProgram?.enrolled;
-
     return {
-      isPremium,
-      isVerified,
-      completionRate: Number(analytics?.completionRate ?? (isVerified ? 98 : isPremium ? 95 : 90)),
-      onTimeDeliveryRate: Number(analytics?.onTimeDeliveryRate ?? (isVerified ? 99 : isPremium ? 96 : 90)),
-      repeatClientRate: Number(analytics?.repeatClientRate ?? (isPremium ? 46 : 24)),
-      inviteRate: Number(analytics?.inviteRate ?? (isPremium ? 63 : 38)),
-      inviteResponseHours: Number(analytics?.inviteResponseHours ?? (isPremium ? 1 : 6)),
+      isPremium: false,
+      isVerified: !!freelancer.wellness?.verifiedSustainable,
+      completionRate: 92,
+      onTimeDeliveryRate: 93,
+      repeatClientRate: 28,
+      inviteRate: 38,
+      inviteResponseHours: 4,
     };
   };
 
@@ -1956,14 +1852,6 @@ export default function Home() {
             (service) => service.serviceName.toLowerCase() === serviceTypeFilter.toLowerCase(),
           );
 
-        if (talentsFilter === "premium") {
-          return trustSignals.isPremium && matchesServiceType;
-        }
-
-        if (talentsFilter === "verified") {
-          return trustSignals.isVerified && matchesServiceType;
-        }
-
         return matchesServiceType;
       })
       .sort((a, b) => {
@@ -1979,9 +1867,7 @@ export default function Home() {
         const bSignals = getFreelancerTrustSignals(b);
 
         const aScore =
-          (aSignals.isPremium ? 25 : 0) +
-          (aSignals.isVerified ? 20 : 0) +
-          (a.premiumProfile?.featuredPlacement ? 15 : 0) +
+          (aSignals.isVerified ? 12 : 0) +
           aSignals.completionRate * 0.2 +
           aSignals.onTimeDeliveryRate * 0.2 +
           aSignals.repeatClientRate * 0.25 +
@@ -1989,9 +1875,7 @@ export default function Home() {
           Math.max(0, 12 - aSignals.inviteResponseHours);
 
         const bScore =
-          (bSignals.isPremium ? 25 : 0) +
-          (bSignals.isVerified ? 20 : 0) +
-          (b.premiumProfile?.featuredPlacement ? 15 : 0) +
+          (bSignals.isVerified ? 12 : 0) +
           bSignals.completionRate * 0.2 +
           bSignals.onTimeDeliveryRate * 0.2 +
           bSignals.repeatClientRate * 0.25 +
@@ -2424,31 +2308,6 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-4">
-              {profile.role === "freelancer" && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 sm:px-3.5 py-1.5 shadow-sm">
-                    <Coins className="h-4 w-4 text-amber-600" />
-                    <span className="hidden sm:inline text-[10px] font-black uppercase tracking-[0.18em] text-amber-700">Credit Wallet</span>
-                    <span className="rounded-lg bg-white px-2 py-0.5 text-xs font-black text-slate-900 border border-amber-100">
-                      {headerCreditsLoading ? "..." : headerCreditBalance}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (profile.premiumProfile?.tier === "pro") {
-                        void startUpgradeCheckout("credit_topup");
-                        return;
-                      }
-                      setShowUpgradePlans(true);
-                    }}
-                    disabled={planCheckoutLoading === "credit_topup"}
-                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700 transition-all hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {planCheckoutLoading === "credit_topup" ? "Loading..." : "Top Up"}
-                  </button>
-                </div>
-              )}
               <button 
                 className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -2569,19 +2428,6 @@ export default function Home() {
                     <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                   )}
                 </div>
-                {isEmployerView && profile.premiumProfile?.tier !== "pro" && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setShowUpgradePlans(true);
-                    }}
-                    className="absolute -right-2 -top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-200 bg-amber-300 text-slate-900 shadow-sm hover:bg-amber-200"
-                    title="Upgrade employer account"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -2738,10 +2584,9 @@ export default function Home() {
                             <h3 className="text-lg font-black text-slate-900">Professional Profile URL</h3>
                             <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm text-indigo-700">
                               {buildPublicProfileUrl({
-                                tier: profile.premiumProfile?.tier || "free",
+                                tier: "free",
                                 username: profile.username,
                                 id: profile.id,
-                                customDomain: profile.premiumProfile?.customDomain,
                               })}
                             </div>
                           </div>
@@ -2749,10 +2594,9 @@ export default function Home() {
                             <button
                               onClick={() => {
                                 const url = buildPublicProfileUrl({
-                                  tier: profile.premiumProfile?.tier || "free",
+                                  tier: "free",
                                   username: profile.username,
                                   id: profile.id,
-                                  customDomain: profile.premiumProfile?.customDomain,
                                 });
                                 navigator.clipboard.writeText(url);
                                 setToastMsg("Professional profile URL copied.");
@@ -2766,10 +2610,9 @@ export default function Home() {
                             </button>
                             <Link
                               href={buildPublicProfileUrl({
-                                tier: profile.premiumProfile?.tier || "free",
+                                tier: "free",
                                 username: profile.username,
                                 id: profile.id,
-                                customDomain: profile.premiumProfile?.customDomain,
                               })}
                               target="_blank"
                               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50"
@@ -2984,10 +2827,9 @@ export default function Home() {
                       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Profile URL</p>
                       <p className="mt-3 break-all text-sm font-semibold text-slate-900">
                         {buildPublicProfileUrl({
-                          tier: profile.premiumProfile?.tier || "free",
+                          tier: "free",
                           username: profile.username,
                           id: profile.id,
-                          customDomain: profile.premiumProfile?.customDomain,
                         })}
                       </p>
                     </div>
@@ -3004,7 +2846,6 @@ export default function Home() {
                   <div className="space-y-6">
                     <ProfileForm 
                       initialProfile={profile} 
-                      onOpenUpgradePlans={() => setShowUpgradePlans(true)}
                       onUpdate={handleProfileSave} 
                       onAddPortfolio={addPortfolioItem}
                       onUpdatePortfolio={updatePortfolioItem}
@@ -3014,38 +2855,21 @@ export default function Home() {
                   </div>
                   <div className="grid gap-6 xl:grid-cols-3">
                     {profile.role === 'freelancer' && (
-                      <div className={cn(
-                        "p-6 rounded-[1.75rem] border shadow-sm relative overflow-hidden group transition-all",
-                        profile.premiumProfile?.tier === "pro"
-                          ? "bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 border-slate-800 shadow-2xl shadow-slate-900/20"
-                          : "bg-white border-slate-200"
-                      )}>
-                        <div className={cn(
-                          "absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2",
-                          profile.premiumProfile?.tier === "pro" ? "bg-amber-400/20" : "bg-indigo-50"
-                        )}></div>
+                      <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm transition-all">
+                        <div className="absolute right-0 top-0 h-24 w-24 translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-50 blur-2xl"></div>
                         <div className="relative">
-                          <h3 className={cn(
-                            "text-[10px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2",
-                            profile.premiumProfile?.tier === "pro" ? "text-slate-400" : "text-slate-400"
-                          )}>
-                            <Layout className={cn("w-4 h-4", profile.premiumProfile?.tier === "pro" ? "text-amber-300" : "text-indigo-600")} />
+                          <h3 className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            <Layout className="h-4 w-4 text-indigo-600" />
                             Public Portfolio
                           </h3>
                           <div className="space-y-4">
-                            <div className={cn(
-                              "p-3 rounded-xl font-mono text-[10px] break-all flex items-center justify-between border",
-                              profile.premiumProfile?.tier === "pro"
-                                ? "bg-white/5 border-white/10 text-white"
-                                : "bg-slate-50 border-slate-100"
-                            )}>
+                            <div className="flex items-center justify-between break-all rounded-xl border border-slate-100 bg-slate-50 p-3 font-mono text-[10px]">
                               <div className="flex flex-col gap-1">
-                                <span className={cn(profile.premiumProfile?.tier === "pro" ? "text-white" : "text-slate-600")}>
+                                <span className="text-slate-600">
                                   {buildPublicProfileUrl({
-                                    tier: profile.premiumProfile?.tier || "free",
+                                    tier: "free",
                                     username: profile.username,
                                     id: profile.id,
-                                    customDomain: profile.premiumProfile?.customDomain,
                                   })}
                                 </span>
                                 {!profile.username && (
@@ -3057,39 +2881,24 @@ export default function Home() {
                               )}
                             </div>
                             
-                            <div className={cn(
-                              "p-4 rounded-xl border",
-                              profile.premiumProfile?.tier === "pro"
-                                ? "bg-white/5 border-white/10"
-                                : "bg-indigo-50/50 border-indigo-100"
-                            )}>
-                              <h4 className={cn(
-                                "text-[9px] font-bold uppercase mb-2",
-                                profile.premiumProfile?.tier === "pro" ? "text-amber-300" : "text-indigo-700"
-                              )}>Portfolio Status</h4>
+                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+                              <h4 className="mb-2 text-[9px] font-bold uppercase text-indigo-700">Portfolio Status</h4>
                               <div className="flex items-center gap-2">
                                 <div className={cn("w-2 h-2 rounded-full", profile.username ? "bg-emerald-500" : "bg-amber-500")}></div>
-                                <span className={cn("text-[10px]", profile.premiumProfile?.tier === "pro" ? "text-slate-300" : "text-slate-600")}>
-                                  {profile.username ? `URL Identifier: @${profile.username}` : "Using temporary ID link"}
-                                </span>
-                              </div>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <span className={cn(
-                                  "rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em]",
-                                  profile.premiumProfile?.tier === "pro" ? "bg-slate-900 text-white" : "bg-white text-slate-500 border border-slate-200"
-                                )}>
-                                  {profile.premiumProfile?.tier === "pro" ? "Pro" : "Free"}
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    const url = buildPublicProfileUrl({
-                                      tier: profile.premiumProfile?.tier || "free",
-                                      username: profile.username,
-                                      id: profile.id,
-                                      customDomain: profile.premiumProfile?.customDomain,
-                                    });
-                                    navigator.clipboard.writeText(url);
-                                    setToastMsg("Portfolio link copied to clipboard!");
+                              <span className="text-[10px] text-slate-600">
+                                {profile.username ? `URL Identifier: @${profile.username}` : "Using temporary ID link"}
+                              </span>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                onClick={() => {
+                                  const url = buildPublicProfileUrl({
+                                    tier: "free",
+                                    username: profile.username,
+                                    id: profile.id,
+                                  });
+                                  navigator.clipboard.writeText(url);
+                                  setToastMsg("Portfolio link copied to clipboard!");
                                     setShowToast(true);
                                     setTimeout(() => setShowToast(false), 3000);
                                   }}
@@ -3100,10 +2909,9 @@ export default function Home() {
                                 </button>
                                 <Link 
                                   href={buildPublicProfileUrl({
-                                    tier: profile.premiumProfile?.tier || "free",
+                                    tier: "free",
                                     username: profile.username,
                                     id: profile.id,
-                                    customDomain: profile.premiumProfile?.customDomain,
                                   })}
                                   target="_blank"
                                   className="flex items-center justify-center p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
@@ -3114,12 +2922,6 @@ export default function Home() {
                               <p className="text-[10px] text-slate-400 font-medium italic">
                                 Professional URL: share this with employers to showcase your work for free.
                               </p>
-                              <button
-                                onClick={() => setShowUpgradePlans(true)}
-                                className="w-full rounded-xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-400"
-                              >
-                                Upgrade Plans
-                              </button>
                             </div>
                           </div>
                         </div>
@@ -3468,7 +3270,7 @@ export default function Home() {
                 <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900">Find Talents</h2>
-                    <p className="text-slate-500 mt-1">Discover high-signal freelancers with premium trust indicators.</p>
+                    <p className="text-slate-500 mt-1">Discover freelancers based on role, skills, services, and portfolio fit.</p>
                   </div>
                   <div className="flex w-full flex-col gap-2 md:max-w-3xl md:flex-row md:flex-wrap md:items-center md:justify-end">
                     <div className="relative w-full md:w-72">
@@ -3481,15 +3283,6 @@ export default function Home() {
                         onChange={(e) => setFreelancerSearchTerm(e.target.value)}
                       />
                     </div>
-                    <select
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-44"
-                      value={talentsFilter}
-                      onChange={(e) => setTalentsFilter(e.target.value as "all" | "premium" | "verified")}
-                    >
-                      <option value="all">All Talents</option>
-                      <option value="premium">Premium Only</option>
-                      <option value="verified">Verified Only</option>
-                    </select>
                     <select
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-56"
                       value={serviceTypeFilter}
@@ -3514,22 +3307,10 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-1">
                   <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Matches</p>
                     <p className="mt-2 text-2xl font-black text-slate-900">{filteredFreelancers.length}</p>
-                  </div>
-                  <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Premium</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">
-                      {filteredFreelancers.filter((freelancer) => freelancer.premiumProfile?.tier === "pro").length}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Verified</p>
-                    <p className="mt-2 text-2xl font-black text-slate-900">
-                      {filteredFreelancers.filter((freelancer) => freelancer.premiumProfile?.verifiedBadge || freelancer.premiumProfile?.verifiedProgram?.enrolled).length}
-                    </p>
                   </div>
                 </div>
 
@@ -3600,18 +3381,6 @@ export default function Home() {
                                   Saved
                                 </span>
                               )}
-                              {trustSignals.isPremium && (
-                                <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 uppercase tracking-widest">
-                                  <Medal className="w-3 h-3" />
-                                  Premium
-                                </span>
-                              )}
-                              {trustSignals.isVerified && (
-                                <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-widest">
-                                  <Verified className="w-3 h-3" />
-                                  Verified
-                                </span>
-                              )}
                             </div>
                             <div className="mt-1 flex flex-wrap items-center gap-2">
                               <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{freelancer.category}</span>
@@ -3623,7 +3392,7 @@ export default function Home() {
                               )}
                             </div>
                             <p className="mt-3 line-clamp-2 text-xs font-medium text-slate-500">
-                              {freelancer.premiumProfile?.introHeadline || freelancer.aboutSections?.whatISpecializeIn || freelancer.bio || "Profile headline not set yet."}
+                              {freelancer.aboutSections?.whatISpecializeIn || freelancer.bio || "Profile headline not set yet."}
                             </p>
                           </div>
                         </div>
@@ -3741,137 +3510,6 @@ export default function Home() {
         )}
       </main>
 
-      <AnimatePresence>
-        {showUpgradePlans && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowUpgradePlans(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.96 }}
-              className="relative w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
-            >
-              <div className="mb-6 flex items-start justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Upgrade Plans</p>
-                  <h3 className="mt-1 text-2xl font-black text-slate-900">
-                    {isEmployerView ? "Employer Free vs Premium" : "Freelancer Free vs Premium"}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Choose your plan and continue through secured PayMongo checkout.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowUpgradePlans(false)}
-                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="mb-5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-700">
-                    <span className="inline-flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      Secure Billing
-                    </span>
-                  </span>
-                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
-                    Instant Activation
-                  </span>
-                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">
-                    PayMongo Gateway
-                  </span>
-                </div>
-                <p className="mt-3 text-xs font-medium text-slate-600">
-                  {isEmployerView
-                    ? "Upgrade your employer profile for better trust, stronger visibility, and faster hiring outcomes."
-                    : "Upgrade your freelancer profile for stronger visibility, portfolio trust, and premium feature access."}
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Free Account</p>
-                  <p className="mt-2 text-xl font-black text-slate-900">PHP 0</p>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {isEmployerView ? (
-                      <>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Basic company profile visibility</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Standard talent search results</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Core hiring and messaging tools</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />No premium employer badge</li>
-                      </>
-                    ) : (
-                      <>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Basic portfolio</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Skills and experience</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />Standard profile URL</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-slate-400" />No premium credits</li>
-                      </>
-                    )}
-                  </ul>
-                </div>
-                <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">Premium Account</p>
-                  <p className="mt-2 text-xl font-black text-slate-900">PHP 499 / month</p>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-800">
-                    {isEmployerView ? (
-                      <>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Premium employer badge for trust</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Priority placement in talent discovery</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Higher response and invite visibility</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Advanced hiring insights dashboard</li>
-                      </>
-                    ) : (
-                      <>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Verified badge + stronger profile trust</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Advanced portfolio sections</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Monthly premium credits</li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Top-up support via PayMongo</li>
-                      </>
-                    )}
-                  </ul>
-                  <button
-                    onClick={() => void startUpgradeCheckout("pro")}
-                    disabled={planCheckoutLoading === "pro"}
-                    className="mt-5 w-full rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-black uppercase tracking-[0.2em] text-slate-950 hover:bg-amber-400 disabled:opacity-60"
-                  >
-                    {planCheckoutLoading === "pro" ? "Redirecting..." : isEmployerView ? "Upgrade Employer" : "Upgrade Freelancer"}
-                  </button>
-                  <p className="mt-2 text-center text-[10px] font-semibold text-slate-500">You will be redirected to PayMongo secure checkout.</p>
-                </div>
-              </div>
-
-              {profile.role === "freelancer" && profile.premiumProfile?.tier === "pro" && (
-                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">Need more credits?</p>
-                      <p className="text-sm font-semibold text-emerald-900">Top-up package: +10 Premium Credits</p>
-                    </div>
-                    <button
-                      onClick={() => void startUpgradeCheckout("credit_topup")}
-                      disabled={planCheckoutLoading === "credit_topup"}
-                      className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-emerald-700 disabled:opacity-60"
-                    >
-                      {planCheckoutLoading === "credit_topup" ? "Redirecting..." : "Top-up Credits"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* Freelancer Profile Modal */}
       <AnimatePresence>
         {showFreelancerModal && selectedFreelancer && (
@@ -3902,18 +3540,6 @@ export default function Home() {
                     <h3 className="text-xl font-bold text-slate-900">{selectedFreelancer.name}</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase tracking-widest">{selectedFreelancer.category}</span>
-                      {(selectedFreelancer.premiumProfile?.tier === "pro") && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 uppercase tracking-widest">
-                          <Medal className="w-3 h-3" />
-                          Premium
-                        </span>
-                      )}
-                      {(selectedFreelancer.premiumProfile?.verifiedBadge || selectedFreelancer.premiumProfile?.verifiedProgram?.enrolled) && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-widest">
-                          <Verified className="w-3 h-3" />
-                          Verified
-                        </span>
-                      )}
                       <span className="text-[10px] font-bold text-emerald-600">{selectedFreelancer.hourlyRate}/hr</span>
                     </div>
                   </div>
@@ -4002,25 +3628,25 @@ export default function Home() {
                         <div className="rounded-xl border border-slate-200 bg-white p-3">
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Completion</p>
                           <p className="mt-1 text-sm font-black text-slate-900">
-                            {Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.completionRate ?? 92))}%
+                            92%
                           </p>
                         </div>
                         <div className="rounded-xl border border-slate-200 bg-white p-3">
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">On-Time</p>
                           <p className="mt-1 text-sm font-black text-slate-900">
-                            {Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.onTimeDeliveryRate ?? 93))}%
+                            93%
                           </p>
                         </div>
                         <div className="rounded-xl border border-slate-200 bg-white p-3">
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Repeat</p>
                           <p className="mt-1 text-sm font-black text-slate-900">
-                            {Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.repeatClientRate ?? 28))}%
+                            28%
                           </p>
                         </div>
                         <div className="rounded-xl border border-slate-200 bg-white p-3">
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Invite Reply</p>
                           <p className="mt-1 text-sm font-black text-slate-900">
-                            {Number(selectedFreelancer.premiumProfile?.analytics?.inviteResponseHours ?? 4) < 2 ? "< 2h" : `${Math.round(Number(selectedFreelancer.premiumProfile?.analytics?.inviteResponseHours ?? 4))}h`}
+                            4h
                           </p>
                         </div>
                       </div>

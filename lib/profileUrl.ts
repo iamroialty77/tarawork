@@ -1,5 +1,4 @@
 const FREE_PROFILE_BASE_URL = "https://www.tarawork.online";
-const PREMIUM_PROFILE_PATH_PREFIX = "@";
 
 export function normalizeProfileSlug(value?: string | null): string {
   if (!value) return "";
@@ -22,11 +21,6 @@ export function getProfileSlug(username?: string | null, id?: string | null): st
   return "user";
 }
 
-export function getPremiumProfileDomain(username?: string | null, id?: string | null): string {
-  const slug = getProfileSlug(username, id);
-  return `${FREE_PROFILE_BASE_URL}/${PREMIUM_PROFILE_PATH_PREFIX}${slug}`;
-}
-
 export function buildPublicProfileUrl(options: {
   tier?: "free" | "pro" | string;
   username?: string | null;
@@ -34,10 +28,5 @@ export function buildPublicProfileUrl(options: {
   customDomain?: string | null;
 }): string {
   const slug = getProfileSlug(options.username, options.id);
-
-  if (options.tier === "pro") {
-    return `${FREE_PROFILE_BASE_URL}/${PREMIUM_PROFILE_PATH_PREFIX}${slug}`;
-  }
-
   return `${FREE_PROFILE_BASE_URL}/${slug}`;
 }

@@ -6,30 +6,24 @@ import {
   User,
   FileText,
   Sparkles,
-  ShieldCheck,
-  Star,
-  MapPin,
   FolderKanban,
   Briefcase,
-  BarChart3,
   Settings2,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
-import { getPremiumProfileDomain } from "../lib/profileUrl";
 import TooltipAction from "@/components/ui/TooltipAction";
 
 interface ProfileFormProps {
   initialProfile: UserProfile;
   onUpdate: (profile: UserProfile) => void;
-  onOpenUpgradePlans?: () => void;
   onAddPortfolio?: (item: Partial<PortfolioItem>) => void;
   onUpdatePortfolio?: (item: PortfolioItem) => void;
   onRemovePortfolio?: (id: string) => void;
   isSaving?: boolean;
 }
 
-type TabKey = "basics" | "professional" | "premium" | "portfolio";
+type TabKey = "basics" | "professional" | "portfolio";
 
 const ABOUT_SECTION_MAX = 200;
 const MAX_SERVICES = 6;
@@ -46,16 +40,6 @@ const DEFAULT_SERVICE_ENTRY: ServiceOffering = {
   typicalTurnaround: "",
 };
 const SERVICE_CURRENCIES = ["PHP", "USD", "EUR", "SGD", "AUD"];
-
-const formatPremiumRate = (hourlyRate?: string) => {
-  const value = (hourlyRate || "").trim();
-  if (!value) return "$50/hr";
-  if (/\/\s*hr/i.test(value)) return value;
-  const numeric = value.replace(/[^\d.,]/g, "");
-  if (!numeric) return value;
-  if (value.includes("$")) return `$${numeric}/hr`;
-  return `${value}/hr`;
-};
 
 const normalizeAboutSections = (profile: UserProfile) => {
   const sections = profile.aboutSections || EMPTY_ABOUT_SECTIONS;
@@ -88,44 +72,9 @@ const normalizeServices = (services: ServiceOffering[] | undefined): ServiceOffe
     .slice(0, MAX_SERVICES);
 };
 
-const PremiumProIdentityCard = ({ profile }: { profile: UserProfile }) => (
-  <div className="relative w-full max-w-sm rounded-[2.2rem] border border-amber-200/30 bg-gradient-to-b from-[#2b0638] via-[#3b0951] to-[#260631] px-7 pb-8 pt-16 shadow-[0_24px_70px_rgba(15,23,42,0.45)]">
-    <div className="absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(147,197,253,0.18),rgba(191,219,254,0.08),rgba(147,197,253,0.18))]" />
-    <div className="absolute left-1/2 top-4 h-24 w-24 -translate-x-1/2 overflow-hidden rounded-full border-4 border-amber-300 shadow-[0_10px_28px_rgba(245,158,11,0.35)]">
-      {profile.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center bg-slate-100">
-          <User className="h-8 w-8 text-slate-400" />
-        </div>
-      )}
-    </div>
-
-    <div className="mt-12 text-center">
-      <div className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-200 to-amber-400 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-950">
-        <ShieldCheck className="h-3 w-3" />
-        Verified Pro
-      </div>
-      <h3 className="mt-3 text-2xl font-black tracking-tight text-white">{profile.name || "Freelancer"}</h3>
-      <p className="mt-1 text-sm font-semibold text-slate-200">
-        {profile.category && profile.category !== "General" ? `${profile.category} Professional` : "Freelancer Professional"}
-      </p>
-      <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-300">
-        <MapPin className="h-3.5 w-3.5" />
-        Manila, Philippines
-      </p>
-      <div className="mx-auto mt-5 h-px w-full max-w-[220px] bg-white/20" />
-      <p className="mt-5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-300">Basic Rate</p>
-      <p className="mt-1 text-3xl font-black text-white">{formatPremiumRate(profile.hourlyRate)}</p>
-    </div>
-  </div>
-);
-
 export default function ProfileForm({ 
   initialProfile, 
   onUpdate, 
-  onOpenUpgradePlans,
   onAddPortfolio,
   onUpdatePortfolio,
   onRemovePortfolio,
@@ -151,35 +100,8 @@ export default function ProfileForm({
   });
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const [serviceInput, setServiceInput] = useState<ServiceOffering>(DEFAULT_SERVICE_ENTRY);
-  const [checkoutLoading, setCheckoutLoading] = useState<"pro" | "verification" | "credit_topup" | null>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
-
-  const premiumProfile = profile.premiumProfile || {
-    tier: "free" as const,
-    analytics: {
-      profileViews: 0,
-      clientClicks: 0,
-    },
-    verifiedProgram: {
-      enrolled: false,
-      annualFee: 499,
-      identityVerified: false,
-      portfolioVerified: false,
-      higherSearchRanking: false,
-      clientTrustBoost: false,
-    },
-  };
-  const isPro = premiumProfile.tier === "pro";
   const isFreelancer = profile.role === "freelancer";
-  const proExpiryDate = premiumProfile.billing?.proExpiresAt ? new Date(premiumProfile.billing.proExpiresAt) : null;
-  const hasValidProExpiry = !!proExpiryDate && !Number.isNaN(proExpiryDate.getTime());
-  const premiumDaysLeft = hasValidProExpiry && proExpiryDate
-    ? Math.max(0, Math.ceil((proExpiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null;
-  const premiumExpiryLabel = hasValidProExpiry && proExpiryDate
-    ? proExpiryDate.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })
-    : null;
-  const autoPremiumDomain = getPremiumProfileDomain(profile.username, profile.id);
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
@@ -193,7 +115,7 @@ export default function ProfileForm({
   }, [initialProfile]);
 
   useEffect(() => {
-    if (!isFreelancer && (activeTab === "premium" || activeTab === "portfolio")) {
+    if (!isFreelancer && activeTab === "portfolio") {
       setActiveTab("professional");
     }
   }, [activeTab, isFreelancer]);
@@ -380,58 +302,6 @@ export default function ProfileForm({
     if (resumeInputRef.current) resumeInputRef.current.value = "";
   };
 
-  const handlePremiumChange = (updates: Partial<typeof premiumProfile>) => {
-    setProfile({
-      ...profile,
-      premiumProfile: {
-        ...premiumProfile,
-        ...updates,
-        analytics: {
-          profileViews: premiumProfile.analytics?.profileViews || 0,
-          clientClicks: premiumProfile.analytics?.clientClicks || 0,
-          ...(updates.analytics || {}),
-        },
-      },
-    });
-  };
-
-  const startCheckout = async (productType: "pro" | "verification" | "credit_topup") => {
-    if (!profile.id) {
-      window.alert("Save your profile first so the payment can be linked to your account.");
-      return;
-    }
-
-    setCheckoutLoading(productType);
-
-    try {
-      const response = await fetch("/api/paymongo/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productType,
-          userId: profile.id,
-          email: undefined,
-          name: profile.name,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok || !payload.checkoutUrl) {
-        throw new Error(payload.error || "Unable to start checkout.");
-      }
-
-      window.location.href = payload.checkoutUrl;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to start checkout.";
-      window.alert(message);
-    } finally {
-      setCheckoutLoading(null);
-    }
-  };
-
   const handleAIParseComplete = (data: { 
     name?: string; 
     bio?: string; 
@@ -541,7 +411,6 @@ export default function ProfileForm({
         { key: "basics", label: "Basics", icon: User },
         { key: "portfolio", label: "Portfolio", icon: FolderKanban },
         { key: "professional", label: "Professional", icon: Briefcase },
-        { key: "premium", label: "Analytics", icon: BarChart3 },
       ]
     : [
         { key: "basics", label: "Basics", icon: User },
@@ -578,12 +447,6 @@ export default function ProfileForm({
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
-      {isFreelancer && isPro && (
-        <div className="flex justify-center">
-          <PremiumProIdentityCard profile={profile} />
-        </div>
-      )}
-
       <div className="mt-5 flex flex-wrap gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -1084,135 +947,6 @@ export default function ProfileForm({
                   </div>
                 </div>
               </>
-            )}
-          </div>
-        )}
-
-        {activeTab === "premium" && isFreelancer && (
-          <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${isPro ? "border-slate-900 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white shadow-2xl shadow-slate-900/20" : "border-slate-200 bg-white shadow-sm"}`}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${isPro ? "border border-white/10 bg-white/10 text-amber-300" : "border border-slate-200 bg-slate-50 text-slate-600"}`}>
-                  <Star className="h-3.5 w-3.5" />
-                  {isPro ? "Analytic Professional Board" : "Analytics Board"}
-                </div>
-                <h3 className={`mt-3 text-xl font-black ${isPro ? "text-white" : "text-slate-900"}`}>Performance Analytics</h3>
-                {isPro && premiumExpiryLabel && (
-                  <p className={`${isPro ? "text-slate-300" : "text-slate-500"} mt-1 text-sm`}>
-                    Active until {premiumExpiryLabel}{premiumDaysLeft !== null ? ` (${premiumDaysLeft} day${premiumDaysLeft === 1 ? "" : "s"} left)` : ""}
-                  </p>
-                )}
-              </div>
-              {!isPro && (
-                <button
-                  type="button"
-                  onClick={() => onOpenUpgradePlans?.()}
-                  className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-400"
-                >
-                  Open Upgrade Plans
-                </button>
-              )}
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl bg-white p-4 text-slate-900">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Views</p>
-                <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.profileViews || 0}</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4 text-slate-900">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clicks</p>
-                <p className="mt-2 text-2xl font-black">{premiumProfile.analytics?.clientClicks || 0}</p>
-              </div>
-              <div className={isPro ? "rounded-2xl border border-white/10 bg-white/5 p-4 text-white" : "rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700"}>
-                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isPro ? "text-slate-300" : "text-slate-500"}`}>Domain</p>
-                <p className="mt-2 text-sm font-bold truncate">{isPro ? autoPremiumDomain : "Upgrade to unlock custom domain"}</p>
-              </div>
-            </div>
-
-            {isPro && (
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Premium URL (Auto)</label>
-                  <input
-                    type="text"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
-                    value={autoPremiumDomain}
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Intro Headline</label>
-                  <input
-                    type="text"
-                    placeholder="Helping founders launch polished digital products."
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
-                    value={premiumProfile.introHeadline || ""}
-                    onChange={(e) => handlePremiumChange({ introHeadline: e.target.value })}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="mb-1 block text-xs font-black uppercase tracking-widest text-slate-400">Video Intro URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://www.loom.com/share/your-intro"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 transition-all focus:ring-2 focus:ring-indigo-500"
-                    value={premiumProfile.videoIntroUrl || ""}
-                    onChange={(e) => handlePremiumChange({ videoIntroUrl: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "premium" && isFreelancer && (
-          <div className={`rounded-[2rem] border p-6 transition-all duration-300 ${premiumProfile.verifiedProgram?.enrolled ? "border-emerald-300 bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-900 text-white shadow-2xl shadow-emerald-900/20" : "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50"}`}>
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] ${premiumProfile.verifiedProgram?.enrolled ? "border border-white/10 bg-white/10 text-emerald-300" : "border border-emerald-200 bg-white text-emerald-700"}`}>
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  {premiumProfile.verifiedProgram?.enrolled ? "Verified Program Active" : "Verified Freelancer Program"}
-                </div>
-                <h3 className={`text-xl font-black ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>Verification</h3>
-              </div>
-              <div className={`rounded-2xl px-4 py-3 ${premiumProfile.verifiedProgram?.enrolled ? "bg-white/10 border border-white/10" : "bg-emerald-600 text-white"}`}>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-200">Annual Fee</p>
-                <p className="mt-1 text-lg font-black">P499/year</p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-4">
-              {[
-                { title: "Verified identity", key: "identityVerified" as const },
-                { title: "Verified portfolio", key: "portfolioVerified" as const },
-                { title: "Higher search ranking", key: "higherSearchRanking" as const },
-                { title: "Client trust boost", key: "clientTrustBoost" as const },
-              ].map((item) => (
-                <div key={item.title} className={`rounded-2xl border p-4 ${premiumProfile.verifiedProgram?.enrolled ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}>
-                  <ShieldCheck className={`h-4 w-4 mb-3 ${premiumProfile.verifiedProgram?.enrolled ? "text-emerald-300" : "text-emerald-700"}`} />
-                  <h4 className={`text-sm font-bold ${premiumProfile.verifiedProgram?.enrolled ? "text-white" : "text-slate-900"}`}>{item.title}</h4>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex flex-col gap-4 md:flex-row">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!premiumProfile.verifiedProgram?.enrolled) {
-                    void startCheckout("verification");
-                  }
-                }}
-                disabled={!!premiumProfile.verifiedProgram?.enrolled || checkoutLoading === "verification"}
-                className={`rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:cursor-not-allowed disabled:opacity-70 ${premiumProfile.verifiedProgram?.enrolled ? "bg-white text-slate-950" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
-              >
-                {premiumProfile.verifiedProgram?.enrolled ? "Verified Enrolled" : checkoutLoading === "verification" ? "Redirecting..." : "Pay for Verification"}
-              </button>
-            </div>
-            {!premiumProfile.verifiedProgram?.enrolled && (
-              <p className="text-sm text-slate-600">
-                Verification status is updated only after PayMongo confirms payment through your webhook endpoint.
-              </p>
             )}
           </div>
         )}

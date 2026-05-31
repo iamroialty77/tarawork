@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Video, VideoOff, Mic, MicOff, PhoneOff, MessageSquare, Sparkles, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Video, VideoOff, Mic, MicOff, PhoneOff, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PREMIUM_CREDIT_COSTS } from "@/lib/creditConfig";
-import CreditConfirmationModal from "@/components/ui/CreditConfirmationModal";
 
 interface VideoCallProps {
   roomUrl?: string;
@@ -13,46 +11,20 @@ interface VideoCallProps {
   currentUserId?: string;
 }
 
-export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }: VideoCallProps) {
-  const interviewSummaryCost = PREMIUM_CREDIT_COSTS.interview_summary;
+export default function VideoCall({ onLeave, projectId }: VideoCallProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
-  const [showCreditConfirm, setShowCreditConfirm] = useState(false);
-  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
-  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
 
   const handleSummarizeRequest = () => {
     setShowConsent(true);
   };
 
-  const openCreditConfirmation = async () => {
-    setIsBalanceLoading(true);
-    try {
-      if (currentUserId) {
-        const response = await fetch(`/api/credits/balance?userId=${encodeURIComponent(currentUserId)}`);
-        const payload = await response.json();
-        if (response.ok) {
-          setRemainingCredits(Number(payload?.balance || 0));
-        } else {
-          setRemainingCredits(0);
-        }
-      } else {
-        setRemainingCredits(0);
-      }
-    } catch {
-      setRemainingCredits(0);
-    } finally {
-      setIsBalanceLoading(false);
-      setShowCreditConfirm(true);
-    }
-  };
-
-  const confirmConsent = async () => {
+  const confirmConsent = () => {
     setShowConsent(false);
-    await openCreditConfirmation();
+    void handleSummarize();
   };
 
   const handleSummarize = async () => {
@@ -68,8 +40,6 @@ export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }
           transcript: mockTranscript,
           projectId: projectId || 'mock-project-123',
           participants: ['Client', 'Freelancer'],
-          userId: currentUserId,
-          confirmCreditUse: true,
         }),
       });
 
@@ -78,14 +48,10 @@ export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }
         throw new Error(data?.error || 'Summarization failed');
       }
       setSummary(data.summary);
-      if (typeof data?.credits?.remaining === "number") {
-        setRemainingCredits(Number(data.credits.remaining));
-      }
     } catch (error) {
       console.error('Summarization failed:', error);
     } finally {
       setIsSummarizing(false);
-      setShowCreditConfirm(false);
     }
   };
 
@@ -202,7 +168,7 @@ export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }
               </div>
               <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">AI Transcription Consent</h3>
               <p className="text-slate-600 font-medium leading-relaxed mb-6">
-                To provide a summary, our AI needs to transcribe this meeting. By clicking "I Consent", you and all participants agree to the <span className="text-indigo-600 font-bold">AI Data Privacy Policy</span>. Summaries are stored securely in audit logs for dispute resolution.
+                To provide a summary, our AI needs to transcribe this meeting. By clicking &quot;I Consent&quot;, you and all participants agree to the <span className="text-indigo-600 font-bold">AI Data Privacy Policy</span>. Summaries are stored securely in audit logs for dispute resolution.
               </p>
               <div className="flex flex-col gap-3">
                 <button 
@@ -222,18 +188,6 @@ export default function VideoCall({ roomUrl, onLeave, projectId, currentUserId }
           </div>
         )}
       </AnimatePresence>
-
-      <CreditConfirmationModal
-        isOpen={showCreditConfirm}
-        creditsRequired={interviewSummaryCost}
-        remainingBalance={remainingCredits}
-        isBalanceLoading={isBalanceLoading}
-        isConfirming={isSummarizing}
-        onCancel={() => setShowCreditConfirm(false)}
-        onConfirm={() => {
-          void handleSummarize();
-        }}
-      />
 
       <p className="mt-6 text-slate-500 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
         <Shield className="w-3 h-3" />

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Job, SmartMatchResponse, SmartMatchResult, UserProfile } from "@/types";
 import { heuristicSmartMatchMany } from "@/lib/smartMatch";
-import { consumePremiumCredits } from "@/lib/credits";
 
 interface SmartMatchPayload {
   profile: UserProfile;
@@ -80,48 +79,6 @@ export async function POST(req: NextRequest) {
 
     const jobs = body.jobs.slice(0, MAX_JOBS_PER_REQUEST);
     const profile = body.profile;
-    if (!profile.id) {
-      return NextResponse.json(
-        {
-          error: "Missing profile.id for premium credit accounting.",
-          errorCode: "missing_user_id",
-          matches: [],
-          provider: "heuristic",
-          fallback: true,
-        },
-        { status: 400 },
-      );
-    }
-    const creditSpend = await consumePremiumCredits({
-      userId: profile.id,
-      action: "smart_match",
-      metadata: {
-        totalJobs: jobs.length,
-        category: profile.category || "General",
-      },
-    });
-
-    if (!creditSpend.ok) {
-      const statusCode =
-        creditSpend.code === "not_premium"
-          ? 403
-          : creditSpend.code === "insufficient_credits"
-            ? 402
-            : 500;
-      return NextResponse.json(
-        {
-          error: creditSpend.message,
-          errorCode: creditSpend.code,
-          matches: [],
-          provider: "heuristic",
-          fallback: true,
-          requiredCredits: creditSpend.cost,
-          remainingCredits: creditSpend.balance ?? 0,
-        },
-        { status: statusCode },
-      );
-    }
-
     const fallbackMatches = heuristicSmartMatchMany(jobs, profile);
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -132,10 +89,6 @@ export async function POST(req: NextRequest) {
         fallback: true,
         error: "GEMINI_API_KEY is missing",
         errorCode: "missing_key",
-        credits: {
-          spent: creditSpend.cost,
-          remaining: creditSpend.balance,
-        },
       };
       return NextResponse.json(response);
     }
@@ -210,10 +163,6 @@ export async function POST(req: NextRequest) {
         fallback: true,
         error: mappedError.message,
         errorCode: mappedError.code,
-        credits: {
-          spent: creditSpend.cost,
-          remaining: creditSpend.balance,
-        },
       };
       return NextResponse.json(response);
     }
@@ -231,10 +180,6 @@ export async function POST(req: NextRequest) {
         fallback: true,
         error: "Gemini returned empty response",
         errorCode: "empty_response",
-        credits: {
-          spent: creditSpend.cost,
-          remaining: creditSpend.balance,
-        },
       };
       return NextResponse.json(response);
     }
@@ -254,10 +199,6 @@ export async function POST(req: NextRequest) {
       matches,
       provider: "gemini",
       fallback: false,
-      credits: {
-        spent: creditSpend.cost,
-        remaining: creditSpend.balance,
-      },
     };
     return NextResponse.json(response);
   } catch (error: unknown) {
