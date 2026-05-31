@@ -1963,100 +1963,24 @@ export default function Home() {
     return <LandingPage />;
   }
 
-  const ensurePortfolioExists = async (userId: string): Promise<string | null> => {
-    // 1. Check if portfolio exists
-    const { data, error } = await supabase
-      .from('portfolios')
-      .select('id')
-      .eq('profile_id', userId)
-      .maybeSingle();
-
-    if (error && error.code !== "PGRST116") {
-      console.warn("Portfolio record lookup failed, falling back to portfolio_items:", error);
-      return null;
-    }
-    
-    if (data) return data.id;
-    
-    // 2. Create one if it doesn't exist
-    const { data: newPortfolio, error: createError } = await supabase
-      .from('portfolios')
-      .insert([{ 
-        profile_id: userId,
-        theme_settings: { aesthetic: "professional", primaryColor: "#4f46e5" }
-      }])
-      .select('id')
-      .single();
-    
-    if (createError) {
-      console.warn("Portfolio record creation failed, falling back to portfolio_items:", createError);
-      return null;
-    }
-    return newPortfolio.id;
-  };
-
   const addPortfolioItem = async (item: Partial<PortfolioItem>) => {
     if (!user) return;
     try {
-      // 1. Ensure a professional portfolio record exists
-      const portfolioId = await ensurePortfolioExists(user.id);
+      const response = await fetch("/api/portfolio/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item),
+      });
+      const payload = await response.json();
 
-      if (portfolioId) {
-        // 2. Add to the new portfolio_projects table
-        const { data, error } = await supabase
-          .from('portfolio_projects')
-          .insert([{
-            portfolio_id: portfolioId,
-            title: item.title,
-            description: item.description,
-            project_url: item.project_url,
-            technologies: item.technologies,
-            created_at: new Date().toISOString(),
-          }])
-          .select()
-          .single();
-
-        if (!error && data) {
-          setProfile(prev => ({
-            ...prev,
-            portfolio: [...(prev.portfolio || []), { ...data, profile_id: user.id }]
-          }));
-          setToastMsg("Portfolio item added!");
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 3000);
-          return;
-        }
-
-        if (error) {
-          console.warn("portfolio_projects insert failed, falling back to portfolio_items:", error);
-        }
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to save portfolio item.");
       }
 
-      // Fallback to old table if new portfolio tables are missing or unavailable.
-      {
-        const { data: oldData, error: oldError } = await supabase
-          .from('portfolio_items')
-          .insert([{
-            profile_id: user.id,
-            title: item.title,
-            description: item.description,
-            project_url: item.project_url,
-            technologies: item.technologies,
-            created_at: new Date().toISOString(),
-          }])
-          .select()
-          .single();
-
-        if (oldError) throw oldError;
-
-        if (oldData) {
-          setProfile(prev => ({
-            ...prev,
-            portfolio: [...(prev.portfolio || []), oldData]
-          }));
-        }
-      }
-
+      setProfile(prev => ({
+        ...prev,
+        portfolio: [...(prev.portfolio || []), payload.item]
+      }));
       setToastMsg("Portfolio item added!");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
@@ -2069,40 +1993,20 @@ export default function Home() {
 
   const updatePortfolioItem = async (item: PortfolioItem) => {
     try {
-      // Try updating in portfolio_projects first
-      const { data: projectRows, error } = await supabase
-        .from('portfolio_projects')
-        .update({
-          title: item.title,
-          description: item.description,
-          project_url: item.project_url,
-          technologies: item.technologies,
-        })
-        .eq('id', item.id)
-        .select('id');
+      const response = await fetch("/api/portfolio/items", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item),
+      });
+      const payload = await response.json();
 
-      if (error || !projectRows || projectRows.length === 0) {
-        // Fallback to old table
-        const { data: oldRows, error: oldError } = await supabase
-          .from('portfolio_items')
-          .update({
-            title: item.title,
-            description: item.description,
-            project_url: item.project_url,
-            technologies: item.technologies,
-          })
-          .eq('id', item.id)
-          .select('id');
-        
-        if (oldError) throw oldError;
-        if (!oldRows || oldRows.length === 0) {
-          throw new Error("Portfolio item was not found for update.");
-        }
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to update portfolio item.");
       }
 
       setProfile(prev => ({
         ...prev,
-        portfolio: (prev.portfolio || []).map(i => i.id === item.id ? item : i)
+        portfolio: (prev.portfolio || []).map(i => i.id === item.id ? payload.item : i)
       }));
       setToastMsg("Portfolio item updated!");
       setShowToast(true);
@@ -2116,25 +2020,13 @@ export default function Home() {
 
   const removePortfolioItem = async (id: string) => {
     try {
-      // Try deleting from portfolio_projects
-      const { data: projectRows, error } = await supabase
-        .from('portfolio_projects')
-        .delete()
-        .eq('id', id)
-        .select('id');
+      const response = await fetch(`/api/portfolio/items?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json();
 
-      if (error || !projectRows || projectRows.length === 0) {
-        // Fallback to old table
-        const { data: oldRows, error: oldError } = await supabase
-          .from('portfolio_items')
-          .delete()
-          .eq('id', id)
-          .select('id');
-        
-        if (oldError) throw oldError;
-        if (!oldRows || oldRows.length === 0) {
-          throw new Error("Portfolio item was not found for delete.");
-        }
+      if (!response.ok) {
+        throw new Error(payload?.error || "Unable to delete portfolio item.");
       }
 
       setProfile(prev => ({

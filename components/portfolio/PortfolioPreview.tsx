@@ -15,7 +15,6 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { FreelancerProfile, PortfolioProject } from '@/types/portfolio';
-import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
 interface PortfolioPreviewProps {
@@ -47,11 +46,10 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
   <div className="group rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm">
     <div className="relative mb-5 aspect-video overflow-hidden rounded-xl bg-slate-100">
       {project.image_url ? (
-        <Image
+        <img
           src={project.image_url}
           alt={project.title}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-slate-300">
@@ -183,11 +181,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           <div className="space-y-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="space-y-4">
               <div className="relative h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                <Image
+                <img
                   src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'}
                   alt={profile.name}
-                  fill
-                  className="object-cover"
+                  className="h-full w-full object-cover"
                 />
               </div>
               <div>
@@ -258,7 +255,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Profile Summary</p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-                  {(profile as FreelancerProfile & { category?: string }).category || profile.role || 'Freelancer'} services for modern teams
+                  {profile.category || profile.role || 'Freelancer'} services for modern teams
                 </h2>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">

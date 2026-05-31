@@ -8,8 +8,8 @@ import AIAgent from "./AIAgent";
 
 interface PortfolioManagerProps {
   items: PortfolioItem[];
-  onAdd: (item: Partial<PortfolioItem>) => void;
-  onUpdate?: (item: PortfolioItem) => void;
+  onAdd: (item: Partial<PortfolioItem>) => void | Promise<void>;
+  onUpdate?: (item: PortfolioItem) => void | Promise<void>;
   onRemove: (id: string) => void;
   isOwner: boolean;
 }
@@ -21,21 +21,28 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
   const [newItem, setNewItem] = useState<Partial<PortfolioItem>>({
     title: "",
     description: "",
+    image_url: "",
     project_url: "",
     technologies: [],
   });
   const [techInput, setTechInput] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleAdd = () => {
-    if (editingItem && onUpdate) {
-      onUpdate({ ...editingItem, ...newItem } as PortfolioItem);
-      setEditingItem(null);
-      setNewItem({ title: "", description: "", project_url: "", technologies: [] });
+  const handleAdd = async () => {
+    if (!newItem.title || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      if (editingItem && onUpdate) {
+        await onUpdate({ ...editingItem, ...newItem } as PortfolioItem);
+        setEditingItem(null);
+      } else {
+        await onAdd(newItem);
+      }
+      setNewItem({ title: "", description: "", image_url: "", project_url: "", technologies: [] });
       setIsAdding(false);
-    } else if (newItem.title) {
-      onAdd(newItem);
-      setNewItem({ title: "", description: "", project_url: "", technologies: [] });
-      setIsAdding(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -44,6 +51,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
     setNewItem({
       title: item.title,
       description: item.description,
+      image_url: item.image_url,
       project_url: item.project_url,
       technologies: item.technologies,
     });
@@ -121,6 +129,16 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
                 placeholder="https://..."
               />
             </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Image URL (Optional)</label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 text-slate-900"
+                value={newItem.image_url || ""}
+                onChange={(e) => setNewItem({ ...newItem, image_url: e.target.value })}
+                placeholder="https://images.unsplash.com/..."
+              />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Description</label>
@@ -165,7 +183,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
               onClick={() => {
                 setIsAdding(false);
                 setEditingItem(null);
-                setNewItem({ title: "", description: "", project_url: "", technologies: [] });
+                setNewItem({ title: "", description: "", image_url: "", project_url: "", technologies: [] });
               }}
               className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700"
             >
@@ -174,10 +192,10 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
             <button
               type="button"
               onClick={handleAdd}
-              disabled={!newItem.title}
+              disabled={!newItem.title || isSaving}
               className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all"
             >
-              {editingItem ? "I-update Proyekto" : "I-save Proyekto"}
+              {isSaving ? "Saving..." : editingItem ? "I-update Proyekto" : "I-save Proyekto"}
             </button>
           </div>
         </div>

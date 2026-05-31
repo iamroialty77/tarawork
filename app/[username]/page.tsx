@@ -56,7 +56,7 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
     if (isCritical || !profile) {
       console.log(`[Portfolio] Attempting basic fallback fetch for "${identifier}"...`);
       // Basic query without complex joins
-      const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username, aiInsights');
+      const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights');
       
       let refinedBasicQuery;
       // Try to match identifier in ID or username or name
@@ -223,7 +223,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     const query1 = supabaseAdmin
       .from('profiles')
       .select(`
-        id, name, role, avatar_url, bio, hourlyRate, username, aiInsights,
+        id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
         portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
       .filter('username', 'ilike', normalizedUsername)
@@ -250,7 +250,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       const query2 = supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate, username, aiInsights,
+          id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .eq('id', normalizedUsername)
@@ -269,7 +269,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     const { data: candidates, error: candidateError } = await supabaseAdmin
       .from('profiles')
       .select(`
-        id, name, role, avatar_url, bio, hourlyRate, username, aiInsights,
+        id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
         portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
       .or(`name.ilike.%${flexibleSearch}%,username.ilike.%${flexibleSearch}%`)
@@ -335,7 +335,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       const query4 = supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate, username, aiInsights,
+          id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .filter('id', 'ilike', `${normalizedUsername}%`)
@@ -363,6 +363,15 @@ function mapProfile(profile: any): FreelancerProfile {
   const servicesOffered = normalizeServicesOffered(
     portfolioData?.theme_settings?.servicesOffered || profile.aiInsights?.servicesOffered,
   );
+  const applicationProfile =
+    profile.aiInsights?.applicationProfile && typeof profile.aiInsights.applicationProfile === 'object'
+      ? profile.aiInsights.applicationProfile
+      : {};
+  const profileLinks = [
+    { id: 'portfolio', label: 'Portfolio', url: applicationProfile.portfolioUrl || '' },
+    { id: 'resume', label: 'Resume', url: applicationProfile.resumeUrl || '' },
+    { id: 'intro', label: 'Intro', url: applicationProfile.interviewUrl || '' },
+  ].filter((link) => typeof link.url === 'string' && link.url.trim().length > 0);
   const proExpiryRaw =
     typeof premiumProfile?.billing?.proExpiresAt === "string"
       ? premiumProfile.billing.proExpiresAt
@@ -400,9 +409,11 @@ function mapProfile(profile: any): FreelancerProfile {
     role: profile.role || 'Freelancer',
     avatar_url: profile.avatar_url,
     bio: aboutSections.whatISpecializeIn || profile.bio,
+    skills: Array.isArray(profile.skills) ? profile.skills.filter(Boolean) : [],
     aboutSections,
     servicesOffered,
     hourlyRate: profile.hourlyRate,
+    category: profile.category,
     portfolio: portfolioData ? {
       id: portfolioData.id,
       profile_id: profile.id,
@@ -412,7 +423,9 @@ function mapProfile(profile: any): FreelancerProfile {
       theme_settings: portfolioData.theme_settings,
       projects: portfolioData.portfolio_projects || [],
       skills: portfolioData.portfolio_skills || [],
-      links: portfolioData.portfolio_links || [],
+      links: Array.isArray(portfolioData.portfolio_links) && portfolioData.portfolio_links.length > 0
+        ? portfolioData.portfolio_links
+        : profileLinks,
     } : undefined,
     premiumProfile: normalizedPremiumProfile
   };
@@ -498,3 +511,4 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
 
   return <PortfolioPreview profile={profile} isPublic={true} />;
 }
+
