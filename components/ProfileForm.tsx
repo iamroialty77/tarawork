@@ -191,6 +191,11 @@ export default function ProfileForm({
     });
   };
 
+  const persistProfile = (nextProfile: UserProfile) => {
+    setProfile(nextProfile);
+    onUpdate(nextProfile);
+  };
+
   const addServiceEntry = () => {
     const serviceName = serviceInput.serviceName.trim();
     const typicalTurnaround = serviceInput.typicalTurnaround.trim();
@@ -202,7 +207,7 @@ export default function ProfileForm({
     const currentServices = normalizeServices(profile.servicesOffered);
     if (currentServices.length >= MAX_SERVICES) return;
 
-    setProfile({
+    persistProfile({
       ...profile,
       servicesOffered: [
         ...currentServices,
@@ -239,12 +244,12 @@ export default function ProfileForm({
         [field]: String(value),
       };
     });
-    setProfile({ ...profile, servicesOffered: nextServices });
+    persistProfile({ ...profile, servicesOffered: nextServices });
   };
 
   const removeServiceEntry = (index: number) => {
     const currentServices = normalizeServices(profile.servicesOffered);
-    setProfile({
+    persistProfile({
       ...profile,
       servicesOffered: currentServices.filter((_, idx) => idx !== index),
     });
