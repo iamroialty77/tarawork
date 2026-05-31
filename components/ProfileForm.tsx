@@ -1012,7 +1012,7 @@ export default function ProfileForm({
           </div>
         )}
 
-        {activeTab !== "portfolio" && (
+        {activeTab === "basics" && (
           <button
             type="submit"
             disabled={isSaving}

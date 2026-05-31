@@ -115,6 +115,7 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
 );
 
 export default function PortfolioPreview({ profile, isPublic = true }: PortfolioPreviewProps) {
+  const [activeSection, setActiveSection] = useState<'services' | 'projects'>('services');
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -138,6 +139,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const contactEmail = profile.contactEmail?.trim();
   const contactPhone = profile.contactPhone?.trim();
   const resumeUrl = profile.resumeUrl?.trim();
+  const profession = profile.category || (profile.role && profile.role.toLowerCase() !== 'freelancer' ? profile.role : 'Independent Professional');
 
   const handleHireMe = () => {
     if (!isPublic) return;
@@ -208,7 +210,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">{profile.name}</h1>
-                <p className="mt-1 font-medium text-slate-500">{profile.role || 'Freelancer'}</p>
+                <p className="mt-1 font-medium text-slate-500">{profession}</p>
                 <div className="mt-2 inline-flex items-center gap-2 text-sm text-slate-400">
                   <MapPin size={14} />
                   <span>Remote / Freelance</span>
@@ -316,53 +318,80 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             </div>
           </section>
 
-          <section className="space-y-6">
-            <div className="flex items-end justify-between">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900">Services Offered</h2>
-              <p className="text-sm font-medium text-slate-400">{servicesOffered.length} services</p>
-            </div>
+          <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveSection('services')}
+              className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+                activeSection === 'services'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              Services Offered
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSection('projects')}
+              className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+                activeSection === 'projects'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              Featured Projects
+            </button>
+          </div>
 
-            {servicesOffered.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {servicesOffered.map((service, index) => (
-                  <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Service</p>
-                    <h3 className="mt-2 text-lg font-bold text-slate-900">{service.serviceName}</h3>
-                    <p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Starting Price</p>
-                    <p className="mt-1 text-lg font-black text-slate-900">
-                      {formatServicePrice(service.currency, Number(service.startingPrice || 0))}
-                    </p>
-                    <p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Typical Turnaround</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-700">{service.typicalTurnaround || 'To be discussed'}</p>
-                  </div>
-                ))}
+          {activeSection === 'services' ? (
+            <section className="space-y-6">
+              <div className="flex items-end justify-between">
+                <h2 className="text-3xl font-bold tracking-tight text-slate-900">Services Offered</h2>
+                <p className="text-sm font-medium text-slate-400">{servicesOffered.length} services</p>
               </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-500">
-                No services listed yet.
-              </div>
-            )}
-          </section>
 
-          <section className="space-y-6">
-            <div className="flex items-end justify-between">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900">Featured Projects</h2>
-              <p className="text-sm font-medium text-slate-400">{projects.length} projects</p>
-            </div>
+              {servicesOffered.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {servicesOffered.map((service, index) => (
+                    <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Service</p>
+                      <h3 className="mt-2 text-lg font-bold text-slate-900">{service.serviceName}</h3>
+                      <p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Starting Price</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">
+                        {formatServicePrice(service.currency, Number(service.startingPrice || 0))}
+                      </p>
+                      <p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Typical Turnaround</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">{service.typicalTurnaround || 'To be discussed'}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-500">
+                  No services listed yet.
+                </div>
+              )}
+            </section>
+          ) : (
+            <section className="space-y-6">
+              <div className="flex items-end justify-between">
+                <h2 className="text-3xl font-bold tracking-tight text-slate-900">Featured Projects</h2>
+                <p className="text-sm font-medium text-slate-400">{projects.length} projects</p>
+              </div>
 
-            {projects.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2">
-                {projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-20 text-slate-500">
-                <Briefcase size={40} strokeWidth={1} className="mb-4" />
-                <p>No projects showcased yet.</p>
-              </div>
-            )}
-          </section>
+              {projects.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {projects.map((project) => (
+                    <ProjectCard key={project.id} project={project} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-20 text-slate-500">
+                  <Briefcase size={40} strokeWidth={1} className="mb-4" />
+                  <p>No projects showcased yet.</p>
+                </div>
+              )}
+            </section>
+          )}
         </main>
       </div>
 
