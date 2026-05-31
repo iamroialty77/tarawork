@@ -8,8 +8,6 @@ import {
   Mail,
   MapPin,
   Briefcase,
-  Globe,
-  ArrowRight,
   X,
   Send,
   CheckCircle2,
@@ -42,20 +40,36 @@ const formatServicePrice = (currency: string, value: number) => {
   }
 };
 
+const isEmptyRate = (value?: string) => {
+  if (!value) return true;
+  const normalized = value.trim().toLowerCase();
+  const numericValue = Number(normalized.replace(/[^\d.]/g, ''));
+  return normalized === "0" || Number.isFinite(numericValue) && numericValue === 0;
+};
+
+const getDisplayRate = (profile: FreelancerProfile, services: ReturnType<typeof normalizeServicesForDisplay>) => {
+  if (!isEmptyRate(profile.hourlyRate)) return profile.hourlyRate;
+  const firstPricedService = services.find((service) => Number(service.startingPrice || 0) > 0);
+  if (firstPricedService) {
+    return `From ${formatServicePrice(firstPricedService.currency, Number(firstPricedService.startingPrice || 0))}`;
+  }
+  return 'Contact for rate';
+};
+
+const normalizeServicesForDisplay = (services: FreelancerProfile['servicesOffered']) => services || [];
+
 const ProjectCard = ({ project }: { project: PortfolioProject }) => (
   <div className="group rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm">
     <div className="relative mb-5 aspect-video overflow-hidden rounded-xl bg-slate-100">
-      {project.image_url ? (
-        <img
-          src={project.image_url}
-          alt={project.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-slate-300">
-          <Globe size={40} strokeWidth={1.25} />
-        </div>
-      )}
+      <img
+        src={project.image_url || '/tarawork-removebg-preview.png'}
+        alt={project.title}
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = '/tarawork-removebg-preview.png';
+        }}
+      />
     </div>
 
     <h3 className="text-lg font-bold tracking-tight text-slate-900">{project.title}</h3>
@@ -116,9 +130,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       : Array.isArray(profile.skills)
         ? profile.skills.filter(Boolean)
         : [];
-  const servicesOffered = profile.servicesOffered || [];
+  const servicesOffered = normalizeServicesForDisplay(profile.servicesOffered);
   const socialLinks = profile.portfolio?.links || [];
   const projects = profile.portfolio?.projects || [];
+  const displayRate = getDisplayRate(profile, servicesOffered);
 
   const handleHireMe = () => {
     if (!isPublic) return;
@@ -260,7 +275,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Hourly Rate</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">{profile.hourlyRate || 'Contact for rate'}</p>
+                <p className="mt-2 text-2xl font-black text-slate-900">{displayRate}</p>
               </div>
             </div>
           </section>
@@ -387,3 +402,4 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
     </div>
   );
 }
+

@@ -992,24 +992,26 @@ export default function ProfileForm({
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isSaving}
-          className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-            isSaving 
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
-              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 active:scale-95"
-          }`}
-        >
-          {isSaving ? (
-            <>
-              <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
-              Saving...
-            </>
-          ) : (
-            "Save Profile Changes"
-          )}
-        </button>
+        {activeTab !== "portfolio" && (
+          <button
+            type="submit"
+            disabled={isSaving}
+            className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+              isSaving 
+                ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 active:scale-95"
+            }`}
+          >
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
+                Saving...
+              </>
+            ) : (
+              "Save Profile Changes"
+            )}
+          </button>
+        )}
       </form>
 
       <AIAgent 
