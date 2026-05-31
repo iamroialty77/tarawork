@@ -42,10 +42,12 @@ const smartMatchErrorMessage = (errorCode?: string, fallbackError?: string) => {
 };
 
 export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: JobFeedProps) {
+  const JOBS_PER_PAGE = 9;
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
   const [selectedJobForAI, setSelectedJobForAI] = useState<Job | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -212,6 +214,22 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
     });
   }, [baseFilteredJobs, useSmartMatching, smartMatches, profile.wellness]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / JOBS_PER_PAGE));
+  const paginatedJobs = useMemo(() => {
+    const startIndex = (currentPage - 1) * JOBS_PER_PAGE;
+    return filteredJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
+  }, [currentPage, filteredJobs]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, useSmartMatching]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
@@ -319,9 +337,9 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
         </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {filteredJobs.length > 0 ? (
-          filteredJobs.map((job, index) => {
+          paginatedJobs.map((job, index) => {
             const smartMatch = smartMatches[job.id];
             const localMatchedSkills = job.skills.filter(s => profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
             const localMissingSkills = job.skills.filter(s => !profile.skills.some(us => us.toLowerCase() === s.toLowerCase()));
@@ -356,7 +374,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
               <JobCard 
                 key={job.id} 
                 job={job} 
-                index={index} 
+                index={(currentPage - 1) * JOBS_PER_PAGE + index} 
                 matchScore={matchScore} 
                 matchedSkills={matchedSkills}
                 missingSkills={missingSkills}
@@ -385,6 +403,46 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
           </div>
         )}
       </div>
+
+      {filteredJobs.length > JOBS_PER_PAGE && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-500">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, pageIndex) => pageIndex + 1).map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentPage(page)}
+                className={`h-10 min-w-10 rounded-xl px-3 text-sm font-semibold transition-all ${
+                  currentPage === page
+                    ? "bg-slate-900 text-white"
+                    : "border border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* AI Agent Modal */}
       <AIAgent 

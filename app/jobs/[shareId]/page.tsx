@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Briefcase, Clock, DollarSign, ExternalLink, MapPin } from "lucide-react";
+import { Briefcase, Clock, DollarSign, MapPin } from "lucide-react";
 import { extractJobIdFromShareToken } from "../../../lib/jobShare";
 import { supabaseAdmin } from "../../../lib/supabase_admin";
 import { formatRelativeTime } from "../../../lib/utils";
 import { Job } from "../../../types";
+import PublicJobApplyButton from "../../../components/PublicJobApplyButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -59,7 +59,7 @@ export default async function PublicJobPage({
     notFound();
   }
 
-  const applyUrl = `/?apply=${encodeURIComponent(job.id)}`;
+  const nextPath = `/jobs/${shareId}`;
 
   return (
     <main className="min-h-screen bg-slate-50 py-10 px-4">
@@ -134,21 +134,7 @@ export default async function PublicJobPage({
               <p className="text-xs font-semibold text-slate-500">
                 Posted {formatRelativeTime(job.createdAt)} by Anonymous Hirer
               </p>
-              <div className="flex gap-3">
-                <Link
-                  href="/"
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
-                >
-                  Explore TaraWork
-                </Link>
-                <Link
-                  href={applyUrl}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-black transition-colors"
-                >
-                  Apply now
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </Link>
-              </div>
+              <PublicJobApplyButton job={job} nextPath={nextPath} />
             </footer>
           </div>
         </div>

@@ -314,12 +314,13 @@ export default function JobCard({
             Posted {formatRelativeTime(job.createdAt)}
           </span>
           <div className="flex flex-wrap gap-2 justify-end">
-            <button 
-              onClick={() => alert(`Details for "${job.title}" by Anonymous Hirer:\n\n${job.description}`)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer uppercase tracking-wider"
+            <Link
+              href={sharePath}
+              target="_blank"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors uppercase tracking-wider"
             >
               Details
-            </button>
+            </Link>
             <button 
               onClick={async () => {
                 if (isApplied || isApplyingLocal) return;

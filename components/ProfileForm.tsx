@@ -17,6 +17,7 @@ import {
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
 import { getPremiumProfileDomain } from "../lib/profileUrl";
+import TooltipAction from "@/components/ui/TooltipAction";
 
 interface ProfileFormProps {
   initialProfile: UserProfile;
@@ -553,6 +554,7 @@ export default function ProfileForm({
     "mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500";
   const servicesOffered = normalizeServices(profile.servicesOffered);
   const applicationProfile = profile.aiInsights?.applicationProfile || {};
+  const sectionCardClassName = "rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6";
 
   const handleApplicationProfileChange = (
     field: "resumeUrl" | "portfolioUrl" | "interviewUrl" | "coverLetter",
@@ -607,9 +609,9 @@ export default function ProfileForm({
       <form onSubmit={handleSubmit} className="mt-5 space-y-5">
         {activeTab === "basics" && (
           <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-            <div className="mb-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
               <h3 className="text-lg font-bold text-slate-950">Basic information</h3>
-              <p className="text-sm text-slate-500">Core details na unang makikita sa profile mo.</p>
+              <TooltipAction label="Basic information help" tooltip="These are the main details shown first on your profile." />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -638,9 +640,9 @@ export default function ProfileForm({
                     onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
                   />
                 </div>
-                <p className="mt-2 text-sm text-slate-500">
-                  Your public profile link: <span className="font-semibold text-slate-700">/{profile.username || "your-name"}</span>
-                </p>
+                <div className="mt-2 text-sm font-medium text-slate-600">
+                  /{profile.username || "your-name"}
+                </div>
               </div>
 
               <div>
@@ -680,9 +682,6 @@ export default function ProfileForm({
                   value={profile.bio || ""}
                   onChange={(e) => handleBioChange(e.target.value)}
                 />
-                <p className="mt-2 text-sm text-slate-500">
-                  This is the main summary shown across your freelancer profile.
-                </p>
               </div>
             </div>
           </div>
@@ -690,14 +689,17 @@ export default function ProfileForm({
 
         {activeTab === "professional" && (
           <div className="space-y-5">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-              <div className="mb-5">
+            <div className={sectionCardClassName}>
+              <div className="mb-5 flex items-center justify-between gap-3">
                 <h3 className="text-lg font-bold text-slate-950">{isFreelancer ? "Professional details" : "Company details"}</h3>
-                <p className="text-sm text-slate-500">
-                  {isFreelancer
-                    ? "Skills, category, at work identity na mas important sa hiring."
-                    : "Impormasyon ng business para mas credible at presentable tingnan."}
-                </p>
+                <TooltipAction
+                  label="Professional details help"
+                  tooltip={
+                    isFreelancer
+                      ? "Use this area for hiring-facing details such as category, rate, skills, experience, and saved application extras."
+                      : "Use this area for core company information and business presentation details."
+                  }
+                />
               </div>
 
               {profile.role === "employer" ? (
@@ -764,9 +766,9 @@ export default function ProfileForm({
                       </div>
                       <div>
                         <h4 className="text-base font-bold text-slate-950">AI Resume Parser</h4>
-                        <p className="text-sm text-slate-600">Upload PDF para auto-fill ang profile at skills mo.</p>
                       </div>
                     </div>
+                    <TooltipAction label="Resume parser help" tooltip="Upload a PDF resume to extract profile details, skills, experience, and portfolio drafts." />
                     <button
                       type="button"
                       onClick={() => resumeInputRef.current?.click()}
@@ -785,12 +787,10 @@ export default function ProfileForm({
                   />
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-                  <div className="mb-4">
+                <div className={sectionCardClassName}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
                     <h4 className="text-base font-bold text-slate-950">Application Extras</h4>
-                    <p className="text-sm text-slate-500">
-                      Optional links you can keep on file. These do not block job applications.
-                    </p>
+                    <TooltipAction label="Application extras help" tooltip="These optional links can be attached to applications when available. They do not block applying." />
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     <div>
@@ -836,10 +836,10 @@ export default function ProfileForm({
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-                  <div className="mb-4">
+                <div className={sectionCardClassName}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
                     <h4 className="text-base font-bold text-slate-950">Skills</h4>
-                    <p className="text-sm text-slate-500">Panatilihing concise at relevant ang listahan.</p>
+                    <TooltipAction label="Skills help" tooltip="Add the skills you want employers to see and that jobs should match against." />
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <input
@@ -882,11 +882,11 @@ export default function ProfileForm({
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                <div className={sectionCardClassName}>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div>
+                    <div className="flex items-center gap-2">
                       <h4 className="text-base font-bold text-slate-950">Services Offered</h4>
-                      <p className="text-sm text-slate-500">Add up to 6 services with starting price and turnaround.</p>
+                      <TooltipAction label="Services help" tooltip="Add up to 6 service packages with a starting price and typical turnaround." />
                     </div>
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                       {servicesOffered.length}/{MAX_SERVICES}
@@ -947,7 +947,9 @@ export default function ProfileForm({
 
                   <div className="mt-4 space-y-3">
                     {servicesOffered.length === 0 && (
-                      <p className="text-sm text-slate-500">No services added yet.</p>
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-5 text-sm font-medium text-slate-500">
+                        No services added.
+                      </div>
                     )}
                     {servicesOffered.map((service, index) => (
                       <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -1009,10 +1011,10 @@ export default function ProfileForm({
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-                  <div className="mb-4">
+                <div className={sectionCardClassName}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
                     <h4 className="text-base font-bold text-slate-950">Experience</h4>
-                    <p className="text-sm text-slate-500">Ito ang ginagamit para mas professional at complete ang profile summary mo.</p>
+                    <TooltipAction label="Experience help" tooltip="Add the strongest roles, outcomes, tools, and scope you want clients to review." />
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <input
@@ -1055,7 +1057,9 @@ export default function ProfileForm({
                   </div>
                   <div className="mt-4 space-y-2">
                     {(profile.experience || []).length === 0 && (
-                      <p className="text-sm text-slate-500">No experience records yet.</p>
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-5 text-sm font-medium text-slate-500">
+                        No experience added.
+                      </div>
                     )}
                     {(profile.experience || []).map((item) => (
                       <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -1217,9 +1221,9 @@ export default function ProfileForm({
           <div className="space-y-5">
             <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
+                <div className="flex items-center gap-3">
                   <h3 className="text-lg font-bold text-slate-950">Portfolio</h3>
-                  <p className="text-sm text-slate-500">Showcase work samples, case studies, and your public profile link in one place.</p>
+                  <TooltipAction label="Portfolio help" tooltip="Keep your public profile link and project samples in one place for employers to review." />
                 </div>
                 <div className="rounded-2xl border border-indigo-100 bg-white px-4 py-3">
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Public Profile</p>
@@ -1229,10 +1233,10 @@ export default function ProfileForm({
                 </div>
               </div>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-              <div className="mb-5">
+            <div className={sectionCardClassName}>
+              <div className="mb-5 flex items-center justify-between gap-3">
                 <h3 className="text-lg font-bold text-slate-950">Portfolio Projects</h3>
-                <p className="text-sm text-slate-500">Keep your best work easy to review and easy to update.</p>
+                <TooltipAction label="Portfolio projects help" tooltip="Add, edit, and organize project samples that support your applications and public profile." />
               </div>
               <PortfolioManager
                 items={profile.portfolio || []}

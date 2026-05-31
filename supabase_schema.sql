@@ -434,6 +434,45 @@ DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notif
 CREATE POLICY "Users can update their own notifications" ON public.notifications
     FOR UPDATE USING (auth.uid() = user_id);
 
+-- 11b. Create PRODUCT_FEEDBACK table
+CREATE TABLE IF NOT EXISTS public.product_feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    feedback_type TEXT NOT NULL, -- feature, bug, rating
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'new', -- new, reviewed, planned, resolved, closed
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.product_feedback ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can insert their own product feedback." ON public.product_feedback;
+CREATE POLICY "Users can insert their own product feedback." ON public.product_feedback
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can view their own product feedback." ON public.product_feedback;
+CREATE POLICY "Users can view their own product feedback." ON public.product_feedback
+    FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can view all product feedback." ON public.product_feedback;
+CREATE POLICY "Admins can view all product feedback." ON public.product_feedback
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
+DROP POLICY IF EXISTS "Admins can update all product feedback." ON public.product_feedback;
+CREATE POLICY "Admins can update all product feedback." ON public.product_feedback
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
 -- 12. Create FOLLOWS table
 CREATE TABLE IF NOT EXISTS public.follows (
     follower_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,

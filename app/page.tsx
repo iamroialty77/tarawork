@@ -4,10 +4,6 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { CurrencyCode, UserProfile, Job, PortfolioItem, Squad, Project, ProfileAboutSections, ServiceOffering } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
-import SkillAssessment from "../components/SkillAssessment";
-import Workspace from "../components/Workspace";
-import TeamManager from "../components/TeamManager";
-import CareerPath from "../components/CareerPath";
 import JobPostingForm from "../components/JobPostingForm";
 import AdminDashboard from "../components/AdminDashboard";
 import { supabase } from "../lib/supabase";
@@ -20,6 +16,9 @@ import {
   LayoutDashboard, 
   Bell, 
   Settings,
+  Lightbulb,
+  Bug,
+  Star,
   Search as SearchIcon,
   TrendingUp,
   Award,
@@ -139,6 +138,23 @@ const normalizeUserRole = (
   return fallback;
 };
 
+const buildSuggestedCoverLetter = (
+  job: Job | null,
+  freelancer: UserProfile,
+  savedDefault: string,
+) => {
+  if (savedDefault.trim().length > 0) return savedDefault.trim();
+  if (!job) return "";
+
+  const firstName = (freelancer.name || "there").split(" ")[0];
+  const topSkills = (freelancer.skills || []).filter(Boolean).slice(0, 3).join(", ");
+  const skillsLine = topSkills
+    ? `My relevant skills include ${topSkills}. `
+    : "";
+
+  return `Hi, I’m ${firstName}. I’m applying for the ${job.title} role. ${skillsLine}I’d be glad to discuss how I can help with this project.`;
+};
+
 type AppNotification = {
   id: string;
   user_id: string;
@@ -196,6 +212,10 @@ export default function Home() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedJobApplicants, setSelectedJobApplicants] = useState<any[]>([]);
   const [selectedJobTitle, setSelectedJobTitle] = useState("");
+  const [applicationDraftJobId, setApplicationDraftJobId] = useState<string | null>(null);
+  const [applicationDraftCoverLetter, setApplicationDraftCoverLetter] = useState("");
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -250,6 +270,10 @@ export default function Home() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<"feature" | "bug" | "rating">("feature");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const effectiveView = profile.role === "admin" ? adminViewMode : view;
   const isEmployerView = effectiveView === "client" || profile.role === "employer";
   const savedTalentsStorageKey = user?.id ? `tarawork:saved-talents:${user.id}` : "";
@@ -265,6 +289,114 @@ export default function Home() {
       ),
     [freelancers, savedTalentIds],
   );
+  const selectedApplicationJob = useMemo(
+    () => jobs.find((job) => job.id === applicationDraftJobId) || null,
+    [applicationDraftJobId, jobs],
+  );
+  const feedbackMeta = useMemo(() => {
+    const map = {
+      feature: {
+        title: "Suggest Feature",
+        subject: "TaraWork Feature Suggestion",
+      },
+      bug: {
+        title: "Report Bug",
+        subject: "TaraWork Bug Report",
+      },
+      rating: {
+        title: "Rate TaraWork",
+        subject: "TaraWork Product Feedback",
+      },
+    } as const;
+    return map[feedbackType];
+  }, [feedbackType]);
+  const profileCompletion = useMemo(() => {
+    const checkpoints = [
+      profile.bio?.trim(),
+      profile.skills?.length > 0,
+      profile.username?.trim(),
+      profile.portfolio?.length > 0,
+      profile.hourlyRate?.trim(),
+    ];
+    const completed = checkpoints.filter(Boolean).length;
+    return Math.round((completed / checkpoints.length) * 100);
+  }, [profile.bio, profile.skills, profile.username, profile.portfolio, profile.hourlyRate]);
+  const categoryJobsCount = useMemo(
+    () => jobs.filter((job) => job.category === profile.category).length,
+    [jobs, profile.category],
+  );
+  const openFeedbackModal = (type: "feature" | "bug" | "rating") => {
+    setFeedbackType(type);
+    setFeedbackMessage("");
+    setShowFeedbackModal(true);
+  };
+  const handleFeedbackEmail = () => {
+    const body = [
+      `Type: ${feedbackMeta.title}`,
+      `User: ${profile.name || "User"}`,
+      `Role: ${profile.role || "freelancer"}`,
+      "",
+      feedbackMessage.trim() || "Add your feedback here.",
+    ].join("\n");
+    window.location.href = `mailto:?subject=${encodeURIComponent(feedbackMeta.subject)}&body=${encodeURIComponent(body)}`;
+  };
+  const submitFeedback = async () => {
+    const message = feedbackMessage.trim();
+
+    if (!user) {
+      setToastMsg("Please sign in to send product feedback.");
+      setShowToast(true);
+      return;
+    }
+
+    if (!message) {
+      setToastMsg("Please enter your feedback before submitting.");
+      setShowToast(true);
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+
+    try {
+      const payload = {
+        user_id: user.id,
+        feedback_type: feedbackType,
+        message,
+        status: "new",
+        metadata: {
+          name: profile.name || null,
+          role: profile.role || "freelancer",
+          username: profile.username || null,
+          email: user.email || null,
+          source: "profile_feedback_modal",
+        },
+      };
+
+      const { error } = await supabase.from("product_feedback").insert([payload]);
+
+      if (error) {
+        if (error.code === "PGRST205" || error.message?.includes("relation \"product_feedback\" does not exist")) {
+          setMissingTables((prev) => [...new Set([...prev, "product_feedback"])]);
+          setToastMsg("Feedback table is not set up yet. Run the latest Supabase schema, then try again.");
+          setShowToast(true);
+          return;
+        }
+        throw error;
+      }
+
+      setShowFeedbackModal(false);
+      setFeedbackMessage("");
+      setToastMsg("Feedback submitted successfully. Thank you.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to submit feedback.";
+      setToastMsg(message);
+      setShowToast(true);
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   const handleViewSwitch = (nextView: "freelancer" | "client" | "admin") => {
     setView(nextView);
@@ -416,7 +548,7 @@ export default function Home() {
   const [isVetting, setIsVetting] = useState(false);
   const [vettingData, setVettingData] = useState<any>(null);
 
-  const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "workspace" | "career" | "profile">("overview");
+  const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "profile">("overview");
   const [clientTab, setClientTab] = useState<"overview" | "jobs" | "talents" | "profile">("overview");
 
   useEffect(() => {
@@ -1304,6 +1436,23 @@ export default function Home() {
     };
   };
 
+  const openApplicationModal = (jobId: string) => {
+    const applicationProfile = getApplicationProfileData(profile);
+    const nextJob = jobs.find((job) => job.id === jobId) || null;
+    setApplicationDraftJobId(jobId);
+    setApplicationDraftCoverLetter(
+      buildSuggestedCoverLetter(nextJob, profile, applicationProfile.coverLetter || ""),
+    );
+    setShowApplicationModal(true);
+  };
+
+  const closeApplicationModal = () => {
+    if (isSubmittingApplication) return;
+    setShowApplicationModal(false);
+    setApplicationDraftJobId(null);
+    setApplicationDraftCoverLetter("");
+  };
+
   const handleApply = async (jobId: string) => {
     if (!user) {
       setToastMsg("Please login to apply for jobs.");
@@ -1314,7 +1463,7 @@ export default function Home() {
       return;
     }
 
-    await submitApplication(jobId);
+    openApplicationModal(jobId);
   };
 
   const startUpgradeCheckout = async (productType: "pro" | "credit_topup") => {
@@ -1400,7 +1549,7 @@ export default function Home() {
       setToastMsg("Only freelancer accounts can apply for jobs.");
       setShowToast(true);
     } else {
-      void submitApplication(selectedJob.id);
+      openApplicationModal(selectedJob.id);
     }
 
     const url = new URL(window.location.href);
@@ -1409,13 +1558,14 @@ export default function Home() {
     setPendingApplyJobId(null);
   }, [pendingApplyJobId, jobs, profile.role]);
 
-  const submitApplication = async (jobId: string) => {
+  const submitApplication = async (jobId: string, coverLetterOverride?: string) => {
     if (!user) return;
 
     const applicationProfile = getApplicationProfileData(profile);
+    const resolvedCoverLetter = (coverLetterOverride ?? applicationProfile.coverLetter).trim();
 
     try {
-      setIsSaving(true);
+      setIsSubmittingApplication(true);
       const insertData: any = { 
         job_id: jobId,
         freelancer_id: user.id,
@@ -1426,7 +1576,7 @@ export default function Home() {
       if (!missingColumns.includes('seeker_id')) insertData.seeker_id = user.id;
       if (applicationProfile.resumeUrl && !missingColumns.includes('resume_url')) insertData.resume_url = applicationProfile.resumeUrl;
       if (applicationProfile.portfolioUrl && !missingColumns.includes('portfolio_url')) insertData.portfolio_url = applicationProfile.portfolioUrl;
-      if (applicationProfile.coverLetter && !missingColumns.includes('cover_letter')) insertData.cover_letter = applicationProfile.coverLetter;
+      if (resolvedCoverLetter && !missingColumns.includes('cover_letter')) insertData.cover_letter = resolvedCoverLetter;
 
       // Only add interview_url if it's provided and not known to be missing
       if (applicationProfile.interviewUrl && !missingColumns.includes('interview_url')) {
@@ -1439,6 +1589,7 @@ export default function Home() {
 
       if (error) {
         if (error.code === '23505') {
+          setAppliedJobs(prev => ({ ...prev, [jobId]: 'pending' }));
           setToastMsg("You have already applied for this job!");
         } else if (error.code === 'PGRST204' || error.message?.includes('column')) {
           console.warn("Schema mismatch detected, attempting fallback insert for applications:", error.message);
@@ -1460,8 +1611,8 @@ export default function Home() {
           if (!error.message?.includes('seeker_id')) minimalData.seeker_id = user.id;
 
           // Only add cover_letter if provided and not causing issues
-          if (applicationProfile.coverLetter && !error.message?.includes('cover_letter')) {
-            minimalData.cover_letter = applicationProfile.coverLetter;
+          if (resolvedCoverLetter && !error.message?.includes('cover_letter')) {
+            minimalData.cover_letter = resolvedCoverLetter;
           }
 
           const { error: retryError } = await supabase
@@ -1471,20 +1622,26 @@ export default function Home() {
           if (retryError) throw retryError;
           
           setAppliedJobs(prev => ({ ...prev, [jobId]: 'pending' }));
-          setToastMsg("Application submitted! (Note: Some advanced fields were skipped because your database schema is not up-to-date)");
+          setToastMsg("Application submitted. Some optional fields were skipped because your database schema is out of date.");
         } else {
           throw error;
         }
       } else {
         setAppliedJobs(prev => ({ ...prev, [jobId]: 'pending' }));
-        setToastMsg("Application submitted! employer will review your credentials.");
+        setToastMsg("Application submitted successfully. The hirer can now review your application.");
       }
+      setShowApplicationModal(false);
+      setApplicationDraftJobId(null);
+      setApplicationDraftCoverLetter("");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
       console.error("Error applying for job:", err);
+      setToastMsg(`Error: ${err.message || "Failed to submit application"}`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
     } finally {
-      setIsSaving(false);
+      setIsSubmittingApplication(false);
     }
   };
 
@@ -2498,8 +2655,6 @@ export default function Home() {
               {[
                 { id: "overview", label: "Dashboard", icon: LayoutDashboard },
                 { id: "jobs", label: "Find Jobs", icon: Briefcase },
-                { id: "workspace", label: "Workspace", icon: Zap },
-                { id: "career", label: "Growth", icon: Award },
                 { id: "profile", label: "My Profile", icon: User },
               ].map((tab) => (
                 <button
@@ -2526,394 +2681,267 @@ export default function Home() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-8"
                 >
-                  {/* Hero / Welcome Section */}
-            <div className="relative overflow-hidden rounded-2xl bg-slate-900 p-8 md:p-12 text-white shadow-xl">
-              <div className="relative z-10 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-slate-300 text-[10px] font-bold mb-6 uppercase tracking-wider">
-                  <Award className="w-3.5 h-3.5" />
-                  Top Rated Freelancer
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 leading-tight tracking-tight">
-                  Welcome back, <span className="text-indigo-400">{(profile.name || "User").split(' ')[0]}!</span>
-                </h2>
-                <p className="text-slate-300 text-lg mb-8 opacity-90 font-medium">
-                  {profile.category === "Developer" && (
-                    <>We found <span className="font-bold text-white">{jobs.filter(j => j.category === "Developer").length} development opportunities</span> for you today.</>
-                  )}
-                  {profile.category === "Virtual Assistant" && (
-                    <>There are <span className="font-bold text-white">{jobs.filter(j => j.category === "Virtual Assistant").length} assistant roles</span> available right now.</>
-                  )}
-                  {profile.category === "Designer" && (
-                    <>Explore <span className="font-bold text-white">{jobs.filter(j => j.category === "Designer").length} creative projects</span> in your category.</>
-                  )}
-                  {profile.category === "Writer" && (
-                    <>We found <span className="font-bold text-white">{jobs.filter(j => j.category === "Writer").length} writing gigs</span> tailored to your skills.</>
-                  )}
-                  {profile.category === "Marketing Specialist" && (
-                    <>Discover <span className="font-bold text-white">{jobs.filter(j => j.category === "Marketing Specialist").length} marketing campaigns</span> you can lead.</>
-                  )}
-                  {!["Developer","Virtual Assistant","Designer","Writer","Marketing Specialist"].includes(profile.category as any) && (
-                    <>We found <span className="font-bold text-white">{jobs.filter(j => j.category === profile.category).length} opportunities</span> in your category.</>
-                  )}
-                </p>
-                <div className="flex flex-wrap gap-4">
-                  <button 
-                    onClick={() => jobsRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 cursor-pointer active:scale-95"
-                  >
-                    Browse Jobs
-                  </button>
-                  <button 
-                    onClick={() => profileRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                    className="bg-white/10 text-white border border-white/10 px-6 py-3 rounded-lg font-bold hover:bg-white/20 transition-all cursor-pointer"
-                  >
-                    Update Profile
-                  </button>
-                </div>
-              </div>
-              
-              {/* Decorative elements - Subtler */}
-              <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px]"></div>
-              <div className="hidden lg:block absolute right-12 bottom-12 w-48 h-48 opacity-5 pointer-events-none">
-                <Zap className="w-full h-full text-white" />
-              </div>
-            </div>
-
-            {/* --- NEW PROFESSIONAL PORTFOLIO LINK CARD --- */}
-            {profile.role === 'freelancer' && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white p-5 rounded-2xl border-2 border-indigo-50/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-5 relative overflow-hidden group"
-              >
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-all duration-500"></div>
-                <div className="flex items-center gap-4 relative">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                    <Layout className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-slate-900 tracking-tight leading-none mb-1">Your Professional Portfolio is Live! 🚀</h4>
-                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest opacity-70">Share this link for frictionless hiring</p>
-                  </div>
-                </div>
-                <div className="relative flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-                  <div className="min-w-0 flex-1 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 font-mono text-xs text-indigo-700 font-black truncate shadow-inner sm:max-w-[24rem]">
-                    {buildPublicProfileUrl({
-                      tier: profile.premiumProfile?.tier || "free",
-                      username: profile.username,
-                      id: profile.id,
-                      customDomain: profile.premiumProfile?.customDomain,
-                    })}
-                  </div>
-                  <button 
-                    onClick={() => {
-                      const url = buildPublicProfileUrl({
-                        tier: profile.premiumProfile?.tier || "free",
-                        username: profile.username,
-                        id: profile.id,
-                        customDomain: profile.premiumProfile?.customDomain,
-                      });
-                      navigator.clipboard.writeText(url);
-                      setToastMsg("Professional portfolio URL copied! 📋");
-                      setShowToast(true);
-                      setTimeout(() => setShowToast(false), 2000);
-                    }}
-                    className="flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-md shadow-indigo-100 transition-all hover:bg-indigo-700 active:scale-95 sm:w-auto"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    Copy Professional URL
-                  </button>
-                  <Link 
-                    href={buildPublicProfileUrl({
-                      tier: profile.premiumProfile?.tier || "free",
-                      username: profile.username,
-                      id: profile.id,
-                      customDomain: profile.premiumProfile?.customDomain,
-                    })}
-                    target="_blank"
-                    className="flex items-center justify-center p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
-                  >
-                    <ExternalLink className="w-5 h-5" />
-                  </Link>
-                </div>
-              </motion.div>
-            )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="md:col-span-2 lg:col-span-3 space-y-6">
-                      <div className="bg-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
-                        <div className="relative z-10">
-                          <h3 className="text-2xl font-black mb-2 tracking-tight">Focus on your workspace</h3>
-                          <p className="text-indigo-100 font-medium mb-6 opacity-90 max-w-md">
-                            Keep your ongoing projects organized and delivered on schedule.
-                          </p>
+                  <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
+                    <div className="space-y-6">
+                      <div className="rounded-2xl bg-slate-900 p-6 text-white shadow-xl">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="max-w-2xl">
+                            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-indigo-300">
+                              Freelancer Dashboard
+                            </p>
+                            <h2 className="mt-2 text-2xl font-black tracking-tight md:text-3xl">
+                              Welcome back, {(profile.name || "User").split(" ")[0]}.
+                            </h2>
+                            <p className="mt-3 text-sm text-slate-300">
+                              {categoryJobsCount} open jobs in {profile.category || "your category"}.
+                            </p>
+                          </div>
                           <div className="flex flex-wrap gap-3">
-                            <button 
-                              onClick={() => setFreelancerTab("workspace")}
-                              className="bg-white text-indigo-600 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-all flex items-center gap-2"
+                            <button
+                              onClick={() => setFreelancerTab("jobs")}
+                              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-indigo-500"
                             >
-                              Go to Workspace
-                              <ArrowUpRight className="w-4 h-4" />
+                              Find Jobs
+                            </button>
+                            <button
+                              onClick={() => setFreelancerTab("profile")}
+                              className="rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-white/10"
+                            >
+                              Edit Profile
                             </button>
                           </div>
                         </div>
-                        <Zap className="absolute -right-8 -bottom-8 w-48 h-48 text-white/10 rotate-12" />
                       </div>
 
-                      {/* --- PORTFOLIO INQUIRIES SECTION --- */}
-                      <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
-                          <div className="space-y-1">
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                              <Mail className="w-5 h-5 text-indigo-600" />
-                              Portfolio Inquiries
-                            </h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Direct messages from your public portfolio</p>
-                          </div>
-                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                            {portfolioInquiries.length} Messages
-                          </span>
+                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Applied</p>
+                          <p className="mt-3 text-3xl font-black text-slate-900">{Object.keys(appliedJobs).length}</p>
                         </div>
-                        
-                        {portfolioInquiries.length === 0 ? (
-                          <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-slate-50 rounded-2xl">
-                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-                              <Mail className="w-8 h-8" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="font-bold text-slate-900">No inquiries yet</p>
-                              <p className="text-xs text-slate-500 max-w-[200px]">Share your professional portfolio URL to start receiving inquiries from employers.</p>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Invites</p>
+                          <p className="mt-3 text-3xl font-black text-slate-900">{invitationNotifications.length}</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Inquiries</p>
+                          <p className="mt-3 text-3xl font-black text-slate-900">{portfolioInquiries.length}</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Profile</p>
+                          <p className="mt-3 text-3xl font-black text-slate-900">{profileCompletion}%</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="min-w-0">
+                            <h3 className="text-lg font-black text-slate-900">Professional Profile URL</h3>
+                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm text-indigo-700">
+                              {buildPublicProfileUrl({
+                                tier: profile.premiumProfile?.tier || "free",
+                                username: profile.username,
+                                id: profile.id,
+                                customDomain: profile.premiumProfile?.customDomain,
+                              })}
                             </div>
                           </div>
-                        ) : (
-                          <div className="space-y-4">
-                            {portfolioInquiries.slice(0, 5).map((inquiry) => {
-                              const senderName =
-                                typeof inquiry?.sender_name === "string" && inquiry.sender_name.trim().length > 0
-                                  ? inquiry.sender_name
-                                  : "Unknown Sender";
-                              const senderEmail =
-                                typeof inquiry?.sender_email === "string" ? inquiry.sender_email : "";
-                              const senderInitial = senderName.slice(0, 1).toUpperCase() || "U";
-                              const inquiryDate = inquiry?.created_at ? new Date(inquiry.created_at) : null;
-                              const inquiryDateLabel =
-                                inquiryDate && !Number.isNaN(inquiryDate.getTime())
-                                  ? inquiryDate.toLocaleDateString()
-                                  : "Unknown date";
+                          <div className="flex flex-wrap gap-3">
+                            <button
+                              onClick={() => {
+                                const url = buildPublicProfileUrl({
+                                  tier: profile.premiumProfile?.tier || "free",
+                                  username: profile.username,
+                                  id: profile.id,
+                                  customDomain: profile.premiumProfile?.customDomain,
+                                });
+                                navigator.clipboard.writeText(url);
+                                setToastMsg("Professional profile URL copied.");
+                                setShowToast(true);
+                                setTimeout(() => setShowToast(false), 2000);
+                              }}
+                              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-black"
+                            >
+                              <Copy className="h-4 w-4" />
+                              Copy URL
+                            </button>
+                            <Link
+                              href={buildPublicProfileUrl({
+                                tier: profile.premiumProfile?.tier || "free",
+                                username: profile.username,
+                                id: profile.id,
+                                customDomain: profile.premiumProfile?.customDomain,
+                              })}
+                              target="_blank"
+                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              Open Profile
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
 
-                              return (
-                              <div key={inquiry.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-indigo-100 hover:shadow-xl transition-all group">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm">
-                                      {senderInitial}
+                      <div className="grid gap-6 xl:grid-cols-2">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <div className="mb-4 flex items-center justify-between gap-3">
+                            <h3 className="text-lg font-black text-slate-900">Invitation Inbox</h3>
+                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600">
+                              {invitationNotifications.length}
+                            </span>
+                          </div>
+                          {invitationNotifications.length === 0 ? (
+                            <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                              No invitations yet.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {invitationNotifications.slice(0, 3).map((notification) => {
+                                const inviteMeta = parseInviteNotificationMeta(notification);
+                                return (
+                                  <div key={notification.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div>
+                                        <p className="text-sm font-black text-slate-900">{inviteMeta.employerName}</p>
+                                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500">
+                                          <Building2 className="h-3.5 w-3.5" />
+                                          {inviteMeta.companyName}
+                                        </p>
+                                      </div>
+                                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                        {new Date(notification.created_at).toLocaleDateString()}
+                                      </span>
                                     </div>
-                                    <div>
-                                      <h4 className="font-bold text-slate-900 leading-none mb-1">{senderName}</h4>
-                                      <p className="text-[10px] font-medium text-slate-500">{senderEmail || "No email provided"}</p>
-                                    </div>
+                                    <p className="mt-3 line-clamp-2 text-sm text-slate-600">{notification.message}</p>
+                                    <Link
+                                      href={notification.link || "/messages"}
+                                      onClick={() => {
+                                        void markNotificationRead(notification.id);
+                                      }}
+                                      className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
+                                    >
+                                      Open Chat
+                                      <ChevronRight className="h-4 w-4" />
+                                    </Link>
                                   </div>
-                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                    {inquiryDateLabel}
-                                  </span>
-                                </div>
-                                <div className="bg-white p-4 rounded-xl border border-slate-100 text-sm text-slate-600 italic leading-relaxed relative">
-                                  <span className="absolute -top-2 -left-2 text-2xl text-indigo-200 font-serif leading-none">"</span>
-                                  {inquiry.message}
-                                  <span className="absolute -bottom-4 -right-2 text-2xl text-indigo-200 font-serif leading-none">"</span>
-                                </div>
-                                <div className="mt-4 flex justify-end gap-2">
-                                  <button 
-                                    onClick={async () => {
-                                      // Try to find if user exists by name/email approximation or just let them try mailto
-                                      // Professional approach: link them to messages if we can find a user
-                                      const { data: profileData } = await supabase
-                                        .from('profiles')
-                                        .select('id')
-                                        .ilike('name', `%${senderName}%`)
-                                        .limit(1)
-                                        .maybeSingle();
-
-                                      if (profileData) {
-                                        router.push(`/messages?with=${profileData.id}`);
-                                      } else {
-                                        window.location.href = `mailto:${senderEmail}?subject=Reply to your TaraWork inquiry`;
-                                      }
-                                    }}
-                                    className="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-sm"
-                                  >
-                                    Reply to Inquiry
-                                    <ArrowUpRight className="w-3 h-3" />
-                                  </button>
-                                  <a 
-                                    href={`mailto:${senderEmail}`}
-                                    className="px-4 py-2 bg-white text-slate-600 border border-slate-200 text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
-                                  >
-                                    Email Direct
-                                    <Mail className="w-3 h-3" />
-                                  </a>
-                                </div>
-                              </div>
-                            )})}
-                            {portfolioInquiries.length > 5 && (
-                              <button className="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">
-                                View all inquiries
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
-                          <div className="space-y-1">
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                              <UserPlus className="w-5 h-5 text-indigo-600" />
-                              Invitation Inbox
-                            </h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Official invites from employers</p>
-                          </div>
-                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                            {invitationNotifications.length} Invites
-                          </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
 
-                        {invitationNotifications.length === 0 ? (
-                          <div className="py-10 flex flex-col items-center justify-center text-center space-y-3 border-2 border-dashed border-slate-100 rounded-2xl">
-                            <div className="w-14 h-14 rounded-full bg-slate-50 text-slate-300 flex items-center justify-center">
-                              <UserPlus className="w-7 h-7" />
-                            </div>
-                            <p className="font-bold text-slate-900">No invitations yet</p>
-                            <p className="text-xs text-slate-500 max-w-sm">When an employer sends an invite from Find Talents, it will appear here and in your notification bell.</p>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <div className="mb-4 flex items-center justify-between gap-3">
+                            <h3 className="text-lg font-black text-slate-900">Portfolio Inquiries</h3>
+                            <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600">
+                              {portfolioInquiries.length}
+                            </span>
                           </div>
-                        ) : (
-                          <div className="space-y-4">
-                            {invitationNotifications.slice(0, 5).map((notification) => {
-                              const inviteMeta = parseInviteNotificationMeta(notification);
-                              return (
-                                <div key={notification.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5 hover:border-indigo-100 hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
-                                  <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{inviteMeta.employerName}</p>
-                                      <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-slate-600">
-                                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                                        {inviteMeta.companyName}
-                                      </p>
+                          {portfolioInquiries.length === 0 ? (
+                            <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                              No inquiries yet.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {portfolioInquiries.slice(0, 3).map((inquiry) => {
+                                const senderName =
+                                  typeof inquiry?.sender_name === "string" && inquiry.sender_name.trim().length > 0
+                                    ? inquiry.sender_name
+                                    : "Unknown Sender";
+                                const senderEmail = typeof inquiry?.sender_email === "string" ? inquiry.sender_email : "";
+                                return (
+                                  <div key={inquiry.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div>
+                                        <p className="text-sm font-black text-slate-900">{senderName}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{senderEmail || "No email provided"}</p>
+                                      </div>
+                                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                        {inquiry?.created_at ? new Date(inquiry.created_at).toLocaleDateString() : "Unknown"}
+                                      </span>
                                     </div>
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                                      {new Date(notification.created_at).toLocaleDateString()}
-                                    </span>
+                                    <p className="mt-3 line-clamp-3 text-sm text-slate-600">{inquiry.message}</p>
+                                    {senderEmail && (
+                                      <a
+                                        href={`mailto:${senderEmail}`}
+                                        className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
+                                      >
+                                        Reply by Email
+                                        <ChevronRight className="h-4 w-4" />
+                                      </a>
+                                    )}
                                   </div>
-                                  <p className="mt-3 text-sm font-medium text-slate-600 leading-relaxed">{notification.message}</p>
-                                  <Link
-                                    href={notification.link || "/messages"}
-                                    onClick={() => {
-                                      void markNotificationRead(notification.id);
-                                    }}
-                                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black transition-all"
-                                  >
-                                    Open Invitation Chat
-                                    <ArrowUpRight className="w-3 h-3" />
-                                  </Link>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                          <div>
-                            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
-                              <TrendingUp className="w-5 h-5 text-emerald-600" />
+                                );
+                              })}
                             </div>
-                            <h4 className="font-bold text-slate-900">Career Insights</h4>
-                            <p className="text-xs text-slate-500 mt-1">Check how your skills match the market demand.</p>
-                          </div>
-                          <button 
-                            onClick={() => setFreelancerTab("career")}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 mt-4 flex items-center gap-1"
-                          >
-                            View Analysis <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </div>
-                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                          <div>
-                            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
-                              <Briefcase className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <h4 className="font-bold text-slate-900">Recommended Jobs</h4>
-                            <p className="text-xs text-slate-500 mt-1">We found {jobs.length} new jobs that match your profile.</p>
-                          </div>
-                          <button 
-                            onClick={() => setFreelancerTab("jobs")}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 mt-4 flex items-center gap-1"
-                          >
-                            Browse Jobs <ChevronRight className="w-3 h-3" />
-                          </button>
+                          )}
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-6">
-                      <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xl">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center overflow-hidden border-2 border-white/10">
-                            {profile.avatar_url ? <img src={profile.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5" />}
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-white">
+                            {profile.avatar_url ? <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : <User className="h-5 w-5" />}
                           </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Profile Score</p>
-                            <p className="text-lg font-black">{profile.ranking ? `Top ${profile.ranking}%` : "Not Ranked"}</p>
+                          <div className="min-w-0">
+                            <p className="truncate text-lg font-black text-slate-900">{profile.name || "User"}</p>
+                            <p className="text-sm text-slate-500">{profile.category || "Freelancer"}</p>
                           </div>
                         </div>
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                            <span>Completeness</span>
-                            <span className="text-indigo-400">85%</span>
+                        <div className="mt-5 space-y-4">
+                          <div>
+                            <div className="mb-2 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                              <span>Profile completion</span>
+                              <span className="text-slate-900">{profileCompletion}%</span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                              <div className="h-full rounded-full bg-indigo-600" style={{ width: `${profileCompletion}%` }} />
+                            </div>
                           </div>
-                          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-500 w-[85%] rounded-full shadow-sm" />
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-xl bg-slate-50 px-4 py-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Ranking</p>
+                              <p className="mt-2 text-lg font-black text-slate-900">{profile.ranking ? `Top ${profile.ranking}%` : "Unranked"}</p>
+                            </div>
+                            <div className="rounded-xl bg-slate-50 px-4 py-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Skills</p>
+                              <p className="mt-2 text-lg font-black text-slate-900">{profile.skills?.length || 0}</p>
+                            </div>
                           </div>
-                          <button 
+                          <button
                             onClick={() => setFreelancerTab("profile")}
-                            className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
+                            className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-black"
                           >
-                            Optimize Profile
+                            Complete Profile
                           </button>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Trust & Safety Section for freelancer */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl flex gap-4">
-                      <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-                        <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-emerald-900">Verified Project Terms</h4>
-                        <p className="text-xs text-emerald-700 mt-1 leading-relaxed">Each approved project includes clear scope and payment terms for both sides.</p>
-                      </div>
-                    </div>
-                    <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex gap-4">
-                      <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
-                        <DollarSign className="w-6 h-6 text-indigo-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-indigo-900">Milestone Visibility</h4>
-                        <p className="text-xs text-indigo-700 mt-1 leading-relaxed">Track milestones and status updates in one place while collaborating with your client.</p>
-                      </div>
-                    </div>
-                    <div className="bg-slate-900 p-6 rounded-2xl flex gap-4 text-white">
-                      <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
-                        <Zap className="w-6 h-6 text-indigo-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold">24/7 Support</h4>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Have a dispute? Our admin team is ready to help resolve any issues.</p>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h3 className="text-lg font-black text-slate-900">Quick Actions</h3>
+                        <div className="mt-4 grid gap-3">
+                          <button
+                            onClick={() => setFreelancerTab("jobs")}
+                            className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50"
+                          >
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Review matching jobs</p>
+                              <p className="text-xs text-slate-500">{jobs.length} jobs available now</p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          </button>
+                          <button
+                            onClick={() => setFreelancerTab("profile")}
+                            className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50"
+                          >
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Update skills and bio</p>
+                              <p className="text-xs text-slate-500">Keep your profile ready for applications</p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2943,57 +2971,37 @@ export default function Home() {
                 </motion.div>
               )}
 
-              {freelancerTab === "workspace" && (
-                <motion.div
-                  key="workspace"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-8"
-                >
-                  <Workspace 
-                    projects={profile.activeProjects || []} 
-                    currentUserId={user?.id || profile.id}
-                    onUpdateProject={handleUpdateProject}
-                    onCreateProject={handleCreateProject}
-                    workflows={profile.workflows || []}
-                    onUpdateWorkflows={handleUpdateWorkflows}
-                  />
-                  <TeamManager 
-                    squad={profile.squad} 
-                    onCreateSquad={handleCreateSquad}
-                    onUpdateSquad={handleUpdateSquad}
-                  />
-                </motion.div>
-              )}
-
-              {freelancerTab === "career" && (
-                <motion.div
-                  key="career"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-8"
-                >
-                  <CareerPath profile={profile} allJobs={jobs} />
-                  <div className="max-w-2xl">
-                    <SkillAssessment 
-                      verifiedSkills={profile.verifiedSkills || []} 
-                      aiInsights={profile.aiInsights}
-                    />
-                  </div>
-                </motion.div>
-              )}
-
               {freelancerTab === "profile" && (
                 <motion.div
                   key="profile"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+                  className="space-y-6"
                 >
-                  <div className="lg:col-span-8 space-y-6">
+                  <div className="grid gap-4 xl:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Profile URL</p>
+                      <p className="mt-3 break-all text-sm font-semibold text-slate-900">
+                        {buildPublicProfileUrl({
+                          tier: profile.premiumProfile?.tier || "free",
+                          username: profile.username,
+                          id: profile.id,
+                          customDomain: profile.premiumProfile?.customDomain,
+                        })}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Skills</p>
+                      <p className="mt-3 text-3xl font-black text-slate-900">{profile.skills?.length || 0}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Portfolio Items</p>
+                      <p className="mt-3 text-3xl font-black text-slate-900">{profile.portfolio?.length || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
                     <ProfileForm 
                       initialProfile={profile} 
                       onOpenUpgradePlans={() => setShowUpgradePlans(true)}
@@ -3004,7 +3012,7 @@ export default function Home() {
                       isSaving={isSaving}
                     />
                   </div>
-                  <div className="lg:col-span-4 space-y-6">
+                  <div className="grid gap-6 xl:grid-cols-3">
                     {profile.role === 'freelancer' && (
                       <div className={cn(
                         "p-6 rounded-[1.75rem] border shadow-sm relative overflow-hidden group transition-all",
@@ -3070,86 +3078,49 @@ export default function Home() {
                                   "rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em]",
                                   profile.premiumProfile?.tier === "pro" ? "bg-slate-900 text-white" : "bg-white text-slate-500 border border-slate-200"
                                 )}>
-                                  {profile.premiumProfile?.tier === "pro" ? "Freelancer Pro" : "Free Profile"}
+                                  {profile.premiumProfile?.tier === "pro" ? "Pro" : "Free"}
                                 </span>
-                                {profile.premiumProfile?.verifiedBadge && (
-                                  <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-700">
-                                    Verified Badge
-                                  </span>
-                                )}
-                                {profile.premiumProfile?.verifiedProgram?.enrolled && (
-                                  <span className="rounded-full bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white">
-                                    Tara Verified
-                                  </span>
-                                )}
-                                {profile.premiumProfile?.analyticsEnabled && (
-                                  <span className="rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-indigo-700">
-                                    {profile.premiumProfile.analytics?.profileViews || 0} Views
-                                  </span>
-                                )}
-                              </div>
-                              {profile.premiumProfile?.tier === "pro" && (
-                                <div className="mt-4 grid grid-cols-2 gap-3">
-                                  <div className="rounded-2xl bg-white px-3 py-3 text-slate-900">
-                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Client Clicks</p>
-                                    <p className="mt-1 text-lg font-black">{profile.premiumProfile.analytics?.clientClicks || 0}</p>
-                                  </div>
-                                  <div className="rounded-2xl bg-white/10 px-3 py-3 text-white border border-white/10">
-                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Conversion Tools</p>
-                                    <p className="mt-1 text-sm font-black">{profile.premiumProfile.videoIntroUrl ? "Video Ready" : "Add Intro"}</p>
-                                  </div>
-                                </div>
-                              )}
-                              {profile.premiumProfile?.verifiedProgram?.enrolled && (
-                                <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-3">
-                                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-300">Verification Benefits</p>
-                                  <p className="mt-2 text-xs leading-relaxed text-slate-300">
-                                    Identity verified, portfolio reviewed, higher search ranking enabled, and stronger client trust treatment active.
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <button 
-                                onClick={() => {
-                                  const url = buildPublicProfileUrl({
+                                <button
+                                  onClick={() => {
+                                    const url = buildPublicProfileUrl({
+                                      tier: profile.premiumProfile?.tier || "free",
+                                      username: profile.username,
+                                      id: profile.id,
+                                      customDomain: profile.premiumProfile?.customDomain,
+                                    });
+                                    navigator.clipboard.writeText(url);
+                                    setToastMsg("Portfolio link copied to clipboard!");
+                                    setShowToast(true);
+                                    setTimeout(() => setShowToast(false), 3000);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                  Copy Link
+                                </button>
+                                <Link 
+                                  href={buildPublicProfileUrl({
                                     tier: profile.premiumProfile?.tier || "free",
                                     username: profile.username,
                                     id: profile.id,
                                     customDomain: profile.premiumProfile?.customDomain,
-                                  });
-                                  navigator.clipboard.writeText(url);
-                                  setToastMsg("Portfolio link copied to clipboard!");
-                                  setShowToast(true);
-                                  setTimeout(() => setShowToast(false), 3000);
-                                }}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                                  })}
+                                  target="_blank"
+                                  className="flex items-center justify-center p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Link>
+                              </div>
+                              <p className="text-[10px] text-slate-400 font-medium italic">
+                                Professional URL: share this with employers to showcase your work for free.
+                              </p>
+                              <button
+                                onClick={() => setShowUpgradePlans(true)}
+                                className="w-full rounded-xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-400"
                               >
-                                <Copy className="w-3.5 h-3.5" />
-                                Copy Link
+                                Upgrade Plans
                               </button>
-                              <Link 
-                                href={buildPublicProfileUrl({
-                                  tier: profile.premiumProfile?.tier || "free",
-                                  username: profile.username,
-                                  id: profile.id,
-                                  customDomain: profile.premiumProfile?.customDomain,
-                                })}
-                                target="_blank"
-                                className="flex items-center justify-center p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </Link>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-medium italic">
-                              Professional URL: share this with employers to showcase your work for free.
-                            </p>
-                            <button
-                              onClick={() => setShowUpgradePlans(true)}
-                              className="w-full rounded-xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-950 transition-all hover:bg-amber-400"
-                            >
-                              Upgrade Plans
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -3228,19 +3199,50 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-indigo-600" />
-                        Connected Accounts
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                        Product Feedback
                       </h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <div className="grid gap-3">
+                        <button
+                          type="button"
+                          onClick={() => openFeedbackModal("feature")}
+                          className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50"
+                        >
                           <div className="flex items-center gap-3">
-                            <Mail className="w-4 h-4 text-red-500" />
-                            <span className="text-xs font-bold text-slate-700">Google / Gmail</span>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                              <Lightbulb className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm font-bold text-slate-900">Suggest Feature</span>
                           </div>
-                          <span className="text-[10px] font-bold text-emerald-600">Active</span>
-                        </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openFeedbackModal("bug")}
+                          className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                              <Bug className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm font-bold text-slate-900">Report Bug</span>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openFeedbackModal("rating")}
+                          className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                              <Star className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm font-bold text-slate-900">Rate TaraWork</span>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -4282,6 +4284,154 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+      {/* Application Confirmation Modal */}
+      <AnimatePresence>
+        {showApplicationModal && selectedApplicationJob && (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeApplicationModal}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            >
+              <div className="border-b border-slate-100 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Review Application</p>
+                    <h3 className="mt-1 text-xl font-black text-slate-900">{selectedApplicationJob.title}</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Confirm your application details before submitting. Status will stay unchanged until you confirm.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeApplicationModal}
+                    className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-5 p-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Rate</p>
+                    <p className="mt-1 text-sm font-bold text-slate-900">{selectedApplicationJob.rate}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Duration</p>
+                    <p className="mt-1 text-sm font-bold text-slate-900">{selectedApplicationJob.duration}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Type</p>
+                    <p className="mt-1 text-sm font-bold text-slate-900">{selectedApplicationJob.jobType || "Contract"}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Required Skills</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedApplicationJob.skills.length > 0 ? (
+                      selectedApplicationJob.skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-700"
+                        >
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-500">No skills listed.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Resume</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {getApplicationProfileData(profile).resumeUrl ? "Attached from profile" : "Not attached"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Portfolio Link</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {getApplicationProfileData(profile).portfolioUrl ? "Attached from profile" : "Not attached"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Interview Link</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {getApplicationProfileData(profile).interviewUrl ? "Attached from profile" : "Not attached"}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                      Cover Letter
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setApplicationDraftCoverLetter(
+                          buildSuggestedCoverLetter(
+                            selectedApplicationJob,
+                            profile,
+                            getApplicationProfileData(profile).coverLetter || "",
+                          ),
+                        )
+                      }
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
+                    >
+                      Reset Draft
+                    </button>
+                  </div>
+                  <textarea
+                    rows={8}
+                    value={applicationDraftCoverLetter}
+                    onChange={(e) => setApplicationDraftCoverLetter(e.target.value)}
+                    placeholder="Write a short, job-specific note explaining why you are a strong fit for this role."
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  />
+                  <p className="mt-2 text-sm text-slate-500">
+                    Start from your saved default and tailor it to this specific job before you submit.
+                  </p>
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeApplicationModal}
+                    disabled={isSubmittingApplication}
+                    className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void submitApplication(selectedApplicationJob.id, applicationDraftCoverLetter)}
+                    disabled={isSubmittingApplication}
+                    className="rounded-xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white hover:bg-black disabled:opacity-60"
+                  >
+                    {isSubmittingApplication ? "Submitting..." : "Confirm and Submit"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Settings Modal */}
       <AnimatePresence>
         {showSettingsModal && (
@@ -4357,6 +4507,93 @@ export default function Home() {
                 >
                   {settingsLoading ? "Updating..." : "Change Password"}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showFeedbackModal && (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFeedbackModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            >
+              <div className="border-b border-slate-100 px-6 py-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Product Feedback</p>
+                    <h3 className="mt-1 text-xl font-black text-slate-900">{feedbackMeta.title}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedbackModal(false)}
+                    className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-5 px-6 py-5">
+                <textarea
+                  rows={7}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                  placeholder={
+                    feedbackType === "feature"
+                      ? "Describe the feature, the problem it solves, and where you expect to use it."
+                      : feedbackType === "bug"
+                        ? "Describe what happened, what you expected, and the steps to reproduce it."
+                        : "Share your rating and what is working well or needs improvement."
+                  }
+                  value={feedbackMessage}
+                  onChange={(e) => setFeedbackMessage(e.target.value)}
+                />
+                <div className="flex flex-wrap justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = [
+                        `${feedbackMeta.title}`,
+                        `User: ${profile.name || "User"}`,
+                        `Role: ${profile.role || "freelancer"}`,
+                        "",
+                        feedbackMessage.trim() || "Add your feedback here.",
+                      ].join("\n");
+                      navigator.clipboard.writeText(text);
+                      setToastMsg("Feedback draft copied.");
+                      setShowToast(true);
+                      setTimeout(() => setShowToast(false), 2000);
+                    }}
+                    className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Copy Draft
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void submitFeedback()}
+                    disabled={isSubmittingFeedback}
+                    className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmittingFeedback ? "Submitting..." : "Submit Feedback"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFeedbackEmail}
+                    className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-black"
+                  >
+                    Open Email Draft
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
