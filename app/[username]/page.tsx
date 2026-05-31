@@ -383,7 +383,6 @@ function mapProfile(profile: any): FreelancerProfile {
       : {};
   const profileLinks = [
     { id: 'portfolio', label: 'Portfolio', url: applicationProfile.portfolioUrl || '' },
-    { id: 'resume', label: 'Resume', url: applicationProfile.resumeUrl || '' },
     { id: 'intro', label: 'Intro', url: applicationProfile.interviewUrl || '' },
   ].filter((link) => typeof link.url === 'string' && link.url.trim().length > 0);
   const proExpiryRaw =
@@ -428,6 +427,9 @@ function mapProfile(profile: any): FreelancerProfile {
     servicesOffered,
     hourlyRate: profile.hourlyRate,
     category: profile.category,
+    contactEmail: applicationProfile.contactEmail || '',
+    contactPhone: applicationProfile.contactPhone || '',
+    resumeUrl: applicationProfile.resumeUrl || '',
     portfolio: portfolioData ? {
       id: portfolioData.id,
       profile_id: profile.id,
@@ -453,6 +455,11 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
 
   if (!profile) {
     notFound();
+  }
+
+  if (!profile.contactEmail) {
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+    profile.contactEmail = authUser.user?.email || "";
   }
 
   const role = (profile.role || "").toLowerCase();

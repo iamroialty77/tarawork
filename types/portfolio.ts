@@ -65,6 +65,9 @@ export interface FreelancerProfile {
   servicesOffered?: ServiceOffering[];
   hourlyRate?: string;
   category?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  resumeUrl?: string;
   premiumProfile?: PremiumProfile;
   portfolio?: Portfolio;
 }

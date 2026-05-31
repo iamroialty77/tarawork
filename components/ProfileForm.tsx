@@ -426,7 +426,7 @@ export default function ProfileForm({
   const sectionCardClassName = "rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6";
 
   const handleApplicationProfileChange = (
-    field: "resumeUrl" | "portfolioUrl" | "interviewUrl" | "coverLetter",
+    field: "contactEmail" | "contactPhone" | "resumeUrl" | "portfolioUrl" | "interviewUrl" | "coverLetter",
     value: string,
   ) => {
     setProfile({
@@ -657,6 +657,26 @@ export default function ProfileForm({
                   </div>
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <div className="space-y-3">
+                      <div>
+                        <label className={labelClassName}>Contact Email</label>
+                        <input
+                          type="email"
+                          placeholder="you@email.com"
+                          className={inputClassName}
+                          value={applicationProfile.contactEmail || ""}
+                          onChange={(e) => handleApplicationProfileChange("contactEmail", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClassName}>Contact Phone</label>
+                        <input
+                          type="tel"
+                          placeholder="+63 900 000 0000"
+                          className={inputClassName}
+                          value={applicationProfile.contactPhone || ""}
+                          onChange={(e) => handleApplicationProfileChange("contactPhone", e.target.value)}
+                        />
+                      </div>
                       <div>
                         <label className={labelClassName}>Resume URL (Optional)</label>
                         <input

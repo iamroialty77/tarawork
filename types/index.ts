@@ -69,6 +69,8 @@ export interface AIAnalysis {
     clientSentiment: "Positive" | "Neutral" | "Negative";
   };
   applicationProfile?: {
+    contactEmail?: string;
+    contactPhone?: string;
     resumeUrl?: string;
     portfolioUrl?: string;
     interviewUrl?: string;

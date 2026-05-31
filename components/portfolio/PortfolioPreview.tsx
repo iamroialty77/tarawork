@@ -8,6 +8,7 @@ import {
   Mail,
   MapPin,
   Briefcase,
+  Phone,
   X,
   Send,
   CheckCircle2,
@@ -134,6 +135,9 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const socialLinks = profile.portfolio?.links || [];
   const projects = profile.portfolio?.projects || [];
   const displayRate = getDisplayRate(profile, servicesOffered);
+  const contactEmail = profile.contactEmail?.trim();
+  const contactPhone = profile.contactPhone?.trim();
+  const resumeUrl = profile.resumeUrl?.trim();
 
   const handleHireMe = () => {
     if (!isPublic) return;
@@ -239,26 +243,58 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
 
             <div>
               <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</h2>
-              <div className="mt-3 flex gap-4">
+              <div className="mt-3 space-y-3">
+                {contactEmail ? (
+                  <a
+                    href={`mailto:${contactEmail}`}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-white"
+                  >
+                    <Mail size={16} />
+                    <span className="min-w-0 break-all">{contactEmail}</span>
+                  </a>
+                ) : null}
+                {contactPhone ? (
+                  <a
+                    href={`tel:${contactPhone.replace(/\s+/g, '')}`}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-white"
+                  >
+                    <Phone size={16} />
+                    <span>{contactPhone}</span>
+                  </a>
+                ) : null}
+                {resumeUrl ? (
+                  <a
+                    href={resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-black"
+                  >
+                    <ExternalLink size={16} />
+                    View Resume
+                  </a>
+                ) : null}
                 {socialLinks.length > 0 ? (
-                  socialLinks.map((link) => {
-                    const Icon = getSocialIcon(link.label);
-                    return (
-                      <a
-                        key={link.id}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={link.label}
-                        className="text-slate-400 transition-colors hover:text-slate-900"
-                      >
-                        <Icon size={20} strokeWidth={1.5} />
-                      </a>
-                    );
-                  })
-                ) : (
+                  <div className="flex gap-3 pt-1">
+                    {socialLinks.map((link) => {
+                      const Icon = getSocialIcon(link.label);
+                      return (
+                        <a
+                          key={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={link.label}
+                          className="text-slate-400 transition-colors hover:text-slate-900"
+                        >
+                          <Icon size={20} strokeWidth={1.5} />
+                        </a>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                {!contactEmail && !contactPhone && !resumeUrl && socialLinks.length === 0 ? (
                   <p className="text-sm text-slate-400">No public links yet.</p>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
