@@ -837,137 +837,49 @@ export default function Home() {
       }
 
       if (nextProfile.role === "freelancer") {
-        const premiumProfile = nextProfile.premiumProfile || {
-          tier: "free",
-          analytics: {
-            profileViews: 0,
-            clientClicks: 0,
-          },
-        };
+        try {
+          const existingPortfolio = await supabase
+            .from("portfolios")
+            .select("id, theme_settings")
+            .eq("profile_id", user.id)
+            .maybeSingle();
 
-        const existingPortfolio = await supabase
-          .from("portfolios")
-          .select("id, theme_settings")
-          .eq("profile_id", user.id)
-          .maybeSingle();
+          if (existingPortfolio.error && existingPortfolio.error.code !== "PGRST116") {
+            throw existingPortfolio.error;
+          }
 
-        if (existingPortfolio.error && existingPortfolio.error.code !== "PGRST116") {
-          throw existingPortfolio.error;
-        }
+          const currentThemeSettings =
+            existingPortfolio.data?.theme_settings && typeof existingPortfolio.data.theme_settings === "object"
+              ? existingPortfolio.data.theme_settings
+              : { aesthetic: "professional", primaryColor: "#4f46e5" };
 
-        const currentThemeSettings =
-          existingPortfolio.data?.theme_settings && typeof existingPortfolio.data.theme_settings === "object"
-            ? existingPortfolio.data.theme_settings
-            : { aesthetic: "professional", primaryColor: "#4f46e5" };
-        const currentPremiumProfile =
-          currentThemeSettings.premiumProfile && typeof currentThemeSettings.premiumProfile === "object"
-            ? currentThemeSettings.premiumProfile
-            : {};
-        const currentProExpiryRaw =
-          typeof currentPremiumProfile.billing?.proExpiresAt === "string"
-            ? currentPremiumProfile.billing.proExpiresAt
-            : "";
-        const currentProExpiry = currentProExpiryRaw ? new Date(currentProExpiryRaw) : null;
-        const hasValidCurrentProExpiry =
-          !!currentProExpiry && !Number.isNaN(currentProExpiry.getTime());
-        const isExpiredBillingPro =
-          currentPremiumProfile.tier === "pro" &&
-          hasValidCurrentProExpiry &&
-          !!currentProExpiry &&
-          currentProExpiry.getTime() <= Date.now();
-        const isBillingLockedPro =
-          currentPremiumProfile.tier === "pro" &&
-          !!currentPremiumProfile.billing?.proLocked &&
-          !isExpiredBillingPro;
-        const requestedTier = premiumProfile.tier === "pro" ? "pro" : "free";
-        const finalTier = isExpiredBillingPro
-          ? "free"
-          : isBillingLockedPro && requestedTier === "free"
-            ? "pro"
-            : requestedTier;
-        const resolvedCustomDomain =
-          finalTier === "pro" ? buildPublicProfileUrl({ username: nextProfile.username, id: nextProfile.id || user.id }) : "";
-        const normalizedBilling = {
-          proStatus:
-            isExpiredBillingPro
-              ? "inactive"
-              : currentPremiumProfile.billing?.proStatus === "active" ||
-                  currentPremiumProfile.billing?.proStatus === "past_due" ||
-                  currentPremiumProfile.billing?.proStatus === "cancelled"
-                ? currentPremiumProfile.billing.proStatus
-                : "inactive",
-          proLocked: isExpiredBillingPro ? false : !!currentPremiumProfile.billing?.proLocked,
-          proLastEvent: currentPremiumProfile.billing?.proLastEvent || "",
-          proUpdatedAt: currentPremiumProfile.billing?.proUpdatedAt || "",
-          proActivatedAt: currentPremiumProfile.billing?.proActivatedAt || "",
-          proExpiresAt: currentProExpiryRaw,
-        };
-
-        const portfolioPayload = {
-          profile_id: user.id,
-          about_me: nextProfile.aboutSections?.whatISpecializeIn || nextProfile.bio,
-          tagline: premiumProfile.introHeadline || null,
-          custom_domain: finalTier === "pro" ? resolvedCustomDomain : null,
-          theme_settings: {
-            ...currentThemeSettings,
-            aboutSections: nextProfile.aboutSections || emptyAboutSections(),
-            servicesOffered: nextProfile.servicesOffered || [],
-            aesthetic: currentThemeSettings.aesthetic || "professional",
-            primaryColor: currentThemeSettings.primaryColor || "#4f46e5",
-            premiumProfile: {
-              ...currentPremiumProfile,
-              tier: finalTier,
-              verifiedBadge: finalTier === "pro" ? premiumProfile.verifiedBadge !== false : false,
-              advancedPortfolio: finalTier === "pro" ? premiumProfile.advancedPortfolio !== false : false,
-              featuredPlacement: finalTier === "pro" ? !!premiumProfile.featuredPlacement : false,
-              analyticsEnabled: finalTier === "pro" ? !!premiumProfile.analyticsEnabled : false,
-              customDomain: resolvedCustomDomain,
-              videoIntroUrl: finalTier === "pro" ? premiumProfile.videoIntroUrl || "" : "",
-              introHeadline: premiumProfile.introHeadline || "",
-              billing: normalizedBilling,
-              analytics: {
-                profileViews: Number(premiumProfile.analytics?.profileViews || 0),
-                clientClicks: Number(premiumProfile.analytics?.clientClicks || 0),
-              },
-              verifiedProgram: {
-                enrolled: !!premiumProfile.verifiedProgram?.enrolled,
-                annualFee: Number(premiumProfile.verifiedProgram?.annualFee || 499),
-                identityVerified: !!premiumProfile.verifiedProgram?.identityVerified,
-                portfolioVerified: !!premiumProfile.verifiedProgram?.portfolioVerified,
-                higherSearchRanking: !!premiumProfile.verifiedProgram?.higherSearchRanking,
-                clientTrustBoost: !!premiumProfile.verifiedProgram?.clientTrustBoost,
-              },
+          const portfolioPayload = {
+            profile_id: user.id,
+            about_me: nextProfile.bio,
+            tagline: nextProfile.bio || null,
+            custom_domain: buildPublicProfileUrl({ username: nextProfile.username, id: nextProfile.id || user.id }),
+            theme_settings: {
+              ...currentThemeSettings,
+              aboutSections: nextProfile.aboutSections || emptyAboutSections(),
+              servicesOffered: nextProfile.servicesOffered || [],
+              aesthetic: currentThemeSettings.aesthetic || "professional",
+              primaryColor: currentThemeSettings.primaryColor || "#4f46e5",
             },
-          },
-          updated_at: new Date().toISOString(),
-        };
-
-        if (isBillingLockedPro && requestedTier === "free" && !isExpiredBillingPro) {
-          nextProfile = {
-            ...nextProfile,
-            premiumProfile: {
-              ...(nextProfile.premiumProfile || {}),
-              ...portfolioPayload.theme_settings.premiumProfile,
-              tier: "pro",
-            },
+            updated_at: new Date().toISOString(),
           };
-        }
 
-        if (existingPortfolio.data?.id) {
-          const { error: portfolioUpdateError } = await supabase
-            .from("portfolios")
-            .update(portfolioPayload)
-            .eq("id", existingPortfolio.data.id);
-          if (portfolioUpdateError) {
-            throw portfolioUpdateError;
+          const portfolioSave = existingPortfolio.data?.id
+            ? await supabase
+                .from("portfolios")
+                .update(portfolioPayload)
+                .eq("id", existingPortfolio.data.id)
+            : await supabase.from("portfolios").insert([portfolioPayload]);
+
+          if (portfolioSave.error) {
+            throw portfolioSave.error;
           }
-        } else {
-          const { error: portfolioInsertError } = await supabase
-            .from("portfolios")
-            .insert([portfolioPayload]);
-          if (portfolioInsertError) {
-            throw portfolioInsertError;
-          }
+        } catch (portfolioError) {
+          console.warn("Profile saved, but portfolio sync was skipped:", portfolioError);
         }
       }
       
