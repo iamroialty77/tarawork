@@ -222,6 +222,26 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   <MapPin size={14} />
                   <span>Remote / Freelance</span>
                 </div>
+                <div className="mt-3 inline-flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
+                  <div className="flex">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Star
+                        key={index}
+                        className={`h-4 w-4 ${
+                          index < Math.round(averageRating)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'fill-amber-100 text-amber-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs font-black text-amber-800">
+                    {averageRating ? averageRating.toFixed(1) : '0.0'}/5
+                  </span>
+                  <span className="text-[11px] font-bold text-amber-700">
+                    {clientReviews.length} feedback{clientReviews.length === 1 ? '' : 's'}
+                  </span>
+                </div>
               </div>
             </div>
 
