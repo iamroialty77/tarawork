@@ -1963,13 +1963,18 @@ export default function Home() {
     return <LandingPage />;
   }
 
-  const ensurePortfolioExists = async (userId: string) => {
+  const ensurePortfolioExists = async (userId: string): Promise<string | null> => {
     // 1. Check if portfolio exists
     const { data, error } = await supabase
       .from('portfolios')
       .select('id')
       .eq('profile_id', userId)
       .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      console.warn("Portfolio record lookup failed, falling back to portfolio_items:", error);
+      return null;
+    }
     
     if (data) return data.id;
     
@@ -1983,14 +1988,11 @@ export default function Home() {
       .select('id')
       .single();
     
-    if (createError) throw createError;
-    return newPortfolio.id;
-  };
-
-  const reloadWholePage = () => {
-    if (typeof window !== "undefined") {
-      window.location.reload();
+    if (createError) {
+      console.warn("Portfolio record creation failed, falling back to portfolio_items:", createError);
+      return null;
     }
+    return newPortfolio.id;
   };
 
   const addPortfolioItem = async (item: Partial<PortfolioItem>) => {
@@ -1999,22 +2001,39 @@ export default function Home() {
       // 1. Ensure a professional portfolio record exists
       const portfolioId = await ensurePortfolioExists(user.id);
 
-      // 2. Add to the new portfolio_projects table
-      const { data, error } = await supabase
-        .from('portfolio_projects')
-        .insert([{
-          portfolio_id: portfolioId,
-          title: item.title,
-          description: item.description,
-          project_url: item.project_url,
-          technologies: item.technologies,
-          created_at: new Date().toISOString(),
-        }])
-        .select()
-        .single();
+      if (portfolioId) {
+        // 2. Add to the new portfolio_projects table
+        const { data, error } = await supabase
+          .from('portfolio_projects')
+          .insert([{
+            portfolio_id: portfolioId,
+            title: item.title,
+            description: item.description,
+            project_url: item.project_url,
+            technologies: item.technologies,
+            created_at: new Date().toISOString(),
+          }])
+          .select()
+          .single();
 
-      if (error) {
-        // Fallback to old table if new table is missing
+        if (!error && data) {
+          setProfile(prev => ({
+            ...prev,
+            portfolio: [...(prev.portfolio || []), { ...data, profile_id: user.id }]
+          }));
+          setToastMsg("Portfolio item added!");
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 3000);
+          return;
+        }
+
+        if (error) {
+          console.warn("portfolio_projects insert failed, falling back to portfolio_items:", error);
+        }
+      }
+
+      // Fallback to old table if new portfolio tables are missing or unavailable.
+      {
         const { data: oldData, error: oldError } = await supabase
           .from('portfolio_items')
           .insert([{
@@ -2027,26 +2046,20 @@ export default function Home() {
           }])
           .select()
           .single();
-        
+
         if (oldError) throw oldError;
-        
+
         if (oldData) {
           setProfile(prev => ({
             ...prev,
             portfolio: [...(prev.portfolio || []), oldData]
           }));
         }
-      } else if (data) {
-        setProfile(prev => ({
-          ...prev,
-          portfolio: [...(prev.portfolio || []), { ...data, profile_id: user.id }]
-        }));
       }
 
       setToastMsg("Portfolio item added!");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
-      setTimeout(reloadWholePage, 250);
     } catch (err: any) {
       console.error("Error adding portfolio item:", err);
       setToastMsg(`Error: ${err.message}`);
@@ -2094,7 +2107,6 @@ export default function Home() {
       setToastMsg("Portfolio item updated!");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
-      setTimeout(reloadWholePage, 250);
     } catch (err: any) {
       console.error("Error updating portfolio item:", err);
       setToastMsg(`Error: ${err.message}`);
@@ -2132,7 +2144,6 @@ export default function Home() {
       setToastMsg("Portfolio item removed.");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
-      setTimeout(reloadWholePage, 250);
     } catch (err: any) {
       console.error("Error removing portfolio item:", err);
       setToastMsg(`Error: ${err.message}`);

@@ -77,6 +77,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
         <div className="flex items-center gap-3">
           {isOwner && (
             <button
+              type="button"
               onClick={() => setIsAuditing(true)}
               className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-md group"
             >
@@ -86,6 +87,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
           )}
           {isOwner && !isAdding && (
             <button
+              type="button"
               onClick={() => setIsAdding(true)}
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
             >
@@ -159,6 +161,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button
+              type="button"
               onClick={() => {
                 setIsAdding(false);
                 setEditingItem(null);
@@ -169,6 +172,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleAdd}
               disabled={!newItem.title}
               className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all"
@@ -192,12 +196,14 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
             {isOwner && (
               <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
                 <button
+                  type="button"
                   onClick={() => startEdit(item)}
                   className="p-2 bg-white/90 backdrop-blur shadow-xl text-indigo-600 rounded-xl hover:bg-white transition-all"
                 >
                   <Sparkles className="w-4 h-4" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => onRemove(item.id)}
                   className="p-2 bg-white/90 backdrop-blur shadow-xl text-red-500 rounded-xl hover:bg-white transition-all"
                 >
