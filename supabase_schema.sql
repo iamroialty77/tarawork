@@ -480,6 +480,8 @@ CREATE TABLE IF NOT EXISTS public.talent_invitations (
     freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled')),
     message TEXT,
+    interview_at TIMESTAMP WITH TIME ZONE,
+    interview_link TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     UNIQUE(employer_id, freelancer_id)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { Fragment, useState, useEffect, useRef, useMemo } from "react";
 import { CurrencyCode, UserProfile, Job, PortfolioItem, Squad, Project, ProfileAboutSections, ServiceOffering } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
@@ -61,7 +61,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
 import LandingPage from "../components/LandingPage";
 import { buildPublicProfileUrl, getProfileSlug } from "../lib/profileUrl";
-import { getJobShareUrl } from "../lib/jobShare";
+import { getJobSharePath, getJobShareUrl } from "../lib/jobShare";
 import TooltipAction from "@/components/ui/TooltipAction";
 
 const SUPPORTED_JOB_CURRENCIES: CurrencyCode[] = ["USD", "AUD", "GBP", "PHP"];
@@ -170,6 +170,8 @@ type TalentInvitation = {
   freelancer_id: string;
   status: "pending" | "accepted" | "rejected" | "cancelled";
   message?: string | null;
+  interview_at?: string | null;
+  interview_link?: string | null;
   created_at: string;
   updated_at?: string | null;
   freelancer?: {
@@ -185,6 +187,10 @@ type TalentInvitation = {
     username?: string | null;
     avatar_url?: string | null;
     companyName?: string | null;
+  } | null;
+  latestJob?: {
+    id: string;
+    title: string;
   } | null;
 };
 
@@ -216,6 +222,7 @@ export default function Home() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [sentTalentInvitations, setSentTalentInvitations] = useState<TalentInvitation[]>([]);
   const [receivedTalentInvitations, setReceivedTalentInvitations] = useState<TalentInvitation[]>([]);
+  const [interviewDrafts, setInterviewDrafts] = useState<Record<string, { interviewAt: string; interviewLink: string }>>({});
   const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);
   const [invitedTalentIds, setInvitedTalentIds] = useState<string[]>([]);
   const [userFollows, setUserFollows] = useState<string[]>([]);
@@ -1780,6 +1787,47 @@ export default function Home() {
     }
   };
 
+  const scheduleTalentInterview = async (invitation: TalentInvitation) => {
+    const draft = interviewDrafts[invitation.id] || {
+      interviewAt: invitation.interview_at || "",
+      interviewLink: invitation.interview_link || "",
+    };
+
+    if (!draft.interviewAt || !draft.interviewLink.trim()) {
+      setToastMsg("Please add interview date/time and meeting link.");
+      setShowToast(true);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/talent-invitations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invitationId: invitation.id,
+          interviewAt: draft.interviewAt,
+          interviewLink: draft.interviewLink.trim(),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Unable to schedule interview.");
+
+      if (payload.invitation) {
+        const nextInvitation = payload.invitation as TalentInvitation;
+        setSentTalentInvitations((prev) =>
+          prev.map((item) => (item.id === nextInvitation.id ? nextInvitation : item)),
+        );
+      }
+      setToastMsg("Interview details saved and sent to freelancer.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to schedule interview.";
+      setToastMsg(`Error: ${message}`);
+      setShowToast(true);
+    }
+  };
+
   const markNotificationRead = async (id: string) => {
     try {
       const { error } = await supabase
@@ -2694,14 +2742,44 @@ export default function Home() {
                                       </span>
                                     </div>
                                     <p className="mt-3 line-clamp-2 text-sm text-slate-600">{invitation.message}</p>
-                                    {invitation.status === "pending" && (
-                                      <div className="mt-4 flex flex-wrap gap-2">
+                                    {invitation.interview_at || invitation.interview_link ? (
+                                      <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-800">
+                                        <p className="font-black uppercase tracking-widest">Interview Details</p>
+                                        {invitation.interview_at ? (
+                                          <p className="mt-1 font-semibold">
+                                            {new Date(invitation.interview_at).toLocaleString()}
+                                          </p>
+                                        ) : null}
+                                        {invitation.interview_link ? (
+                                          <a
+                                            href={invitation.interview_link}
+                                            target="_blank"
+                                            className="mt-2 inline-flex font-bold text-emerald-700 underline"
+                                          >
+                                            Open meeting link
+                                          </a>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                      <Link
+                                        href={
+                                          invitation.latestJob
+                                            ? getJobSharePath(invitation.latestJob)
+                                            : `/${getProfileSlug(invitation.employer?.username, invitation.employer?.id)}`
+                                        }
+                                        className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                                      >
+                                        View Jobs
+                                      </Link>
+                                      {invitation.status === "pending" && (
+                                        <>
                                         <button
                                           type="button"
                                           onClick={() => void updateTalentInvitationStatus(invitation.id, "accepted")}
                                           className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-black"
                                         >
-                                          Accept Professional
+                                          Accept
                                         </button>
                                         <button
                                           type="button"
@@ -2710,8 +2788,9 @@ export default function Home() {
                                         >
                                           Reject
                                         </button>
-                                      </div>
-                                    )}
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                               ))}
                             </div>
@@ -3183,8 +3262,13 @@ export default function Home() {
                         <tbody>
                           {sentTalentInvitations.map((invitation) => {
                             const freelancer = invitation.freelancer;
+                            const draft = interviewDrafts[invitation.id] || {
+                              interviewAt: invitation.interview_at || "",
+                              interviewLink: invitation.interview_link || "",
+                            };
                             return (
-                              <tr key={invitation.id} className="border-b border-slate-50 last:border-0">
+                              <Fragment key={invitation.id}>
+                              <tr className="border-b border-slate-50 last:border-0">
                                 <td className="py-4 pr-4">
                                   <div className="flex items-center gap-3">
                                     <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
@@ -3210,7 +3294,7 @@ export default function Home() {
                                         ? "bg-rose-50 text-rose-700"
                                         : "bg-amber-50 text-amber-700",
                                   )}>
-                                    {invitation.status === "accepted" ? "Accept Professional" : invitation.status}
+                                    {invitation.status}
                                   </span>
                                 </td>
                                 <td className="px-4 py-4 text-sm text-slate-500">
@@ -3225,6 +3309,61 @@ export default function Home() {
                                   </Link>
                                 </td>
                               </tr>
+                              {invitation.status === "accepted" ? (
+                                <tr key={`${invitation.id}-schedule`} className="border-b border-slate-100">
+                                  <td colSpan={5} className="pb-5">
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        Interview Schedule
+                                      </p>
+                                      <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto]">
+                                        <input
+                                          type="datetime-local"
+                                          value={draft.interviewAt ? draft.interviewAt.slice(0, 16) : ""}
+                                          onChange={(event) =>
+                                            setInterviewDrafts((prev) => ({
+                                              ...prev,
+                                              [invitation.id]: {
+                                                ...draft,
+                                                interviewAt: event.target.value,
+                                              },
+                                            }))
+                                          }
+                                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-indigo-400"
+                                        />
+                                        <input
+                                          type="url"
+                                          value={draft.interviewLink}
+                                          onChange={(event) =>
+                                            setInterviewDrafts((prev) => ({
+                                              ...prev,
+                                              [invitation.id]: {
+                                                ...draft,
+                                                interviewLink: event.target.value,
+                                              },
+                                            }))
+                                          }
+                                          placeholder="Google Meet, Zoom, Teams, or other meeting link"
+                                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-indigo-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => void scheduleTalentInterview(invitation)}
+                                          className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-black"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                      {invitation.interview_at || invitation.interview_link ? (
+                                        <p className="mt-3 text-xs font-semibold text-slate-500">
+                                          Current: {invitation.interview_at ? new Date(invitation.interview_at).toLocaleString() : "No date"} {invitation.interview_link ? `- ${invitation.interview_link}` : ""}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : null}
+                              </Fragment>
                             );
                           })}
                         </tbody>

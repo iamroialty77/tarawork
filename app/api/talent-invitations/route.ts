@@ -6,6 +6,8 @@ type InvitationBody = {
   freelancerId?: string;
   invitationId?: string;
   status?: "accepted" | "rejected" | "cancelled";
+  interviewAt?: string | null;
+  interviewLink?: string | null;
   message?: string;
 };
 
@@ -15,6 +17,8 @@ const invitationSelect = `
   freelancer_id,
   status,
   message,
+  interview_at,
+  interview_link,
   created_at,
   updated_at,
   freelancer:profiles!talent_invitations_freelancer_id_fkey(id, name, username, avatar_url, category),
@@ -38,7 +42,41 @@ export async function GET(req: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ invitations: data || [] });
+    const invitations = data || [];
+    const employerIds = [
+      ...new Set(
+        invitations
+          .map((invitation) => invitation.employer_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
+      ),
+    ];
+
+    let latestJobsByEmployer: Record<string, { id: string; title: string }> = {};
+    if (employerIds.length > 0) {
+      const { data: jobs } = await supabaseAdmin
+        .from("jobs")
+        .select('id, title, employer_id, "createdAt"')
+        .in("employer_id", employerIds)
+        .eq("status", "live")
+        .order("createdAt", { ascending: false });
+
+      latestJobsByEmployer = (jobs || []).reduce(
+        (acc: Record<string, { id: string; title: string }>, job: any) => {
+          if (!acc[job.employer_id]) {
+            acc[job.employer_id] = { id: job.id, title: job.title || "TaraWork Opportunity" };
+          }
+          return acc;
+        },
+        {},
+      );
+    }
+
+    return NextResponse.json({
+      invitations: invitations.map((invitation) => ({
+        ...invitation,
+        latestJob: latestJobsByEmployer[invitation.employer_id] || null,
+      })),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to fetch invitations.";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -129,8 +167,11 @@ export async function PATCH(req: Request) {
     const body = (await req.json()) as InvitationBody;
     const invitationId = (body.invitationId || "").trim();
     const nextStatus = body.status;
-    if (!invitationId || !nextStatus) {
-      return NextResponse.json({ error: "Missing invitation id or status." }, { status: 400 });
+    const hasInterviewUpdate =
+      Object.prototype.hasOwnProperty.call(body, "interviewAt") ||
+      Object.prototype.hasOwnProperty.call(body, "interviewLink");
+    if (!invitationId || (!nextStatus && !hasInterviewUpdate)) {
+      return NextResponse.json({ error: "Missing invitation update." }, { status: 400 });
     }
 
     const { data: existing, error: existingError } = await supabaseAdmin
@@ -144,15 +185,49 @@ export async function PATCH(req: Request) {
     if (existing.employer_id !== user.id && existing.freelancer_id !== user.id) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
+    if (hasInterviewUpdate && existing.employer_id !== user.id) {
+      return NextResponse.json({ error: "Only the employer can schedule interviews." }, { status: 403 });
+    }
+
+    const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (nextStatus) updatePayload.status = nextStatus;
+    if (hasInterviewUpdate) {
+      updatePayload.interview_at = body.interviewAt || null;
+      updatePayload.interview_link = body.interviewLink?.trim() || null;
+    }
 
     const { data, error } = await supabaseAdmin
       .from("talent_invitations")
-      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", invitationId)
       .select(invitationSelect)
       .single();
 
     if (error) throw error;
+
+    if (nextStatus === "accepted") {
+      await supabaseAdmin.from("notifications").insert([
+        {
+          user_id: existing.employer_id,
+          title: "Invitation Accepted",
+          message: "A freelancer accepted your invitation. You can now schedule an interview.",
+          type: "success",
+          link: "/",
+        },
+      ]);
+    }
+
+    if (hasInterviewUpdate) {
+      await supabaseAdmin.from("notifications").insert([
+        {
+          user_id: existing.freelancer_id,
+          title: "Interview Scheduled",
+          message: "Your interview details have been updated by the employer.",
+          type: "invite",
+          link: "/",
+        },
+      ]);
+    }
 
     return NextResponse.json({ invitation: data });
   } catch (error) {
