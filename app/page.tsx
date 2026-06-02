@@ -1077,6 +1077,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
+        .eq('status', 'live')
         .order('createdAt', { ascending: false });
 
       if (error) {
@@ -1121,6 +1122,7 @@ export default function Home() {
         .from('jobs')
         .select('*, applications(count)')
         .eq('employer_id', userId)
+        .eq('status', 'live')
         .order('createdAt', { ascending: false });
 
       if (error) {
@@ -1146,6 +1148,29 @@ export default function Home() {
       }
     } catch (err) {
       console.warn("Unexpected employer jobs fetch issue:", err);
+    }
+  };
+
+  const closeJob = async (jobId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from("jobs")
+        .update({ status: "closed" })
+        .eq("id", jobId)
+        .eq("employer_id", user.id);
+
+      if (error) throw error;
+
+      setemployerJobs((prev) => prev.filter((job) => job.id !== jobId));
+      setJobs((prev) => prev.filter((job) => job.id !== jobId));
+      setToastMsg("Job closed.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2200);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to close job.";
+      setToastMsg(`Error: ${message}`);
+      setShowToast(true);
     }
   };
 
@@ -3378,6 +3403,13 @@ export default function Home() {
                         <tbody>
                           {sentTalentInvitations.map((invitation) => {
                             const freelancer = invitation.freelancer;
+                            const interviewTime = invitation.interview_at ? new Date(invitation.interview_at).getTime() : null;
+                            const invitationDisplayStatus =
+                              invitation.status === "accepted" && interviewTime
+                                ? interviewTime <= Date.now()
+                                  ? "Done"
+                                  : "Ongoing Interview"
+                                : invitation.status;
                             const draft = interviewDrafts[invitation.id] || {
                               interviewAt: invitation.interview_at || "",
                               interviewLink: invitation.interview_link || "",
@@ -3418,13 +3450,17 @@ export default function Home() {
                                 <td className="px-4 py-4">
                                   <span className={cn(
                                     "rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em]",
-                                    invitation.status === "accepted"
+                                    invitationDisplayStatus === "Ongoing Interview"
+                                      ? "bg-indigo-50 text-indigo-700"
+                                      : invitationDisplayStatus === "Done"
+                                        ? "bg-slate-100 text-slate-600"
+                                        : invitation.status === "accepted"
                                       ? "bg-emerald-50 text-emerald-700"
                                       : invitation.status === "rejected"
                                         ? "bg-rose-50 text-rose-700"
                                         : "bg-amber-50 text-amber-700",
                                   )}>
-                                    {invitation.status}
+                                    {invitationDisplayStatus}
                                   </span>
                                 </td>
                                 <td className="px-4 py-4 text-sm text-slate-500">
@@ -3580,6 +3616,14 @@ export default function Home() {
                             <div className="flex items-center gap-3 mb-1">
                               <h3 className="text-lg font-bold text-slate-900">{job.title}</h3>
                               <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">{job.category}</span>
+                              <span className={cn(
+                                "text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-widest",
+                                (job as any).status === "closed"
+                                  ? "bg-rose-50 text-rose-600 border-rose-100"
+                                  : "bg-emerald-50 text-emerald-600 border-emerald-100",
+                              )}>
+                                {(job as any).status === "closed" ? "Closed" : "Live"}
+                              </span>
                             </div>
                             <p className="text-xs text-slate-500 font-medium">Posted on {new Date(job.createdAt).toLocaleDateString()}</p>
                             <p className="mt-2 inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-indigo-700">
@@ -3622,6 +3666,17 @@ export default function Home() {
                                 View Applicants
                               </button>
                             </TooltipAction>
+                            {(job as any).status !== "closed" && (
+                              <TooltipAction text="Close this job posting">
+                                <button
+                                  type="button"
+                                  onClick={() => void closeJob(job.id)}
+                                  className="px-4 py-2 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all uppercase tracking-wider"
+                                >
+                                  Close Job
+                                </button>
+                              </TooltipAction>
+                            )}
                           </div>
                         </div>
                       </div>

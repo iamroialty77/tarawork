@@ -17,6 +17,7 @@ const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?
     .from("jobs")
     .select("*")
     .eq("id", jobId)
+    .eq("status", "live")
     .maybeSingle();
 
   if (error || !data) return null;
