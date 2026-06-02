@@ -188,10 +188,13 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       <nav className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm font-black text-white">T</div>
+            <img
+              src="/tarawork-removebg-preview.png"
+              alt="TaraWork Logo"
+              className="h-10 w-auto object-contain"
+            />
             <div>
               <span className="block text-lg font-bold tracking-tight">TaraWork</span>
-              <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Public Portfolio</span>
             </div>
           </div>
           <button
@@ -222,7 +225,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   <MapPin size={14} />
                   <span>Remote / Freelance</span>
                 </div>
-                <div className="mt-3 inline-flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
+                <div className="mt-3 inline-flex items-center gap-3 rounded-2xl bg-yellow-100 px-3 py-2">
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, index) => (
                       <Star
@@ -236,10 +239,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                     ))}
                   </div>
                   <span className="text-xs font-black text-amber-800">
-                    {averageRating ? averageRating.toFixed(1) : '0.0'}/5
-                  </span>
-                  <span className="text-[11px] font-bold text-amber-700">
-                    {clientReviews.length} feedback{clientReviews.length === 1 ? '' : 's'}
+                    {averageRating ? averageRating.toFixed(1) : '0.0'}
                   </span>
                 </div>
               </div>
@@ -436,7 +436,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600">Client Feedback</p>
                   <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Reviews from clients</h2>
                 </div>
-                <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                <div className="flex items-center gap-4 rounded-2xl bg-yellow-100 px-5 py-4">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Rating</p>
                     <p className="mt-1 text-2xl font-black text-slate-900">{averageRating ? averageRating.toFixed(1) : '0.0'}</p>

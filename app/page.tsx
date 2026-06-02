@@ -261,6 +261,7 @@ export default function Home() {
   });
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -269,6 +270,7 @@ export default function Home() {
   const [feedbackType, setFeedbackType] = useState<"feature" | "bug" | "rating">("feature");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const effectiveView = profile.role === "admin" ? adminViewMode : view;
   const isEmployerView = effectiveView === "client" || profile.role === "employer";
   const savedTalentsStorageKey = user?.id ? `tarawork:saved-talents:${user.id}` : "";
@@ -1350,6 +1352,19 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (!showProfileMenu) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showProfileMenu]);
+
+  useEffect(() => {
     if (!pendingApplyJobId || jobs.length === 0) return;
 
     const selectedJob = jobs.find((job) => job.id === pendingApplyJobId);
@@ -2076,24 +2091,19 @@ export default function Home() {
           </div>
         )}
         <div className="max-w-full px-4 sm:px-10">
-          <div className="flex justify-between items-center h-16 py-4">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <img 
-                  src="/tarawork-removebg-preview.png" 
-                  alt="Tara Logo" 
-                  className="h-10 w-auto object-contain"
+          <div className="relative flex items-center h-16 py-4">
+            <div className="flex shrink-0 items-center gap-6">
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="flex items-center hover:opacity-85 transition-opacity"
+              >
+                <img
+                  src="/tarawork-removebg-preview.png"
+                  alt="TaraWork Logo"
+                  className="h-12 w-auto object-contain"
                 />
-                <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black border border-emerald-100 uppercase tracking-tighter cursor-help group relative">
-                  <ShieldCheck className="w-3 h-3" />
-                  SSL Secure
-                  <div className="absolute top-full left-0 mt-2 w-48 p-2 bg-slate-900 text-white text-[8px] rounded-2xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none font-medium leading-relaxed border border-white/10">
-                    <p className="font-black text-indigo-400 mb-1">Status: Active</p>
-                    Tara verifies SSL status internally. Browser "Not Secure" warnings may occur during ACME cert challenges.
-                  </div>
-                </div>
-              </div>
-              
+              </button>
               <div className="hidden lg:flex items-center gap-6">
                 {profile.role === "admin" ? (
                   <div className="flex items-center gap-2">
@@ -2116,33 +2126,48 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                    {effectiveView === 'admin' ? 'Admin Portal' : effectiveView === 'client' ? 'Client Dashboard' : 'Freelancer Workspace'}
-                  </span>
-                )}
+                ) : null}
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            {effectiveView === "freelancer" && (
+              <div className="absolute left-1/2 hidden -translate-x-1/2 lg:flex items-center">
+                <div className="flex items-center gap-2">
+                  {[
+                    { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+                    { id: "jobs", label: "Find Jobs", icon: Briefcase },
+                    { id: "profile", label: "My Profile", icon: User },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setFreelancerTab(tab.id as "overview" | "jobs" | "profile")}
+                      className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
+                        freelancerTab === tab.id
+                          ? "bg-slate-900 text-white shadow-sm"
+                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="ml-auto flex shrink-0 items-center gap-4">
               <button 
                 className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-              <button 
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  router.push("/auth");
-                }}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-100 transition-all"
-              >
-                Logout
-              </button>
               <div className="relative">
                 <button 
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    setShowNotifications(!showNotifications);
+                  }}
                   className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors relative"
                 >
                   <Bell className="w-5 h-5" />
@@ -2229,22 +2254,86 @@ export default function Home() {
                   </span>
                 )}
               </Link>
-              <button 
-                onClick={() => setShowSettingsModal(true)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              <div className="relative">
-                <div
-                  onClick={() => profileRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                  className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-100 transition-all overflow-hidden"
+              <div ref={profileMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNotifications(false);
+                    setShowProfileMenu((current) => !current);
+                  }}
+                  className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-sm cursor-pointer hover:ring-4 hover:ring-indigo-100 transition-all overflow-hidden"
                   title="Profile Image"
                 >
                   {profile.avatar_url && (
                     <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                   )}
-                </div>
+                  {!profile.avatar_url && <User className="m-auto h-5 w-5 text-white" />}
+                </button>
+
+                <AnimatePresence>
+                  {showProfileMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                      transition={{ duration: 0.16 }}
+                      className="absolute right-0 top-full z-[70] mt-3 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.14)]"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          profileRef.current?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-4 text-left hover:bg-slate-50"
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white">
+                          {profile.avatar_url ? (
+                            <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+                          ) : (
+                            <User className="h-5 w-5" />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-black text-slate-900">{profile.name || "User"}</span>
+                          <span className="block truncate text-xs font-semibold text-slate-500">
+                            View profile
+                          </span>
+                        </span>
+                      </button>
+
+                      <div className="p-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            setShowSettingsModal(true);
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                            <Settings className="h-5 w-5" />
+                          </span>
+                          Settings
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setShowProfileMenu(false);
+                            await supabase.auth.signOut();
+                            router.push("/auth");
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50"
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+                            <LogIn className="h-5 w-5 rotate-180" />
+                          </span>
+                          Logout
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -2314,7 +2403,7 @@ export default function Home() {
         {effectiveView === "freelancer" ? (
           <div className="space-y-8">
             {/* Freelancer Tab Navigation */}
-            <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden">
               {[
                 { id: "overview", label: "Dashboard", icon: LayoutDashboard },
                 { id: "jobs", label: "Find Jobs", icon: Briefcase },
