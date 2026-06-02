@@ -8,6 +8,8 @@ type InvitationBody = {
   status?: "accepted" | "rejected" | "cancelled";
   interviewAt?: string | null;
   interviewLink?: string | null;
+  interviewRequestAt?: string | null;
+  interviewRequestNote?: string | null;
   message?: string;
 };
 
@@ -19,6 +21,9 @@ const invitationSelect = `
   message,
   interview_at,
   interview_link,
+  interview_request_at,
+  interview_request_note,
+  interview_request_status,
   created_at,
   updated_at,
   freelancer:profiles!talent_invitations_freelancer_id_fkey(id, name, username, avatar_url, category),
@@ -170,7 +175,10 @@ export async function PATCH(req: Request) {
     const hasInterviewUpdate =
       Object.prototype.hasOwnProperty.call(body, "interviewAt") ||
       Object.prototype.hasOwnProperty.call(body, "interviewLink");
-    if (!invitationId || (!nextStatus && !hasInterviewUpdate)) {
+    const hasInterviewRequest =
+      Object.prototype.hasOwnProperty.call(body, "interviewRequestAt") ||
+      Object.prototype.hasOwnProperty.call(body, "interviewRequestNote");
+    if (!invitationId || (!nextStatus && !hasInterviewUpdate && !hasInterviewRequest)) {
       return NextResponse.json({ error: "Missing invitation update." }, { status: 400 });
     }
 
@@ -188,12 +196,21 @@ export async function PATCH(req: Request) {
     if (hasInterviewUpdate && existing.employer_id !== user.id) {
       return NextResponse.json({ error: "Only the employer can schedule interviews." }, { status: 403 });
     }
+    if (hasInterviewRequest && existing.freelancer_id !== user.id) {
+      return NextResponse.json({ error: "Only the freelancer can request another interview date." }, { status: 403 });
+    }
 
     const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (nextStatus) updatePayload.status = nextStatus;
     if (hasInterviewUpdate) {
       updatePayload.interview_at = body.interviewAt || null;
       updatePayload.interview_link = body.interviewLink?.trim() || null;
+      updatePayload.interview_request_status = "resolved";
+    }
+    if (hasInterviewRequest) {
+      updatePayload.interview_request_at = body.interviewRequestAt || null;
+      updatePayload.interview_request_note = body.interviewRequestNote?.trim() || null;
+      updatePayload.interview_request_status = "pending";
     }
 
     const { data, error } = await supabaseAdmin
@@ -224,6 +241,18 @@ export async function PATCH(req: Request) {
           title: "Interview Scheduled",
           message: "Your interview details have been updated by the employer.",
           type: "invite",
+          link: "/",
+        },
+      ]);
+    }
+
+    if (hasInterviewRequest) {
+      await supabaseAdmin.from("notifications").insert([
+        {
+          user_id: existing.employer_id,
+          title: "Interview Reschedule Request",
+          message: "A freelancer requested another interview date. Review it in your Talent Invitations table.",
+          type: "warning",
           link: "/",
         },
       ]);

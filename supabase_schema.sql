@@ -482,6 +482,9 @@ CREATE TABLE IF NOT EXISTS public.talent_invitations (
     message TEXT,
     interview_at TIMESTAMP WITH TIME ZONE,
     interview_link TEXT,
+    interview_request_at TIMESTAMP WITH TIME ZONE,
+    interview_request_note TEXT,
+    interview_request_status TEXT DEFAULT 'none' CHECK (interview_request_status IN ('none', 'pending', 'resolved', 'declined')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     UNIQUE(employer_id, freelancer_id)

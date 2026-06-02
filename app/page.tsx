@@ -172,6 +172,9 @@ type TalentInvitation = {
   message?: string | null;
   interview_at?: string | null;
   interview_link?: string | null;
+  interview_request_at?: string | null;
+  interview_request_note?: string | null;
+  interview_request_status?: "none" | "pending" | "resolved" | "declined" | null;
   created_at: string;
   updated_at?: string | null;
   freelancer?: {
@@ -223,6 +226,9 @@ export default function Home() {
   const [sentTalentInvitations, setSentTalentInvitations] = useState<TalentInvitation[]>([]);
   const [receivedTalentInvitations, setReceivedTalentInvitations] = useState<TalentInvitation[]>([]);
   const [interviewDrafts, setInterviewDrafts] = useState<Record<string, { interviewAt: string; interviewLink: string }>>({});
+  const [visibleInterviewIds, setVisibleInterviewIds] = useState<string[]>([]);
+  const [expandedInvitationIds, setExpandedInvitationIds] = useState<string[]>([]);
+  const [rescheduleDrafts, setRescheduleDrafts] = useState<Record<string, { requestAt: string; note: string }>>({});
   const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);
   const [invitedTalentIds, setInvitedTalentIds] = useState<string[]>([]);
   const [userFollows, setUserFollows] = useState<string[]>([]);
@@ -1789,7 +1795,9 @@ export default function Home() {
 
   const scheduleTalentInterview = async (invitation: TalentInvitation) => {
     const draft = interviewDrafts[invitation.id] || {
-      interviewAt: invitation.interview_at || "",
+      interviewAt:
+        invitation.interview_at ||
+        (invitation.interview_request_status === "pending" ? invitation.interview_request_at || "" : ""),
       interviewLink: invitation.interview_link || "",
     };
 
@@ -1823,6 +1831,43 @@ export default function Home() {
       setTimeout(() => setShowToast(false), 2500);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to schedule interview.";
+      setToastMsg(`Error: ${message}`);
+      setShowToast(true);
+    }
+  };
+
+  const requestInterviewReschedule = async (invitation: TalentInvitation) => {
+    const draft = rescheduleDrafts[invitation.id] || { requestAt: "", note: "" };
+    if (!draft.requestAt) {
+      setToastMsg("Please choose your preferred interview date/time.");
+      setShowToast(true);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/talent-invitations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invitationId: invitation.id,
+          interviewRequestAt: draft.requestAt,
+          interviewRequestNote: draft.note.trim(),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Unable to request another date.");
+
+      if (payload.invitation) {
+        const nextInvitation = payload.invitation as TalentInvitation;
+        setReceivedTalentInvitations((prev) =>
+          prev.map((item) => (item.id === nextInvitation.id ? nextInvitation : item)),
+        );
+      }
+      setToastMsg("Reschedule request sent to employer.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to request another date.";
       setToastMsg(`Error: ${message}`);
       setShowToast(true);
     }
@@ -2742,25 +2787,6 @@ export default function Home() {
                                       </span>
                                     </div>
                                     <p className="mt-3 line-clamp-2 text-sm text-slate-600">{invitation.message}</p>
-                                    {invitation.interview_at || invitation.interview_link ? (
-                                      <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-800">
-                                        <p className="font-black uppercase tracking-widest">Interview Details</p>
-                                        {invitation.interview_at ? (
-                                          <p className="mt-1 font-semibold">
-                                            {new Date(invitation.interview_at).toLocaleString()}
-                                          </p>
-                                        ) : null}
-                                        {invitation.interview_link ? (
-                                          <a
-                                            href={invitation.interview_link}
-                                            target="_blank"
-                                            className="mt-2 inline-flex font-bold text-emerald-700 underline"
-                                          >
-                                            Open meeting link
-                                          </a>
-                                        ) : null}
-                                      </div>
-                                    ) : null}
                                     <div className="mt-4 flex flex-wrap gap-2">
                                       <Link
                                         href={
@@ -2790,7 +2816,97 @@ export default function Home() {
                                         </button>
                                         </>
                                       )}
+                                      {invitation.status === "accepted" && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setVisibleInterviewIds((prev) =>
+                                              prev.includes(invitation.id)
+                                                ? prev.filter((id) => id !== invitation.id)
+                                                : [...prev, invitation.id],
+                                            )
+                                          }
+                                          className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-black"
+                                        >
+                                          View Date Interview
+                                        </button>
+                                      )}
                                     </div>
+                                    {invitation.status === "accepted" && visibleInterviewIds.includes(invitation.id) ? (
+                                      <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-800">
+                                        <p className="font-black uppercase tracking-widest">Interview Details</p>
+                                        {invitation.interview_at ? (
+                                          <p className="mt-1 font-semibold">
+                                            {new Date(invitation.interview_at).toLocaleString()}
+                                          </p>
+                                        ) : (
+                                          <p className="mt-1 font-semibold">No interview date set yet.</p>
+                                        )}
+                                        {invitation.interview_link ? (
+                                          <a
+                                            href={invitation.interview_link}
+                                            target="_blank"
+                                            className="mt-2 inline-flex font-bold text-emerald-700 underline"
+                                          >
+                                            Open meeting link
+                                          </a>
+                                        ) : (
+                                          <p className="mt-2 font-semibold">No meeting link set yet.</p>
+                                        )}
+                                        <div className="mt-4 rounded-lg border border-emerald-200 bg-white/70 p-3">
+                                          <p className="font-black uppercase tracking-widest text-emerald-900">
+                                            Request Another Date
+                                          </p>
+                                          {invitation.interview_request_status === "pending" ? (
+                                            <p className="mt-2 font-semibold">
+                                              Request pending:{" "}
+                                              {invitation.interview_request_at
+                                                ? new Date(invitation.interview_request_at).toLocaleString()
+                                                : "Preferred date not set"}
+                                            </p>
+                                          ) : (
+                                            <div className="mt-3 grid gap-2">
+                                              <input
+                                                type="datetime-local"
+                                                value={rescheduleDrafts[invitation.id]?.requestAt || ""}
+                                                onChange={(event) =>
+                                                  setRescheduleDrafts((prev) => ({
+                                                    ...prev,
+                                                    [invitation.id]: {
+                                                      requestAt: event.target.value,
+                                                      note: prev[invitation.id]?.note || "",
+                                                    },
+                                                  }))
+                                                }
+                                                className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none"
+                                              />
+                                              <textarea
+                                                rows={2}
+                                                value={rescheduleDrafts[invitation.id]?.note || ""}
+                                                onChange={(event) =>
+                                                  setRescheduleDrafts((prev) => ({
+                                                    ...prev,
+                                                    [invitation.id]: {
+                                                      requestAt: prev[invitation.id]?.requestAt || "",
+                                                      note: event.target.value,
+                                                    },
+                                                  }))
+                                                }
+                                                placeholder="Optional note for employer"
+                                                className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() => void requestInterviewReschedule(invitation)}
+                                                className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800"
+                                              >
+                                                Send Request
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : null}
                                   </div>
                               ))}
                             </div>
@@ -3268,7 +3384,21 @@ export default function Home() {
                             };
                             return (
                               <Fragment key={invitation.id}>
-                              <tr className="border-b border-slate-50 last:border-0">
+                              <tr
+                                onClick={() =>
+                                  invitation.status === "accepted"
+                                    ? setExpandedInvitationIds((prev) =>
+                                        prev.includes(invitation.id)
+                                          ? prev.filter((id) => id !== invitation.id)
+                                          : [...prev, invitation.id],
+                                      )
+                                    : undefined
+                                }
+                                className={cn(
+                                  "border-b border-slate-50 last:border-0",
+                                  invitation.status === "accepted" && "cursor-pointer hover:bg-slate-50",
+                                )}
+                              >
                                 <td className="py-4 pr-4">
                                   <div className="flex items-center gap-3">
                                     <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
@@ -3303,23 +3433,45 @@ export default function Home() {
                                 <td className="py-4 pl-4 text-right">
                                   <Link
                                     href={`/${getProfileSlug(freelancer?.username, freelancer?.id)}`}
+                                    onClick={(event) => event.stopPropagation()}
                                     className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
                                   >
                                     View Profile
                                   </Link>
                                 </td>
                               </tr>
-                              {invitation.status === "accepted" ? (
+                              {invitation.status === "accepted" && expandedInvitationIds.includes(invitation.id) ? (
                                 <tr key={`${invitation.id}-schedule`} className="border-b border-slate-100">
                                   <td colSpan={5} className="pb-5">
                                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                                         Interview Schedule
                                       </p>
+                                      {invitation.interview_request_status === "pending" ? (
+                                        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                                          <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">
+                                            Freelancer requested another date
+                                          </p>
+                                          <p className="mt-1 font-bold">
+                                            {invitation.interview_request_at
+                                              ? new Date(invitation.interview_request_at).toLocaleString()
+                                              : "No preferred date provided"}
+                                          </p>
+                                          {invitation.interview_request_note ? (
+                                            <p className="mt-2 text-xs font-semibold">{invitation.interview_request_note}</p>
+                                          ) : null}
+                                        </div>
+                                      ) : null}
                                       <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto]">
                                         <input
                                           type="datetime-local"
-                                          value={draft.interviewAt ? draft.interviewAt.slice(0, 16) : ""}
+                                          value={
+                                            draft.interviewAt
+                                              ? draft.interviewAt.slice(0, 16)
+                                              : invitation.interview_request_at && invitation.interview_request_status === "pending"
+                                                ? invitation.interview_request_at.slice(0, 16)
+                                                : ""
+                                          }
                                           onChange={(event) =>
                                             setInterviewDrafts((prev) => ({
                                               ...prev,
