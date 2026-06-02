@@ -473,6 +473,36 @@ CREATE POLICY "Admins can update all product feedback." ON public.product_feedba
         )
     );
 
+-- 11c. Create TALENT_INVITATIONS table
+CREATE TABLE IF NOT EXISTS public.talent_invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled')),
+    message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(employer_id, freelancer_id)
+);
+
+ALTER TABLE public.talent_invitations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Employers can view sent talent invitations." ON public.talent_invitations;
+CREATE POLICY "Employers can view sent talent invitations." ON public.talent_invitations
+    FOR SELECT USING (auth.uid() = employer_id);
+
+DROP POLICY IF EXISTS "Freelancers can view received talent invitations." ON public.talent_invitations;
+CREATE POLICY "Freelancers can view received talent invitations." ON public.talent_invitations
+    FOR SELECT USING (auth.uid() = freelancer_id);
+
+DROP POLICY IF EXISTS "Employers can create talent invitations." ON public.talent_invitations;
+CREATE POLICY "Employers can create talent invitations." ON public.talent_invitations
+    FOR INSERT WITH CHECK (auth.uid() = employer_id);
+
+DROP POLICY IF EXISTS "Invitation participants can update status." ON public.talent_invitations;
+CREATE POLICY "Invitation participants can update status." ON public.talent_invitations
+    FOR UPDATE USING (auth.uid() = employer_id OR auth.uid() = freelancer_id);
+
 -- 12. Create FOLLOWS table
 CREATE TABLE IF NOT EXISTS public.follows (
     follower_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,

@@ -120,6 +120,8 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const [activeSection, setActiveSection] = useState<'services' | 'projects' | 'feedback'>('services');
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -151,6 +153,30 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const handleHireMe = () => {
     if (!isPublic) return;
     setIsInquiryModalOpen(true);
+  };
+
+  const handleInvite = async () => {
+    if (!isPublic || isInviting) return;
+    setIsInviting(true);
+    setInviteStatus('');
+
+    try {
+      const response = await fetch('/api/talent-invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ freelancerId: profile.id }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to send invitation.');
+      }
+      setInviteStatus('Invitation sent');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to send invitation.';
+      setInviteStatus(message === 'Unauthorized.' ? 'Sign in as an employer to invite' : message);
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const handleInquirySubmit = async (e: React.FormEvent) => {
@@ -197,13 +223,27 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
               <span className="block text-lg font-bold tracking-tight">TaraWork</span>
             </div>
           </div>
-          <button
-            onClick={handleHireMe}
-            disabled={!isPublic}
-            className="rounded-full bg-slate-900 px-5 py-2 text-xs font-bold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Send Inquiry
-          </button>
+          <div className="flex items-center gap-3">
+            {inviteStatus ? (
+              <span className="hidden max-w-48 truncate text-xs font-bold text-slate-500 sm:inline">
+                {inviteStatus}
+              </span>
+            ) : null}
+            <button
+              onClick={handleInvite}
+              disabled={!isPublic || isInviting}
+              className="rounded-full border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isInviting ? 'Inviting...' : 'Invite'}
+            </button>
+            <button
+              onClick={handleHireMe}
+              disabled={!isPublic}
+              className="rounded-full bg-slate-900 px-5 py-2 text-xs font-bold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Send Inquiry
+            </button>
+          </div>
         </div>
       </nav>
 

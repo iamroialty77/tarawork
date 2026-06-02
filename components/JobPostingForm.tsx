@@ -785,7 +785,7 @@ export default function JobPostingForm({
     <div className="w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Form */}
-        <div className="lg:col-span-7 bg-white p-8 rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100">
+        <div className="lg:col-span-12 bg-white p-8 rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100">
           <div className="mb-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Post your project</h2>
@@ -899,10 +899,6 @@ export default function JobPostingForm({
           </form>
         </div>
 
-        {/* Right Column: AI Insights */}
-        <div className="lg:col-span-5 sticky top-8">
-          {renderAiInsights()}
-        </div>
       </div>
     </div>
   );

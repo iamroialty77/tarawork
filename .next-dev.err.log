@@ -1,0 +1,41 @@
+⨯ ./app/page.tsx
+Error:   x Unterminated regexp literal
+      ,-[C:\Users\Admin\WebstormProjects\tarawork\app\page.tsx:4178:1]
+ 4175 |           <p className="text-slate-400 text-xs font-medium uppercase tracking-widest">© 2024 Tara Marketplace. All rights reserved.</p>
+ 4176 |         </div>
+ 4177 |       </footer>
+ 4178 |     </div>
+      :      ^^^^^
+ 4179 |   );
+ 4180 | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/page.tsx
+⨯ ./app/page.tsx
+Error:   x Unterminated regexp literal
+      ,-[C:\Users\Admin\WebstormProjects\tarawork\app\page.tsx:4178:1]
+ 4175 |           <p className="text-slate-400 text-xs font-medium uppercase tracking-widest">© 2024 Tara Marketplace. All rights reserved.</p>
+ 4176 |         </div>
+ 4177 |       </footer>
+ 4178 |     </div>
+      :      ^^^^^
+ 4179 |   );
+ 4180 | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/page.tsx
+⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload due to a runtime error.

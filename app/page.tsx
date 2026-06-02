@@ -16,7 +16,6 @@ import {
   Bell, 
   Settings,
   Lightbulb,
-  Bug,
   Star,
   Search as SearchIcon,
   TrendingUp,
@@ -61,7 +60,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import AIAgent from "../components/AIAgent";
 import LandingPage from "../components/LandingPage";
-import { buildPublicProfileUrl } from "../lib/profileUrl";
+import { buildPublicProfileUrl, getProfileSlug } from "../lib/profileUrl";
 import { getJobShareUrl } from "../lib/jobShare";
 import TooltipAction from "@/components/ui/TooltipAction";
 
@@ -165,18 +164,28 @@ type AppNotification = {
   created_at: string;
 };
 
-type InviteNotificationMeta = {
-  employerName: string;
-  companyName: string;
-};
-
-const parseInviteNotificationMeta = (notification: AppNotification): InviteNotificationMeta => {
-  const message = typeof notification.message === "string" ? notification.message : "";
-  const inviteMatch = message.match(/^(.+?)\sfrom\s(.+?)\sinvited you/i);
-  return {
-    employerName: inviteMatch?.[1]?.trim() || "Employer",
-    companyName: inviteMatch?.[2]?.trim() || "Company",
-  };
+type TalentInvitation = {
+  id: string;
+  employer_id: string;
+  freelancer_id: string;
+  status: "pending" | "accepted" | "rejected" | "cancelled";
+  message?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  freelancer?: {
+    id: string;
+    name?: string | null;
+    username?: string | null;
+    avatar_url?: string | null;
+    category?: string | null;
+  } | null;
+  employer?: {
+    id: string;
+    name?: string | null;
+    username?: string | null;
+    avatar_url?: string | null;
+    companyName?: string | null;
+  } | null;
 };
 
 export default function Home() {
@@ -205,6 +214,8 @@ export default function Home() {
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
   const [pendingApplyJobId, setPendingApplyJobId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [sentTalentInvitations, setSentTalentInvitations] = useState<TalentInvitation[]>([]);
+  const [receivedTalentInvitations, setReceivedTalentInvitations] = useState<TalentInvitation[]>([]);
   const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);
   const [invitedTalentIds, setInvitedTalentIds] = useState<string[]>([]);
   const [userFollows, setUserFollows] = useState<string[]>([]);
@@ -275,10 +286,6 @@ export default function Home() {
   const isEmployerView = effectiveView === "client" || profile.role === "employer";
   const savedTalentsStorageKey = user?.id ? `tarawork:saved-talents:${user.id}` : "";
   const invitedTalentsStorageKey = user?.id ? `tarawork:invited-talents:${user.id}` : "";
-  const invitationNotifications = useMemo(
-    () => notifications.filter((notification) => notification.type === "invite"),
-    [notifications],
-  );
   const savedTalents = useMemo(
     () =>
       freelancers.filter(
@@ -1514,6 +1521,31 @@ export default function Home() {
     }
   };
 
+  const rejectApplication = async (applicationId: string) => {
+    if (!user) return;
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: "rejected" })
+        .eq("id", applicationId);
+
+      if (error) throw error;
+
+      setSelectedJobApplicants((prev) =>
+        prev.map((app) => (app.id === applicationId ? { ...app, status: "rejected" } : app)),
+      );
+      setToastMsg("Applicant rejected.");
+      setShowToast(true);
+    } catch (err: any) {
+      console.error("Error rejecting application:", err);
+      setToastMsg(`Error: ${err.message || "Failed to reject applicant"}`);
+      setShowToast(true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const fetchFreelancers = async () => {
     try {
       const { data, error } = await supabase
@@ -1603,6 +1635,26 @@ export default function Home() {
       console.error("Error fetching notifications:", err);
     }
   };
+
+  const fetchTalentInvitations = async () => {
+    try {
+      const [sentResponse, receivedResponse] = await Promise.all([
+        fetch("/api/talent-invitations?scope=sent"),
+        fetch("/api/talent-invitations?scope=received"),
+      ]);
+      const sentPayload = await sentResponse.json().catch(() => ({}));
+      const receivedPayload = await receivedResponse.json().catch(() => ({}));
+
+      if (sentResponse.ok) {
+        setSentTalentInvitations(Array.isArray(sentPayload.invitations) ? sentPayload.invitations : []);
+      }
+      if (receivedResponse.ok) {
+        setReceivedTalentInvitations(Array.isArray(receivedPayload.invitations) ? receivedPayload.invitations : []);
+      }
+    } catch (err) {
+      console.error("Error fetching talent invitations:", err);
+    }
+  };
   
   const fetchFollows = async (userId: string) => {
     try {
@@ -1659,38 +1711,73 @@ export default function Home() {
   const sendTalentInvite = async (freelancer: UserProfile) => {
     if (!user || !freelancer.id) return;
     const freelancerId = freelancer.id;
-    if (invitedTalentIds.includes(freelancerId)) {
+    if (
+      invitedTalentIds.includes(freelancerId) ||
+      sentTalentInvitations.some((invitation) => invitation.freelancer_id === freelancerId)
+    ) {
       setToastMsg("Invitation already sent to this freelancer.");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2200);
       return;
     }
 
-    const employerName = profile.name?.trim() || user.email?.split("@")[0] || "Employer";
-    const companyName = profile.companyName?.trim() || "Independent Company";
-    const inviteMessage = `${employerName} from ${companyName} invited you to discuss an opportunity.`;
+    const response = await fetch("/api/talent-invitations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ freelancerId }),
+    });
+    const payload = await response.json().catch(() => ({}));
 
-    const { error } = await supabase.from("notifications").insert([
-      {
-        user_id: freelancerId,
-        title: "Official Talent Invitation",
-        message: inviteMessage,
-        type: "invite",
-        link: `/messages?with=${user.id}&official=1`,
-      },
-    ]);
-
-    if (error) {
-      setToastMsg(`Error: ${error.message || "Failed to send invitation."}`);
+    if (!response.ok) {
+      setToastMsg(`Error: ${payload?.error || "Failed to send invitation."}`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3500);
       return;
     }
 
     setInvitedTalentIds((prev) => [freelancerId, ...prev]);
+    if (payload.invitation) {
+      setSentTalentInvitations((prev) => [
+        payload.invitation,
+        ...prev.filter((item) => item.id !== payload.invitation.id),
+      ]);
+    }
     setToastMsg(`Invitation sent to ${freelancer.name}.`);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
+  };
+
+  const updateTalentInvitationStatus = async (
+    invitationId: string,
+    status: "accepted" | "rejected" | "cancelled",
+  ) => {
+    try {
+      const response = await fetch("/api/talent-invitations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invitationId, status }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Unable to update invitation.");
+
+      if (payload.invitation) {
+        const nextInvitation = payload.invitation as TalentInvitation;
+        setReceivedTalentInvitations((prev) =>
+          prev.map((item) => (item.id === nextInvitation.id ? nextInvitation : item)),
+        );
+        setSentTalentInvitations((prev) =>
+          prev.map((item) => (item.id === nextInvitation.id ? nextInvitation : item)),
+        );
+      }
+
+      setToastMsg(status === "accepted" ? "Invitation accepted." : "Invitation updated.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update invitation.";
+      setToastMsg(`Error: ${message}`);
+      setShowToast(true);
+    }
   };
 
   const markNotificationRead = async (id: string) => {
@@ -1834,6 +1921,7 @@ export default function Home() {
         await fetchFreelancers();
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
+        await fetchTalentInvitations();
         await fetchFollows(session.user.id);
         await fetchPortfolioInquiries(session.user.id);
         
@@ -1958,6 +2046,7 @@ export default function Home() {
       } else {
         setUser(session.user);
         fetchProfile(session.user.id, session.user);
+        fetchTalentInvitations();
         setLoading(false);
       }
     });
@@ -2155,6 +2244,32 @@ export default function Home() {
               </div>
             )}
 
+            {effectiveView === "client" && (
+              <div className="absolute left-1/2 hidden -translate-x-1/2 lg:flex items-center">
+                <div className="flex items-center gap-2">
+                  {[
+                    { id: "overview", label: "Overview", icon: LayoutDashboard },
+                    { id: "jobs", label: "Jobs", icon: Briefcase },
+                    { id: "talents", label: "Find Talents", icon: Users },
+                    { id: "profile", label: "Company Profile", icon: User },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setClientTab(tab.id as "overview" | "jobs" | "talents" | "profile")}
+                      className={`flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-bold transition-all ${
+                        clientTab === tab.id
+                          ? "bg-slate-900 text-white shadow-sm"
+                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="ml-auto flex shrink-0 items-center gap-4">
               <button 
                 className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
@@ -2318,6 +2433,19 @@ export default function Home() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            openFeedbackModal("feature");
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                            <Lightbulb className="h-5 w-5" />
+                          </span>
+                          Product Feedback
+                        </button>
+                        <button
+                          type="button"
                           onClick={async () => {
                             setShowProfileMenu(false);
                             await supabase.auth.signOut();
@@ -2472,7 +2600,7 @@ export default function Home() {
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Invites</p>
-                          <p className="mt-3 text-3xl font-black text-slate-900">{invitationNotifications.length}</p>
+                          <p className="mt-3 text-3xl font-black text-slate-900">{receivedTalentInvitations.length}</p>
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Inquiries</p>
@@ -2535,45 +2663,57 @@ export default function Home() {
                           <div className="mb-4 flex items-center justify-between gap-3">
                             <h3 className="text-lg font-black text-slate-900">Invitation Inbox</h3>
                             <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600">
-                              {invitationNotifications.length}
+                              {receivedTalentInvitations.length}
                             </span>
                           </div>
-                          {invitationNotifications.length === 0 ? (
+                          {receivedTalentInvitations.length === 0 ? (
                             <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
                               No invitations yet.
                             </div>
                           ) : (
                             <div className="space-y-3">
-                              {invitationNotifications.slice(0, 3).map((notification) => {
-                                const inviteMeta = parseInviteNotificationMeta(notification);
-                                return (
-                                  <div key={notification.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                              {receivedTalentInvitations.slice(0, 3).map((invitation) => (
+                                  <div key={invitation.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                     <div className="flex items-start justify-between gap-3">
                                       <div>
-                                        <p className="text-sm font-black text-slate-900">{inviteMeta.employerName}</p>
+                                        <p className="text-sm font-black text-slate-900">{invitation.employer?.name || "Employer"}</p>
                                         <p className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500">
                                           <Building2 className="h-3.5 w-3.5" />
-                                          {inviteMeta.companyName}
+                                          {invitation.employer?.companyName || "Independent Company"}
                                         </p>
                                       </div>
-                                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                                        {new Date(notification.created_at).toLocaleDateString()}
+                                      <span className={cn(
+                                        "rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em]",
+                                        invitation.status === "accepted"
+                                          ? "bg-emerald-50 text-emerald-700"
+                                          : invitation.status === "rejected"
+                                            ? "bg-rose-50 text-rose-700"
+                                            : "bg-amber-50 text-amber-700",
+                                      )}>
+                                        {invitation.status}
                                       </span>
                                     </div>
-                                    <p className="mt-3 line-clamp-2 text-sm text-slate-600">{notification.message}</p>
-                                    <Link
-                                      href={notification.link || "/messages"}
-                                      onClick={() => {
-                                        void markNotificationRead(notification.id);
-                                      }}
-                                      className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
-                                    >
-                                      Open Chat
-                                      <ChevronRight className="h-4 w-4" />
-                                    </Link>
+                                    <p className="mt-3 line-clamp-2 text-sm text-slate-600">{invitation.message}</p>
+                                    {invitation.status === "pending" && (
+                                      <div className="mt-4 flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => void updateTalentInvitationStatus(invitation.id, "accepted")}
+                                          className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-black"
+                                        >
+                                          Accept Professional
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => void updateTalentInvitationStatus(invitation.id, "rejected")}
+                                          className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                                        >
+                                          Reject
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
-                                );
-                              })}
+                              ))}
                             </div>
                           )}
                         </div>
@@ -2909,39 +3049,6 @@ export default function Home() {
                     </div>
                     )}
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                      <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                        Product Feedback
-                      </h3>
-                      <div className="grid gap-3">
-                        <button
-                          type="button"
-                          onClick={() => openFeedbackModal("feature")}
-                          className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                              <Lightbulb className="h-4 w-4" />
-                            </div>
-                            <span className="text-sm font-bold text-slate-900">Suggest Feature</span>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-slate-400" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openFeedbackModal("bug")}
-                          className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-left transition-all hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                              <Bug className="h-4 w-4" />
-                            </div>
-                            <span className="text-sm font-bold text-slate-900">Report Bug</span>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-slate-400" />
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </motion.div>
               )}
@@ -2950,7 +3057,7 @@ export default function Home() {
         ) : effectiveView === "client" ? (
           <div className="space-y-8">
             {/* Client Tab Navigation */}
-            <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="sticky top-20 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden">
               {[
                 { id: "overview", label: "Overview", icon: LayoutDashboard, tooltip: "View your hiring dashboard summary" },
                 { id: "jobs", label: "Jobs", icon: Briefcase, tooltip: "Post and manage your job listings" },
@@ -3045,6 +3152,86 @@ export default function Home() {
                     <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-600/10 rounded-full blur-xl"></div>
                   </div>
                 </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900">Talent Invitations</h3>
+                      <p className="mt-1 text-sm text-slate-500">Freelancers you invited from public profiles.</p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                      {sentTalentInvitations.length} Invited
+                    </span>
+                  </div>
+
+                  {sentTalentInvitations.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                      No invited freelancers yet.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-left">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            <th className="py-3 pr-4">Freelancer</th>
+                            <th className="px-4 py-3">Category</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Invited</th>
+                            <th className="py-3 pl-4 text-right">Profile</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sentTalentInvitations.map((invitation) => {
+                            const freelancer = invitation.freelancer;
+                            return (
+                              <tr key={invitation.id} className="border-b border-slate-50 last:border-0">
+                                <td className="py-4 pr-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
+                                      {freelancer?.avatar_url ? (
+                                        <img src={freelancer.avatar_url} alt="" className="h-full w-full object-cover" />
+                                      ) : (
+                                        <User className="h-4 w-4 text-slate-400" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-black text-slate-900">{freelancer?.name || "Freelancer"}</p>
+                                      <p className="text-xs text-slate-500">@{getProfileSlug(freelancer?.username, freelancer?.id)}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4 text-sm font-semibold text-slate-600">{freelancer?.category || "General"}</td>
+                                <td className="px-4 py-4">
+                                  <span className={cn(
+                                    "rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em]",
+                                    invitation.status === "accepted"
+                                      ? "bg-emerald-50 text-emerald-700"
+                                      : invitation.status === "rejected"
+                                        ? "bg-rose-50 text-rose-700"
+                                        : "bg-amber-50 text-amber-700",
+                                  )}>
+                                    {invitation.status === "accepted" ? "Accept Professional" : invitation.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-4 text-sm text-slate-500">
+                                  {new Date(invitation.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="py-4 pl-4 text-right">
+                                  <Link
+                                    href={`/${getProfileSlug(freelancer?.username, freelancer?.id)}`}
+                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                                  >
+                                    View Profile
+                                  </Link>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 
@@ -3056,6 +3243,8 @@ export default function Home() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
               >
+                <div className="grid gap-8 xl:grid-cols-12">
+                  <div className="xl:col-span-7">
                 <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/20 p-8 w-full">
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -3083,15 +3272,16 @@ export default function Home() {
                     onPublish={() => { fetchEmployerJobs(user.id); setClientTab("jobs"); }}
                   />
                 </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Your Job Postings</h2>
-                    <p className="text-slate-500 mt-1">Manage and track your active opportunities.</p>
                   </div>
-                </div>
+                  <div className="xl:col-span-5">
+                    <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="mb-5">
+                        <h2 className="text-2xl font-bold text-slate-900">Your Job Postings</h2>
+                        <p className="text-slate-500 mt-1">Manage and track your active opportunities.</p>
+                      </div>
 
                 {employerJobs.length > 0 ? (
-                  <div className="grid gap-4">
+                  <div className="grid max-h-[720px] gap-4 overflow-y-auto pr-1">
                     {employerJobs.map((job) => (
                       <div key={job.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all">
                         <div className="flex justify-between items-start mb-4">
@@ -3151,6 +3341,9 @@ export default function Home() {
                     <p className="text-slate-500 text-sm">No jobs posted yet.</p>
                   </div>
                 )}
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             )}
 
@@ -3465,11 +3658,17 @@ export default function Home() {
                         {isEmployerView && (
                           <button
                             onClick={() => void sendTalentInvite(selectedFreelancer)}
-                            disabled={invitedTalentIds.includes(selectedFreelancer.id || "")}
+                            disabled={
+                              invitedTalentIds.includes(selectedFreelancer.id || "") ||
+                              sentTalentInvitations.some((invitation) => invitation.freelancer_id === selectedFreelancer.id)
+                            }
                             className="w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 disabled:bg-indigo-900/40 disabled:text-indigo-200 disabled:cursor-not-allowed"
                           >
                             <UserPlus className="w-4 h-4" />
-                            {invitedTalentIds.includes(selectedFreelancer.id || "") ? "Invited" : "Invite"}
+                            {invitedTalentIds.includes(selectedFreelancer.id || "") ||
+                            sentTalentInvitations.some((invitation) => invitation.freelancer_id === selectedFreelancer.id)
+                              ? "Invited"
+                              : "Invite"}
                           </button>
                         )}
                         {isEmployerView && (
@@ -3726,31 +3925,21 @@ export default function Home() {
                             )}
                           </div>
 
-                          <div className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2.5 flex items-center gap-2">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                              freelancer&apos;s Message
-                            </p>
-                            <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
-                              &quot;{app.cover_letter || "No cover letter provided."}&quot;
-                            </p>
-                          </div>
-
                           <div className="flex flex-wrap gap-3 pt-2">
-                            <TooltipAction text="Run AI vetting on applicant">
-                              <button 
-                                onClick={() => {
-                                  setVettingData(app);
-                                  setIsVetting(true);
-                                }}
-                                className="px-6 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-slate-800 transition-all uppercase tracking-widest flex items-center gap-2 border border-slate-800 shadow-xl shadow-slate-900/10 active:scale-95"
+                            <TooltipAction text="Open public freelancer profile">
+                              <Link
+                                href={`/${getProfileSlug(
+                                  (app.freelancer_profile || app.profiles)?.username,
+                                  (app.freelancer_profile || app.profiles)?.id || app.freelancer_id,
+                                )}`}
+                                className="px-6 py-3 bg-white text-slate-700 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest flex items-center gap-2 border border-slate-200 active:scale-95"
                               >
-                                <Brain className="w-3.5 h-3.5 text-indigo-400" />
-                                Start AI Vetting
-                              </button>
+                                <ExternalLink className="w-4 h-4" />
+                                View Profile
+                              </Link>
                             </TooltipAction>
                             {app.status === 'pending' && (
-                              <TooltipAction text="Approve applicant">
+                              <TooltipAction text="Add this applicant to your candidates">
                                 <button 
                                   onClick={() => {
                                     const job = employerJobs.find(j => j.title === selectedJobTitle);
@@ -3760,30 +3949,31 @@ export default function Home() {
                                   className="px-6 py-3 bg-indigo-600 text-white text-[10px] font-bold rounded-xl hover:bg-indigo-700 transition-all uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-500/20 active:scale-95"
                                 >
                                   <CheckCircle2 className="w-4 h-4" />
-                                  Approve Applicant
+                                  Add Candidate
                                 </button>
                               </TooltipAction>
                             )}
-                            <TooltipAction text="Open full freelancer profile">
-                              <button 
-                                onClick={() => {
-                                  setSelectedFreelancer(app.freelancer_profile || app.profiles);
-                                  setShowFreelancerModal(true);
-                                }}
-                                className="px-5 py-3 bg-white text-slate-900 border border-slate-200 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest"
+                            {app.status !== 'rejected' && (
+                              <TooltipAction text="Reject this applicant">
+                                <button
+                                  type="button"
+                                  onClick={() => rejectApplication(app.id)}
+                                  disabled={isSaving}
+                                  className="px-6 py-3 bg-rose-50 text-rose-600 text-[10px] font-bold rounded-xl hover:bg-rose-100 transition-all uppercase tracking-widest flex items-center gap-2 border border-rose-100 active:scale-95"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                  Reject
+                                </button>
+                              </TooltipAction>
+                            )}
+                            {app.status !== 'pending' && app.status !== 'rejected' && (
+                              <span
+                                className="px-6 py-3 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-xl uppercase tracking-widest flex items-center gap-2 border border-emerald-100"
                               >
-                                Profile Details
-                              </button>
-                            </TooltipAction>
-                            <TooltipAction text="Open direct interview messaging">
-                              <Link 
-                                href={`/messages?with=${app.freelancer_id}`}
-                                className="px-5 py-3 bg-slate-900 text-white text-[10px] font-bold rounded-xl hover:bg-black transition-all uppercase tracking-widest flex items-center gap-2"
-                              >
-                                <Mail className="w-4 h-4 text-indigo-400" />
-                                Interview Chat
-                              </Link>
-                            </TooltipAction>
+                                <CheckCircle2 className="w-4 h-4" />
+                                Added
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -4159,6 +4349,7 @@ export default function Home() {
         )}
       </AnimatePresence>
       
+      {false && (
       <footer className="bg-slate-50 border-t border-slate-200 py-16 mt-20">
         <div className="max-w-full px-4 sm:px-10 text-center">
           <button 
@@ -4174,6 +4365,7 @@ export default function Home() {
           <p className="text-slate-400 text-xs font-medium uppercase tracking-widest">© 2024 Tara Marketplace. All rights reserved.</p>
         </div>
       </footer>
+      )}
     </div>
   );
 }
