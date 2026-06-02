@@ -7,7 +7,7 @@ import {
   MapPin, 
   Briefcase, 
   DollarSign, 
-  Heart, 
+  Bookmark, 
   MoreHorizontal,
   Share2,
   ShieldCheck,
@@ -16,7 +16,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { cn, formatRelativeTime } from "../lib/utils";
+import { cn, formatPostAge } from "../lib/utils";
 import Link from "next/link";
 import { getJobSharePath, getJobShareUrl } from "../lib/jobShare";
 
@@ -114,11 +114,6 @@ export default function JobCard({
                   <span className="text-[10px] font-bold uppercase tracking-widest">
                     {job.category}
                   </span>
-                  {energyRequirement && (
-                    <span className="ml-1 text-[9px] font-bold bg-white text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-widest" title="Energy requirement">
-                      {energyRequirement}
-                    </span>
-                  )}
                 </div>
                 {matchScore !== undefined && matchScore > 0 && (
                   <div className="relative flex items-center gap-2">
@@ -137,18 +132,6 @@ export default function JobCard({
                       <Sparkles className="w-3 h-3 mr-1 group-hover/match:animate-spin" />
                       {matchScore}% Match
                     </button>
-
-                    {typeof sustainabilityMatch === 'number' && (
-                      <span className={cn(
-                        "flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg border uppercase tracking-widest",
-                        sustainabilityMatch >= 80 ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                        sustainabilityMatch >= 60 ? "bg-amber-50 text-amber-700 border-amber-100" :
-                        "bg-slate-50 text-slate-700 border-slate-100"
-                      )} title="Energy & sustainability compatibility">
-                        <ShieldCheck className="w-3 h-3 mr-1" />
-                        {sustainabilityMatch}% Sustainable
-                      </span>
-                    )}
 
                     {showMatchDetails && (
                       <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl border border-slate-200 shadow-xl z-20 p-4 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -206,8 +189,6 @@ export default function JobCard({
                 )}
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                <span className="hover:text-slate-900 transition-colors cursor-pointer">Anonymous Hirer</span>
-                <span className="w-1 h-1 rounded-full bg-slate-300" />
                 <span className="flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                   Verified Partner
@@ -221,10 +202,11 @@ export default function JobCard({
               onClick={() => setIsSaved(!isSaved)}
               className={cn(
                 "p-2 rounded-lg transition-all duration-200 cursor-pointer",
-                isSaved ? "bg-red-50 text-red-500" : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                isSaved ? "bg-indigo-50 text-indigo-600" : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               )}
+              aria-label={isSaved ? "Remove saved job" : "Save job"}
             >
-              <Heart className={cn("w-5 h-5", isSaved && "fill-current")} />
+              <Bookmark className={cn("w-5 h-5", isSaved && "fill-current")} />
             </button>
             <div className="relative" ref={actionsMenuRef}>
               <button
@@ -311,7 +293,7 @@ export default function JobCard({
         
         <div className="flex justify-between items-center pt-5 border-t border-slate-100">
           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            Posted {formatRelativeTime(job.createdAt)}
+            Posted {formatPostAge(job.createdAt)}
           </span>
           <div className="flex flex-wrap gap-2 justify-end">
             <Link

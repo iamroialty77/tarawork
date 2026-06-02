@@ -27,6 +27,22 @@ export function formatRelativeTime(dateString: string) {
   return date.toLocaleDateString();
 }
 
+export function formatPostAge(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (!Number.isFinite(diffInSeconds) || diffInSeconds < 0) return "New";
+  const diffInDays = Math.floor(diffInSeconds / 86400);
+  if (diffInDays < 7) return "New";
+
+  const diffInWeeks = Math.floor(diffInDays / 7);
+  if (diffInWeeks < 8) return `${diffInWeeks} ${diffInWeeks === 1 ? "week" : "weeks"}`;
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  return `${diffInMonths} ${diffInMonths === 1 ? "month" : "months"}`;
+}
+
 export const energyScore = (userEnergy?: string, jobEnergy?: string) => {
   const u = (userEnergy || "Balanced").toLowerCase();
   const j = (jobEnergy || "Balanced").toLowerCase();

@@ -60,7 +60,6 @@ export default function JobPostingForm({
     customQuestions: [],
     deadline: "",
     category: "General",
-    energyRequirement: "Balanced",
   });
 
   const [skillInput, setSkillInput] = useState("");
@@ -110,24 +109,6 @@ export default function JobPostingForm({
     }, 800);
   };
 
-  const suggestEnergyRequirement = () => {
-    setIsAiAnalyzing(true);
-    setTimeout(() => {
-      const desc = (formData.description || "").toLowerCase();
-      const title = (formData.title || "").toLowerCase();
-      const combined = desc + " " + title;
-      
-      let suggestion: "High" | "Balanced" | "Low" = "Balanced";
-      if (combined.includes("urgent") || combined.includes("fast") || combined.includes("hard") || combined.includes("deadline") || combined.includes("complex") || combined.includes("immediate")) {
-        suggestion = "High";
-      } else if (combined.includes("flexible") || combined.includes("easy") || combined.includes("maintenance") || combined.includes("support") || combined.includes("whenever")) {
-        suggestion = "Low";
-      }
-      
-      setFormData(prev => ({ ...prev, energyRequirement: suggestion }));
-      setIsAiAnalyzing(false);
-    }, 1200);
-  };
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
   const addSkill = () => {
@@ -227,7 +208,6 @@ export default function JobPostingForm({
         customQuestions: formData.customQuestions,
         deadline: formData.deadline,
         category: formData.category,
-        energy_requirement: formData.energyRequirement,
         company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Employer",
         employer_id: user.id,
         createdAt: new Date().toISOString(),
@@ -266,7 +246,6 @@ export default function JobPostingForm({
         customQuestions: [],
         deadline: "",
         category: "General",
-        energyRequirement: "Balanced",
       });
       setDurationPreset("1-3 months");
       setCustomDurationText("");
@@ -341,14 +320,7 @@ export default function JobPostingForm({
         <div className="bg-white p-5 rounded-2xl shadow-xl shadow-indigo-200/50 border border-indigo-100 transition-all hover:scale-[1.02]">
            <div className="flex justify-between items-start mb-2">
              <div className="h-6 w-6 bg-indigo-100 rounded"></div>
-             <div className="flex gap-1">
-               {formData.energyRequirement && (
-                 <span className="text-[8px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest">
-                   {formData.energyRequirement}
-                 </span>
-               )}
-               <span className="text-[10px] font-bold text-indigo-500">{formData.duration}</span>
-             </div>
+             <span className="text-[10px] font-bold text-indigo-500">{formData.duration}</span>
            </div>
            <h5 className="font-bold text-sm text-gray-900 line-clamp-1">{formData.title || 'Project Title Placeholder'}</h5>
            <div className="flex flex-wrap gap-1.5 mt-2">
@@ -533,28 +505,6 @@ export default function JobPostingForm({
             <p className="mt-2 text-[11px] font-medium text-gray-500">
               Leave blank if one of the preset durations already fits your project.
             </p>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-black text-gray-900 uppercase tracking-widest mb-2 text-amber-600">Energy Requirement</label>
-          <div className="flex gap-2 p-1 bg-amber-50/30 border-2 border-amber-100/50 rounded-2xl">
-            {["High", "Balanced", "Low"].map((level) => (
-              <TooltipAction key={level} text={`Set ${level.toLowerCase()} energy level`}>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, energyRequirement: level as any })}
-                  className={cn(
-                    "flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                    formData.energyRequirement === level 
-                      ? "bg-amber-500 text-white shadow-lg shadow-amber-200" 
-                      : "text-amber-700 hover:bg-amber-100"
-                  )}
-                >
-                  {level}
-                </button>
-              </TooltipAction>
-            ))}
           </div>
         </div>
       </div>
@@ -840,16 +790,6 @@ export default function JobPostingForm({
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Post your project</h2>
           <div className="flex items-center gap-3">
-            <TooltipAction text="Predict project energy requirement">
-              <button 
-                type="button"
-                onClick={suggestEnergyRequirement}
-                className="group flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 hover:bg-amber-100 transition-all font-bold text-[10px] uppercase tracking-widest active:scale-95"
-              >
-                <Sparkles className="w-3.5 h-3.5 group-hover:animate-spin" />
-                AI Energy Predictor
-              </button>
-            </TooltipAction>
             <div className="flex items-center gap-2">
               {[1, 2, 3].map((s) => (
                 <div

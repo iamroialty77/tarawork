@@ -8,7 +8,7 @@ import {
   Sparkles,
   FolderKanban,
   MessageSquareText,
-  Star,
+  Video,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
@@ -463,10 +463,6 @@ export default function ProfileForm({
   const servicesOffered = normalizeServices(profile.servicesOffered);
   const applicationProfile = profile.aiInsights?.applicationProfile || {};
   const clientReviews = normalizeClientReviews((profile.aiInsights as Record<string, unknown> | undefined)?.clientReviews);
-  const averageRating =
-    clientReviews.length > 0
-      ? clientReviews.reduce((total, review) => total + review.rating, 0) / clientReviews.length
-      : 0;
   const sectionCardClassName = "rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6";
   const visibleActiveTab: TabKey = !isFreelancer && activeTab === "portfolio" ? "basics" : activeTab;
 
@@ -559,18 +555,6 @@ export default function ProfileForm({
                   </div>
 
                   <div>
-                    <label className={labelClassName}>Account Role</label>
-                    <select
-                      className={inputClassName}
-                      value={profile.role}
-                      onChange={(e) => handleFieldChange({ role: e.target.value as "freelancer" | "employer" })}
-                    >
-                      <option value="freelancer">Freelancer</option>
-                      <option value="employer">Client</option>
-                    </select>
-                  </div>
-
-                  <div>
                     <label className={labelClassName}>Full Name</label>
                     <input
                       type="text"
@@ -616,15 +600,32 @@ export default function ProfileForm({
               </div>
 
               {profile.role === "employer" ? (
-                <div>
-                  <label className={labelClassName}>Company Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. TechCorp Solutions"
-                    className={inputClassName}
-                    value={profile.companyName || ""}
-                    onChange={(e) => handleFieldChange({ companyName: e.target.value })}
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <label className={labelClassName}>Company Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. TechCorp Solutions"
+                      className={inputClassName}
+                      value={profile.companyName || ""}
+                      onChange={(e) => handleFieldChange({ companyName: e.target.value })}
+                    />
+                  </div>
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-slate-950">Video Call Verification</p>
+                        <p className="mt-1 text-xs font-medium text-emerald-800">Verify employer identity before inviting freelancers.</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+                      >
+                        <Video className="h-4 w-4" />
+                        Start
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -672,6 +673,27 @@ export default function ProfileForm({
 
             {isFreelancer && (
               <>
+                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-200">
+                        <Video className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-bold text-slate-950">Video Call Verification</h4>
+                        <p className="mt-1 text-sm font-medium text-emerald-800">Complete a short identity and work-readiness check.</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
+                    >
+                      <Video className="h-4 w-4" />
+                      Start Verification
+                    </button>
+                  </div>
+                </div>
+
                 <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
@@ -1071,25 +1093,7 @@ export default function ProfileForm({
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Client Feedback</p>
                   <h3 className="mt-1 text-xl font-bold text-slate-950">Reviews</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:min-w-[320px]">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Average Rating</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-2xl font-black text-slate-950">{averageRating ? averageRating.toFixed(1) : "0.0"}</span>
-                      <div className="flex">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <Star
-                            key={index}
-                            className={`h-4 w-4 ${
-                              index < Math.round(averageRating)
-                                ? "fill-amber-400 text-amber-400"
-                                : "fill-slate-200 text-slate-200"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 gap-3 sm:min-w-[220px]">
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Total Reviews</p>
                     <p className="mt-2 text-2xl font-black text-slate-950">{clientReviews.length}</p>
@@ -1107,22 +1111,6 @@ export default function ProfileForm({
                         <h4 className="text-base font-bold text-slate-950">{review.clientName}</h4>
                         <p className="mt-1 text-sm font-medium text-slate-500">{review.projectTitle}</p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span className="text-xs font-black text-amber-700">{review.rating.toFixed(1)}</span>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star
-                          key={index}
-                          className={`h-4 w-4 ${
-                            index < Math.round(review.rating)
-                              ? "fill-amber-400 text-amber-400"
-                              : "fill-slate-200 text-slate-200"
-                          }`}
-                        />
-                      ))}
                     </div>
                     <p className="mt-4 text-sm leading-relaxed text-slate-700">{review.comment}</p>
                     {review.date && (
@@ -1133,12 +1121,12 @@ export default function ProfileForm({
               </div>
             ) : (
               <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-amber-500 shadow-sm">
-                  <Star className="h-5 w-5" />
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-indigo-500 shadow-sm">
+                  <MessageSquareText className="h-5 w-5" />
                 </div>
                 <h4 className="mt-4 text-lg font-bold text-slate-950">No client reviews yet</h4>
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
-                  Client star ratings and comments will appear here after completed work is reviewed.
+                  Client comments will appear here after completed work is reviewed.
                 </p>
               </div>
             )}

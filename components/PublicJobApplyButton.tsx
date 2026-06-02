@@ -227,7 +227,7 @@ export default function PublicJobApplyButton({ job, nextPath }: PublicJobApplyBu
     <>
       <div className="flex gap-3">
         <Link
-          href="/"
+          href="/?tab=jobs"
           className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
         >
           Explore TaraWork
