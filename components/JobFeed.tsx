@@ -103,6 +103,10 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
 
   const baseFilteredJobs = useMemo(() => {
     return jobs.filter((job) => {
+      if ((job as { status?: string }).status && (job as { status?: string }).status !== "live") {
+        return false;
+      }
+
       // 1. Category Filter
       if (categoryFilter !== "All" && job.category !== categoryFilter) {
         return false;

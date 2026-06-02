@@ -108,6 +108,11 @@ DROP POLICY IF EXISTS "Authenticated users can post jobs." ON public.jobs;
 CREATE POLICY "Authenticated users can post jobs." ON public.jobs
     FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Employers can update their own jobs." ON public.jobs;
+CREATE POLICY "Employers can update their own jobs." ON public.jobs
+    FOR UPDATE USING (auth.uid() = employer_id)
+    WITH CHECK (auth.uid() = employer_id);
+
 -- 2b. Create JOB_CATEGORIES table
 CREATE TABLE IF NOT EXISTS public.job_categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

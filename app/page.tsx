@@ -1154,13 +1154,14 @@ export default function Home() {
   const closeJob = async (jobId: string) => {
     if (!user) return;
     try {
-      const { error } = await supabase
-        .from("jobs")
-        .update({ status: "closed" })
-        .eq("id", jobId)
-        .eq("employer_id", user.id);
+      const response = await fetch("/api/employer/close-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const payload = await response.json().catch(() => ({}));
 
-      if (error) throw error;
+      if (!response.ok) throw new Error(payload?.error || "Unable to close job.");
 
       setemployerJobs((prev) => prev.filter((job) => job.id !== jobId));
       setJobs((prev) => prev.filter((job) => job.id !== jobId));
