@@ -218,6 +218,7 @@ export default function Home() {
   const [talentsFilter, setTalentsFilter] = useState<"all">("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
+  const [visibleTalentsCount, setVisibleTalentsCount] = useState(12);
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
@@ -1594,8 +1595,7 @@ export default function Home() {
           portfolio_items(*)
         `)
         .eq('role', 'freelancer')
-        .order('ranking', { ascending: true })
-        .limit(10);
+        .order('ranking', { ascending: true });
 
       if (error) {
         console.warn("Freelancer list fetch issue:", error);
@@ -2020,6 +2020,17 @@ export default function Home() {
         return bScore - aScore;
       });
   }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter]);
+
+  const visibleFreelancers = useMemo(
+    () => filteredFreelancers.slice(0, visibleTalentsCount),
+    [filteredFreelancers, visibleTalentsCount],
+  );
+
+  const hasMoreFreelancers = visibleTalentsCount < filteredFreelancers.length;
+
+  useEffect(() => {
+    setVisibleTalentsCount(12);
+  }, [debouncedFreelancerSearchTerm, serviceTypeFilter, talentsSort]);
 
   useEffect(() => {
     async function checkUser() {
@@ -3796,7 +3807,7 @@ export default function Home() {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredFreelancers.map((freelancer) => {
+                  {visibleFreelancers.map((freelancer) => {
                     const trustSignals = getFreelancerTrustSignals(freelancer);
                     const highlightedPortfolio = freelancer.portfolio?.[0];
                     const displayedServices = (freelancer.servicesOffered || []).slice(0, 2);
@@ -3918,6 +3929,36 @@ export default function Home() {
                     );
                   })}
                 </div>
+                {filteredFreelancers.length > 0 && (
+                  <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-5 text-center sm:flex-row sm:text-left">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        Showing {Math.min(visibleFreelancers.length, filteredFreelancers.length)} of {filteredFreelancers.length} talents
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Results update automatically when search, service, or sort changes.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {visibleTalentsCount > 12 && (
+                        <button
+                          onClick={() => setVisibleTalentsCount(12)}
+                          className="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                        >
+                          Reset View
+                        </button>
+                      )}
+                      {hasMoreFreelancers && (
+                        <button
+                          onClick={() => setVisibleTalentsCount((prev) => prev + 12)}
+                          className="rounded-lg bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black"
+                        >
+                          Load More
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {filteredFreelancers.length === 0 && (
                   <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-10 text-center">
                     <p className="text-sm font-semibold text-slate-600">No talents found for this filter yet.</p>
