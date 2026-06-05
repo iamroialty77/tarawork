@@ -533,6 +533,28 @@ CREATE POLICY "Users can follow others." ON public.follows FOR INSERT WITH CHECK
 DROP POLICY IF EXISTS "Users can unfollow others." ON public.follows;
 CREATE POLICY "Users can unfollow others." ON public.follows FOR DELETE USING (auth.uid() = follower_id);
 
+-- 12b. Create SAVED_TALENTS table
+CREATE TABLE IF NOT EXISTS public.saved_talents (
+    employer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    PRIMARY KEY (employer_id, freelancer_id)
+);
+
+ALTER TABLE public.saved_talents ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Employers can view saved talents." ON public.saved_talents;
+CREATE POLICY "Employers can view saved talents." ON public.saved_talents
+    FOR SELECT USING (auth.uid() = employer_id);
+
+DROP POLICY IF EXISTS "Employers can save talents." ON public.saved_talents;
+CREATE POLICY "Employers can save talents." ON public.saved_talents
+    FOR INSERT WITH CHECK (auth.uid() = employer_id);
+
+DROP POLICY IF EXISTS "Employers can remove saved talents." ON public.saved_talents;
+CREATE POLICY "Employers can remove saved talents." ON public.saved_talents
+    FOR DELETE USING (auth.uid() = employer_id);
+
 -- 13. Create TRIGGERS for Automatic Notifications
 
 -- Trigger for NOTIFICATIONS when a new PORTFOLIO INQUIRY is created

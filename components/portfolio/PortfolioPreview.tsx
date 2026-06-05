@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Github,
   Linkedin,
@@ -14,6 +14,10 @@ import {
   CheckCircle2,
   Star,
   MessageSquareText,
+  Bookmark,
+  ShieldCheck,
+  Lock,
+  Copy,
 } from 'lucide-react';
 import { FreelancerProfile, PortfolioProject } from '@/types/portfolio';
 import { supabase } from '@/lib/supabase';
@@ -122,7 +126,14 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [inviteStatus, setInviteStatus] = useState('');
+  const [saveStatus, setSaveStatus] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [viewerUserId, setViewerUserId] = useState('');
+  const [viewerRole, setViewerRole] = useState('');
+  const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);
+  const [invitedTalentIds, setInvitedTalentIds] = useState<string[]>([]);
+  const [contactUnlockedPulse, setContactUnlockedPulse] = useState(false);
+  const [contactUnlockMessage, setContactUnlockMessage] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -149,14 +160,175 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const contactPhone = profile.contactPhone?.trim();
   const resumeUrl = profile.resumeUrl?.trim();
   const profession = profile.category || (profile.role && profile.role.toLowerCase() !== 'freelancer' ? profile.role : 'Independent Professional');
+  const invitedTalentsStorageKey = viewerUserId ? `tarawork:invited-talents:${viewerUserId}` : '';
+  const isEmployerViewer = ['employer', 'client', 'hirer'].includes(viewerRole.toLowerCase());
+  const hasSentInvite = invitedTalentIds.includes(profile.id) || inviteStatus === 'Invitation sent';
+  const isSavedTalent = savedTalentIds.includes(profile.id);
+  const hasUnlockedContact = isEmployerViewer && (isSavedTalent || hasSentInvite);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadViewer = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const nextUserId = session?.user?.id || '';
+      if (!isMounted) return;
+      setViewerUserId(nextUserId);
+
+      if (!nextUserId) {
+        setViewerRole('');
+        return;
+      }
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', nextUserId)
+        .maybeSingle();
+
+      if (!isMounted) return;
+      setViewerRole(typeof profileData?.role === 'string' ? profileData.role : '');
+    };
+
+    loadViewer();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!viewerUserId || !isEmployerViewer) {
+      setSavedTalentIds([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchSavedTalents = async () => {
+      try {
+        const response = await fetch('/api/saved-talents', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          if (isMounted) {
+            setSaveStatus(payload?.error || 'Unable to load saved talents');
+          }
+          return;
+        }
+
+        if (!isMounted) return;
+        setSavedTalentIds(
+          Array.isArray(payload.freelancerIds)
+            ? payload.freelancerIds.filter((entry: unknown): entry is string => typeof entry === 'string')
+            : [],
+        );
+      } catch (error) {
+        if (isMounted) {
+          setSaveStatus(error instanceof Error ? error.message : 'Unable to load saved talents');
+        }
+      }
+    };
+
+    fetchSavedTalents();
+    return () => {
+      isMounted = false;
+    };
+  }, [viewerUserId, isEmployerViewer]);
+
+  useEffect(() => {
+    if (!invitedTalentsStorageKey) {
+      setInvitedTalentIds([]);
+      return;
+    }
+
+    const raw = window.localStorage.getItem(invitedTalentsStorageKey);
+    try {
+      const parsed = raw ? JSON.parse(raw) : [];
+      setInvitedTalentIds(Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === 'string') : []);
+    } catch {
+      setInvitedTalentIds([]);
+    }
+  }, [invitedTalentsStorageKey]);
+
+  useEffect(() => {
+    if (invitedTalentsStorageKey) {
+      window.localStorage.setItem(invitedTalentsStorageKey, JSON.stringify(invitedTalentIds));
+    }
+  }, [invitedTalentIds, invitedTalentsStorageKey]);
+
+  const triggerContactUnlockPulse = () => {
+    setContactUnlockedPulse(true);
+    window.setTimeout(() => setContactUnlockedPulse(false), 1600);
+  };
+
+  const showContactUnlockChip = (message: string) => {
+    setContactUnlockMessage(message);
+    window.setTimeout(() => setContactUnlockMessage(''), 2200);
+  };
 
   const handleHireMe = () => {
     if (!isPublic) return;
     setIsInquiryModalOpen(true);
   };
 
+  const handleSaveTalent = () => {
+    if (!isPublic) return;
+    if (!viewerUserId || !isEmployerViewer) {
+      setSaveStatus('Sign in as an employer to save talents');
+      return;
+    }
+
+    const nextIsSaved = !savedTalentIds.includes(profile.id);
+    const previousIds = savedTalentIds;
+    const nextIds = nextIsSaved
+      ? [profile.id, ...previousIds.filter((id) => id !== profile.id)]
+      : previousIds.filter((id) => id !== profile.id);
+
+    setSavedTalentIds(nextIds);
+    setSaveStatus(nextIsSaved ? 'Saving talent...' : 'Removing talent...');
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          nextIsSaved ? '/api/saved-talents' : `/api/saved-talents?freelancerId=${encodeURIComponent(profile.id)}`,
+          nextIsSaved
+            ? {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ freelancerId: profile.id }),
+              }
+            : { method: 'DELETE' },
+        );
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          setSavedTalentIds(previousIds);
+          setSaveStatus(payload?.error || 'Unable to update saved talent');
+          return;
+        }
+
+        setSaveStatus(nextIsSaved ? 'Talent saved' : 'Talent removed');
+        if (nextIsSaved) {
+          triggerContactUnlockPulse();
+          showContactUnlockChip('Contact details unlocked');
+        }
+      } catch (error) {
+        setSavedTalentIds(previousIds);
+        setSaveStatus(error instanceof Error ? error.message : 'Unable to update saved talent');
+      }
+    })();
+  };
+
   const handleInvite = async () => {
     if (!isPublic || isInviting) return;
+    if (!viewerUserId || !isEmployerViewer) {
+      setInviteStatus('Sign in as an employer to invite');
+      return;
+    }
+    if (invitedTalentIds.includes(profile.id)) {
+      setInviteStatus('Invitation sent');
+      return;
+    }
     setIsInviting(true);
     setInviteStatus('');
 
@@ -170,7 +342,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       if (!response.ok) {
         throw new Error(payload?.error || 'Unable to send invitation.');
       }
+      setInvitedTalentIds((prev) => [profile.id, ...prev.filter((id) => id !== profile.id)]);
       setInviteStatus('Invitation sent');
+      triggerContactUnlockPulse();
+      showContactUnlockChip('Contact details unlocked');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to send invitation.';
       setInviteStatus(message === 'Unauthorized.' ? 'Sign in as an employer to invite' : message);
@@ -229,12 +404,27 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 {inviteStatus}
               </span>
             ) : null}
+            {saveStatus ? (
+              <span className="hidden max-w-48 truncate text-xs font-bold text-slate-500 sm:inline">
+                {saveStatus}
+              </span>
+            ) : null}
             <button
-              onClick={handleInvite}
-              disabled={!isPublic || isInviting}
+              onClick={handleSaveTalent}
+              disabled={!isPublic}
               className="rounded-full border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isInviting ? 'Inviting...' : 'Invite'}
+              <span className="inline-flex items-center gap-1.5">
+                <Bookmark size={14} />
+                {isSavedTalent ? 'Saved' : 'Save'}
+              </span>
+            </button>
+            <button
+              onClick={handleInvite}
+              disabled={!isPublic || isInviting || hasSentInvite}
+              className="rounded-full border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isInviting ? 'Inviting...' : hasSentInvite ? 'Invited' : 'Invite'}
             </button>
             <button
               onClick={handleHireMe}
@@ -313,23 +503,92 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             <div>
               <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</h2>
               <div className="mt-3 space-y-3">
-                {contactEmail ? (
-                  <a
-                    href={`mailto:${contactEmail}`}
-                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-white"
-                  >
-                    <Mail size={16} />
-                    <span className="min-w-0 break-all">{contactEmail}</span>
-                  </a>
-                ) : null}
-                {contactPhone ? (
-                  <a
-                    href={`tel:${contactPhone.replace(/\s+/g, '')}`}
-                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-white"
-                  >
-                    <Phone size={16} />
-                    <span>{contactPhone}</span>
-                  </a>
+                {isEmployerViewer ? (
+                  <div className={`rounded-2xl border bg-white p-4 transition-all duration-500 ${
+                    contactUnlockedPulse ? 'border-emerald-300 ring-4 ring-emerald-100 shadow-lg shadow-emerald-100' : 'border-slate-200'
+                  }`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Contact Details</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                          Direct outreach unlocks after you save or invite this talent.
+                        </p>
+                      </div>
+                      {hasUnlockedContact ? (
+                        <span className={`inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-700 transition-all duration-500 ${
+                          contactUnlockedPulse ? 'scale-105 shadow-sm shadow-emerald-200' : ''
+                        }`}>
+                          <ShieldCheck className="h-3 w-3" />
+                          Verified Contact
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      {hasUnlockedContact ? (
+                        <>
+                          {contactEmail ? (
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Email</p>
+                              <div className="mt-1 flex items-center justify-between gap-3">
+                                <a
+                                  href={`mailto:${contactEmail}`}
+                                  className="flex min-w-0 items-center gap-3 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
+                                >
+                                  <Mail size={16} />
+                                  <span className="min-w-0 break-all">{contactEmail}</span>
+                                </a>
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(contactEmail)}
+                                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                  Copy
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+                          {contactPhone ? (
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Contact Number</p>
+                              <div className="mt-1 flex items-center justify-between gap-3">
+                                <a
+                                  href={`tel:${contactPhone.replace(/\s+/g, '')}`}
+                                  className="flex min-w-0 items-center gap-3 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
+                                >
+                                  <Phone size={16} />
+                                  <span>{contactPhone}</span>
+                                </a>
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(contactPhone)}
+                                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                  Copy
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+                          {!contactEmail && !contactPhone ? (
+                            <p className="text-sm text-slate-400">No direct contact details provided.</p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5">
+                          <div className="flex items-start gap-3">
+                            <div className="rounded-xl bg-slate-900 p-2 text-white">
+                              <Lock className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-900">Contact details are locked</p>
+                              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                Save this talent or send an invite first to unlock email and contact number for direct outreach.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ) : null}
                 {resumeUrl ? (
                   <a
@@ -361,7 +620,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                     })}
                   </div>
                 ) : null}
-                {!contactEmail && !contactPhone && !resumeUrl && socialLinks.length === 0 ? (
+                {!isEmployerViewer && !resumeUrl && socialLinks.length === 0 ? (
                   <p className="text-sm text-slate-400">No public links yet.</p>
                 ) : null}
               </div>
@@ -370,6 +629,12 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
         </aside>
 
         <main className="flex-1 space-y-12">
+          {contactUnlockMessage ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-emerald-700 shadow-sm">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {contactUnlockMessage}
+            </div>
+          ) : null}
           <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>

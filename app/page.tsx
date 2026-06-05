@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useEffect, useRef, useMemo } from "react";
+import { Fragment, useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { CurrencyCode, UserProfile, Job, PortfolioItem, Squad, Project, ProfileAboutSections, ServiceOffering } from "../types";
 import JobFeed from "../components/JobFeed";
 import ProfileForm from "../components/ProfileForm";
@@ -26,6 +26,7 @@ import {
   Clock,
   LogIn,
   Mail,
+  Phone,
   Facebook,
   Linkedin,
   Github,
@@ -220,6 +221,7 @@ export default function Home() {
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
   const [visibleTalentsCount, setVisibleTalentsCount] = useState(12);
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
+  const [contactUnlockTalentId, setContactUnlockTalentId] = useState<string | null>(null);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
   const [pendingApplyJobId, setPendingApplyJobId] = useState<string | null>(null);
@@ -298,7 +300,6 @@ export default function Home() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const effectiveView = profile.role === "admin" ? adminViewMode : view;
   const isEmployerView = effectiveView === "client" || profile.role === "employer";
-  const savedTalentsStorageKey = user?.id ? `tarawork:saved-talents:${user.id}` : "";
   const invitedTalentsStorageKey = user?.id ? `tarawork:invited-talents:${user.id}` : "";
   const savedTalents = useMemo(
     () =>
@@ -427,26 +428,6 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (!savedTalentsStorageKey) return;
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(savedTalentsStorageKey);
-      if (!raw) {
-        setSavedTalentIds([]);
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setSavedTalentIds(parsed.filter((entry): entry is string => typeof entry === "string"));
-      } else {
-        setSavedTalentIds([]);
-      }
-    } catch {
-      setSavedTalentIds([]);
-    }
-  }, [savedTalentsStorageKey]);
-
-  useEffect(() => {
     if (!invitedTalentsStorageKey) return;
     if (typeof window === "undefined") return;
     try {
@@ -465,12 +446,6 @@ export default function Home() {
       setInvitedTalentIds([]);
     }
   }, [invitedTalentsStorageKey]);
-
-  useEffect(() => {
-    if (!savedTalentsStorageKey) return;
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(savedTalentsStorageKey, JSON.stringify(savedTalentIds));
-  }, [savedTalentIds, savedTalentsStorageKey]);
 
   useEffect(() => {
     if (!invitedTalentsStorageKey) return;
@@ -1694,6 +1669,31 @@ export default function Home() {
       console.error("Error fetching talent invitations:", err);
     }
   };
+
+  const fetchSavedTalents = useCallback(async () => {
+    if (!user) {
+      setSavedTalentIds([]);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/saved-talents", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        console.warn("Saved talents fetch issue:", payload?.error || response.statusText);
+        return;
+      }
+
+      setSavedTalentIds(
+        Array.isArray(payload.freelancerIds)
+          ? payload.freelancerIds.filter((entry: unknown): entry is string => typeof entry === "string")
+          : [],
+      );
+    } catch (err) {
+      console.warn("Unexpected saved talents fetch issue:", err);
+    }
+  }, [user]);
   
   const fetchFollows = async (userId: string) => {
     try {
@@ -1736,15 +1736,51 @@ export default function Home() {
     }
   };
 
-  const toggleSavedTalent = (freelancerId?: string) => {
-    if (!freelancerId) return;
+  const toggleSavedTalent = async (freelancerId?: string) => {
+    if (!freelancerId || !user) return;
     const isSaved = savedTalentIds.includes(freelancerId);
-    setSavedTalentIds((prev) =>
-      isSaved ? prev.filter((id) => id !== freelancerId) : [freelancerId, ...prev],
-    );
-    setToastMsg(isSaved ? "Talent removed from saved list." : "Talent saved to your hiring shortlist.");
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2200);
+    const previousIds = savedTalentIds;
+    const nextIds = isSaved
+      ? previousIds.filter((id) => id !== freelancerId)
+      : [freelancerId, ...previousIds.filter((id) => id !== freelancerId)];
+
+    setSavedTalentIds(nextIds);
+
+    try {
+      const response = await fetch(
+        isSaved ? `/api/saved-talents?freelancerId=${encodeURIComponent(freelancerId)}` : "/api/saved-talents",
+        isSaved
+          ? { method: "DELETE" }
+          : {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ freelancerId }),
+            },
+      );
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setSavedTalentIds(previousIds);
+        setToastMsg(`Error: ${payload?.error || "Failed to update saved talent."}`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3200);
+        return;
+      }
+
+      if (!isSaved) {
+        setContactUnlockTalentId(freelancerId);
+        window.setTimeout(() => setContactUnlockTalentId((current) => (current === freelancerId ? null : current)), 1600);
+      }
+      setToastMsg(isSaved ? "Talent removed from saved list." : "Talent saved to your hiring shortlist.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2200);
+    } catch (error) {
+      setSavedTalentIds(previousIds);
+      const message = error instanceof Error ? error.message : "Failed to update saved talent.";
+      setToastMsg(`Error: ${message}`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3200);
+    }
   };
 
   const sendTalentInvite = async (freelancer: UserProfile) => {
@@ -1781,6 +1817,8 @@ export default function Home() {
         ...prev.filter((item) => item.id !== payload.invitation.id),
       ]);
     }
+    setContactUnlockTalentId(freelancerId);
+    window.setTimeout(() => setContactUnlockTalentId((current) => (current === freelancerId ? null : current)), 1600);
     setToastMsg(`Invitation sent to ${freelancer.name}.`);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
@@ -2052,6 +2090,7 @@ export default function Home() {
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
         await fetchTalentInvitations();
+        await fetchSavedTalents();
         await fetchFollows(session.user.id);
         await fetchPortfolioInquiries(session.user.id);
         
@@ -2177,12 +2216,13 @@ export default function Home() {
         setUser(session.user);
         fetchProfile(session.user.id, session.user);
         fetchTalentInvitations();
+        fetchSavedTalents();
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [fetchSavedTalents, router]);
 
   if (loading) {
     return (
@@ -4035,6 +4075,109 @@ export default function Home() {
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-1 space-y-6">
+                    {isEmployerView && (
+                    <div className={cn(
+                      "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-500",
+                      contactUnlockTalentId === selectedFreelancer.id && "border-emerald-300 ring-4 ring-emerald-100 shadow-lg shadow-emerald-100",
+                    )}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact Details</h4>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                            Direct outreach unlocks after you save or invite this talent.
+                          </p>
+                        </div>
+                        {(savedTalentIds.includes(selectedFreelancer.id || "") ||
+                          invitedTalentIds.includes(selectedFreelancer.id || "") ||
+                          sentTalentInvitations.some((invitation) => invitation.freelancer_id === selectedFreelancer.id)) && (
+                          <span className={cn(
+                            "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-700 transition-all duration-500",
+                            contactUnlockTalentId === selectedFreelancer.id && "scale-105 shadow-sm shadow-emerald-200",
+                          )}>
+                            <ShieldCheck className="h-3 w-3" />
+                            Verified Contact
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-4 space-y-3">
+                        {(savedTalentIds.includes(selectedFreelancer.id || "") ||
+                          invitedTalentIds.includes(selectedFreelancer.id || "") ||
+                          sentTalentInvitations.some((invitation) => invitation.freelancer_id === selectedFreelancer.id)) ? (
+                          <>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Email</p>
+                          {selectedFreelancer.aiInsights?.applicationProfile?.contactEmail?.trim() ? (
+                            <div className="mt-1 flex items-center justify-between gap-3">
+                              <a
+                                href={`mailto:${selectedFreelancer.aiInsights.applicationProfile.contactEmail.trim()}`}
+                                className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 break-all"
+                              >
+                                <Mail className="h-4 w-4" />
+                                {selectedFreelancer.aiInsights.applicationProfile.contactEmail.trim()}
+                              </a>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedFreelancer.aiInsights?.applicationProfile?.contactEmail?.trim() || "");
+                                  setToastMsg("Email copied.");
+                                  setShowToast(true);
+                                }}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                                Copy
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="mt-1 text-sm font-semibold text-slate-500">Not provided</p>
+                          )}
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Contact Number</p>
+                          {selectedFreelancer.aiInsights?.applicationProfile?.contactPhone?.trim() ? (
+                            <div className="mt-1 flex items-center justify-between gap-3">
+                              <a
+                                href={`tel:${selectedFreelancer.aiInsights.applicationProfile.contactPhone.trim()}`}
+                                className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 break-all"
+                              >
+                                <Phone className="h-4 w-4" />
+                                {selectedFreelancer.aiInsights.applicationProfile.contactPhone.trim()}
+                              </a>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedFreelancer.aiInsights?.applicationProfile?.contactPhone?.trim() || "");
+                                  setToastMsg("Contact number copied.");
+                                  setShowToast(true);
+                                }}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                                Copy
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="mt-1 text-sm font-semibold text-slate-500">Not provided</p>
+                          )}
+                        </div>
+                          </>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5">
+                            <div className="flex items-start gap-3">
+                              <div className="rounded-xl bg-slate-900 p-2 text-white">
+                                <Lock className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-slate-900">Contact details are locked</p>
+                                <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                  Save this talent or send an invite first to unlock email and contact number for direct outreach.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    )}
+
                     {/* Follow/Save Interaction */}
                     <div className="bg-slate-950 p-6 rounded-2xl border border-white/10 text-white shadow-2xl overflow-hidden relative group">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-3xl -z-10 group-hover:bg-indigo-500/30 transition-all duration-700" />
