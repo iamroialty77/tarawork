@@ -213,7 +213,15 @@ export default function AuthForm() {
       console.error("Auth error:", err);
       let message = err.message || "An error occurred during authentication.";
       
-      if (message.includes("Email rate limit exceeded")) {
+      if (
+        err?.name === "AuthRetryableFetchError" ||
+        err?.status === 504 ||
+        message.includes("504") ||
+        message.toLowerCase().includes("gateway timeout")
+      ) {
+        message = "Password reset email service timed out. Please wait a minute and try again. If this keeps happening, the Supabase email sender needs Custom SMTP configured.";
+        setShowSMTPHelp(true);
+      } else if (message.includes("Email rate limit exceeded")) {
         message = "System Limit Reached: Too many email requests (5 per hour limit). Please wait an hour before trying again or contact our technical team for scaling options.";
       } else if (err.status === 500 || err.code === '500' || message.includes("500") || message.toLowerCase().includes("internal server error") || message.includes("Database error")) {
         message = "Security & Trust Alert: There is a technical issue with our backend configuration. We are ensuring your data remains safe while we fix this. Please check platform health in the admin dashboard.";
