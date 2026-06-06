@@ -56,9 +56,16 @@ export default function AuthForm() {
 
       const handleRecoveryCode = async () => {
         const code = params.get('code');
-        if (!code) return;
+        const tokenHash = params.get('token_hash');
+        const type = params.get('type');
+        if (!code && !(tokenHash && type === 'recovery')) return;
 
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        const { error } = code
+          ? await supabase.auth.exchangeCodeForSession(code)
+          : await supabase.auth.verifyOtp({
+              token_hash: tokenHash as string,
+              type: 'recovery',
+            });
         if (error) {
           setError("Password reset link is invalid or expired. Please request a new reset link.");
           return;
@@ -145,6 +152,15 @@ export default function AuthForm() {
       if (mode === "update_password") {
         if (password !== confirmPassword) {
           setError("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          setError("Password reset session is missing or expired. Please request a new reset link and open the latest email.");
+          setMode("forgot_password");
           setLoading(false);
           return;
         }
