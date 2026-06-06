@@ -54,16 +54,41 @@ export default function AuthForm() {
         setRole(requestedRole);
       }
 
+      const handleRecoveryCode = async () => {
+        const code = params.get('code');
+        if (!code) return;
+
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setError("Password reset link is invalid or expired. Please request a new reset link.");
+          return;
+        }
+
+        window.history.replaceState(null, "", "/auth?mode=update_password");
+        setMode('update_password');
+      };
+
       // Check for password reset mode
       const hash = window.location.hash;
-      if (hash && hash.includes('type=recovery')) {
+      if (hash && (hash.includes('type=recovery') || hash.includes('access_token'))) {
         setMode('update_password');
       }
       
       const modeParam = params.get('mode');
       if (modeParam === 'update_password') {
         setMode('update_password');
+        void handleRecoveryCode();
       }
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setMode('update_password');
+        }
+      });
+
+      return () => subscription.unsubscribe();
     }
   }, []);
 
@@ -110,7 +135,7 @@ export default function AuthForm() {
     try {
       if (mode === "forgot_password") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/callback?next=/auth?mode=update_password`,
+          redirectTo: `${window.location.origin}/auth?mode=update_password`,
         });
         if (error) throw error;
         setSuccess("Password reset link sent! Please check your email.");
