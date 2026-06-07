@@ -244,6 +244,7 @@ export default function Home() {
   const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const loadedSessionIdRef = useRef<string | null>(null);
 
   const [profile, setProfile] = useState<UserProfile>({
     name: "User",
@@ -839,25 +840,53 @@ export default function Home() {
           },
         },
       };
-      const saveProfileRequest = () =>
-        fetch("/api/profile/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(savePayload),
-        });
+      const saveProfileRequest = async () => {
+        const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
+        const candidateUrls = [
+          "/api/profile/save",
+          currentOrigin ? `${currentOrigin}/api/profile/save` : "",
+          "http://localhost:3000/api/profile/save",
+          "http://127.0.0.1:3000/api/profile/save",
+        ].filter((url, index, urls) => url && urls.indexOf(url) === index);
+
+        let lastError: unknown = null;
+        for (const url of candidateUrls) {
+          try {
+            return await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(savePayload),
+              cache: "no-store",
+            });
+          } catch (requestError) {
+            lastError = requestError;
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            error:
+              lastError instanceof Error && lastError.message
+                ? `Profile save API request failed: ${lastError.message}`
+                : "Profile save API request failed.",
+          }),
+          {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      };
 
       let response: Response;
-      try {
-        response = await saveProfileRequest();
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, 700));
-        response = await saveProfileRequest();
-      }
+      response = await saveProfileRequest();
 
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(payload?.error || "Failed to save profile.");
+        setToastMsg(`Error: ${payload?.error || "Failed to save profile."}`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 6000);
+        return;
       }
       
       setProfile(nextProfile);
@@ -872,17 +901,10 @@ export default function Home() {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err: any) {
-      console.error("Error saving profile:", err);
       if (err.code === '23505') {
         setToastMsg("⚠️ Error: Username is already taken. Please choose another one.");
       } else if (err.code === 'PGRST205' || err.message?.includes("relation \"profiles\" does not exist")) {
         setToastMsg("⚠️ Database Error: 'profiles' table not found. Go to Admin tab for setup instructions.");
-      } else if (
-        err instanceof TypeError ||
-        err.message === "Failed to fetch" ||
-        err.message?.includes("Failed to fetch")
-      ) {
-        setToastMsg("Connection error: Cannot reach the profile save API right now. Check that the dev server is running, then try again.");
       } else {
         setToastMsg(`Error: ${err.message || "Failed to save profile"}`);
       }
@@ -1678,8 +1700,8 @@ export default function Home() {
     }
   };
 
-  const fetchSavedTalents = useCallback(async () => {
-    if (!user) {
+  const fetchSavedTalents = useCallback(async (userId = user?.id) => {
+    if (!userId) {
       setSavedTalentIds([]);
       return;
     }
@@ -2085,6 +2107,7 @@ export default function Home() {
         setLoading(false);
       } else {
         setUser(session.user);
+        loadedSessionIdRef.current = session.user.id;
         
         // Fetch real profile from DB
         const currentProfile = profile;
@@ -2098,7 +2121,7 @@ export default function Home() {
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
         await fetchTalentInvitations(session.user.id);
-        await fetchSavedTalents();
+        await fetchSavedTalents(session.user.id);
         await fetchFollows(session.user.id);
         await fetchPortfolioInquiries(session.user.id);
         
@@ -2219,18 +2242,24 @@ export default function Home() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null);
+        loadedSessionIdRef.current = null;
         setLoading(false);
       } else {
         setUser(session.user);
+        if (loadedSessionIdRef.current === session.user.id) {
+          setLoading(false);
+          return;
+        }
+        loadedSessionIdRef.current = session.user.id;
         fetchProfile(session.user.id, session.user);
         fetchTalentInvitations(session.user.id);
-        fetchSavedTalents();
+        fetchSavedTalents(session.user.id);
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchSavedTalents, router]);
+  }, []);
 
   if (loading) {
     return (

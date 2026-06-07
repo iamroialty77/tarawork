@@ -13,6 +13,15 @@ const sql = databaseUrl
 
 let profileColumnCache: Set<string> | null = null;
 let portfolioColumnCache: Set<string> | null = null;
+const responseHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: responseHeaders });
+}
 
 async function getTableColumns(tableName: "profiles" | "portfolios") {
   if (!sql) return new Set<string>();
@@ -41,7 +50,10 @@ function pickExistingColumns(row: Record<string, unknown>, existingColumns: Set<
 
 export async function POST(request: Request) {
   if (!sql) {
-    return NextResponse.json({ error: "Database connection is not configured." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Database connection is not configured." },
+      { status: 500, headers: responseHeaders },
+    );
   }
 
   try {
@@ -50,7 +62,10 @@ export async function POST(request: Request) {
     const userId = String(body.userId || profile.id || "").trim();
 
     if (!userId) {
-      return NextResponse.json({ error: "Missing profile user id." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing profile user id." },
+        { status: 400, headers: responseHeaders },
+      );
     }
 
     const aiInsights = profile.aiInsights || {};
@@ -129,12 +144,12 @@ export async function POST(request: Request) {
       `;
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: responseHeaders });
   } catch (error: any) {
     console.error("Profile API save error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to save profile." },
-      { status: 500 },
+      { status: 500, headers: responseHeaders },
     );
   }
 }
