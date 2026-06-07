@@ -2743,7 +2743,7 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="max-w-full px-4 sm:px-10 py-8">
+      <main className="max-w-full h-[calc(100vh-5rem)] overflow-y-auto px-4 py-8 sm:px-10">
         {effectiveView === "freelancer" ? (
           <div className="space-y-8">
             {/* Freelancer Tab Navigation */}
@@ -3163,12 +3163,6 @@ export default function Home() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
-                  <div className="flex justify-between items-end mb-6">
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Available Jobs</h2>
-                      <p className="text-slate-500 mt-1">Browse opportunities that match your expertise.</p>
-                    </div>
-                  </div>
                   <JobFeed 
                     jobs={jobs} 
                     profile={profile} 

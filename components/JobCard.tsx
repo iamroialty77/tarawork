@@ -33,6 +33,8 @@ export interface JobCardProps {
   rateLabel?: string;
   rateSubLabel?: string;
   onViewSmartMatch?: (job: Job) => void;
+  isSaved?: boolean;
+  onToggleSave?: (jobId: string) => void;
 }
 
 export default function JobCard({ 
@@ -47,10 +49,12 @@ export default function JobCard({
   energyRequirement,
   rateLabel,
   rateSubLabel,
-  onViewSmartMatch
+  onViewSmartMatch,
+  isSaved: controlledIsSaved,
+  onToggleSave
 }: JobCardProps) {
   const isApplied = !!applicationStatus;
-  const [isSaved, setIsSaved] = useState(false);
+  const [localIsSaved, setLocalIsSaved] = useState(false);
   const [showMatchDetails, setShowMatchDetails] = useState(false);
   const [isApplyingLocal, setIsApplyingLocal] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -58,6 +62,7 @@ export default function JobCard({
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const sharePath = getJobSharePath(job);
   const shareUrl = getJobShareUrl(job);
+  const isSaved = controlledIsSaved ?? localIsSaved;
 
   useEffect(() => {
     if (!showActionsMenu) return;
@@ -199,7 +204,13 @@ export default function JobCard({
 
           <div className="flex gap-1 relative">
             <button 
-              onClick={() => setIsSaved(!isSaved)}
+              onClick={() => {
+                if (onToggleSave) {
+                  onToggleSave(job.id);
+                } else {
+                  setLocalIsSaved((current) => !current);
+                }
+              }}
               className={cn(
                 "p-2 rounded-lg transition-all duration-200 cursor-pointer",
                 isSaved ? "bg-indigo-50 text-indigo-600" : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600"

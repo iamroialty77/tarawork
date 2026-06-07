@@ -201,7 +201,7 @@ export default function PortfolioManager({ items, onAdd, onUpdate, onRemove, isO
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {items.length === 0 && !isAdding && (
           <div className="col-span-full py-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100">
             <Briefcase className="w-12 h-12 text-slate-200 mx-auto mb-3" />

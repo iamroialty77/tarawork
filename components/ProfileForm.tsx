@@ -617,8 +617,8 @@ export default function ProfileForm({
   };
 
   return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
-      <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="h-full min-h-[calc(100vh-12rem)] overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
+      <form onSubmit={handleSubmit} className="grid h-full min-h-0 gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="rounded-3xl border border-slate-200 bg-slate-50 p-2 lg:sticky lg:top-24 lg:self-start">
           <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
             {sectionNavItems.map((tab) => {
@@ -642,10 +642,11 @@ export default function ProfileForm({
           </nav>
         </aside>
 
-        <div className="space-y-5">
+        <div className="min-h-0 space-y-5 overflow-y-auto pr-1">
         {visibleActiveTab === "basics" && (
           <div className="space-y-5">
             {activeBasicsSubTab === "overview" && (
+            <>
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
               <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
                 <div className="mb-5 flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
@@ -744,7 +745,6 @@ export default function ProfileForm({
                       onChange={(e) => handleFieldChange({ companyName: e.target.value })}
                     />
                   </div>
-                  {saveProfileButton}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -789,6 +789,8 @@ export default function ProfileForm({
               )}
             </div>
             </div>
+            {saveProfileButton}
+            </>
             )}
 
             {isFreelancer && (
@@ -900,6 +902,7 @@ export default function ProfileForm({
                 )}
 
                 {activeBasicsSubTab === "skills" && (
+                <>
                 <div className={sectionCardClassName}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <h4 className="text-base font-bold text-slate-950">Skills</h4>
@@ -955,9 +958,11 @@ export default function ProfileForm({
                     </div>
                   </div>
                 </div>
+                </>
                 )}
 
                 {activeBasicsSubTab === "services" && (
+                <>
                 <div className={sectionCardClassName}>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -1077,9 +1082,11 @@ export default function ProfileForm({
                     </div>
                   </div>
                 </div>
+                </>
                 )}
 
                 {activeBasicsSubTab === "experience" && (
+                <>
                 <div className={sectionCardClassName}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <h4 className="text-base font-bold text-slate-950">Experience</h4>
@@ -1180,6 +1187,7 @@ export default function ProfileForm({
                     </div>
                   </div>
                 </div>
+                </>
                 )}
               </>
             )}
@@ -1188,20 +1196,6 @@ export default function ProfileForm({
 
         {visibleActiveTab === "portfolio" && isFreelancer && (
           <div className="space-y-5">
-            <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-slate-950">Portfolio</h3>
-                  <TooltipAction label="Portfolio help" tooltip="Keep your public profile link and project samples in one place for employers to review." />
-                </div>
-                <div className="rounded-2xl border border-indigo-100 bg-white px-4 py-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Public Profile</p>
-                  <p className="mt-1 break-all text-sm font-semibold text-slate-900">
-                    {typeof window !== "undefined" ? `${window.location.origin}/${profile.username || "your-name"}` : `tarawork.network/${profile.username || "your-name"}`}
-                  </p>
-                </div>
-              </div>
-            </div>
             <div className={sectionCardClassName}>
               <div className="mb-5 flex items-center justify-between gap-3">
                 <h3 className="text-lg font-bold text-slate-950">Portfolio Projects</h3>

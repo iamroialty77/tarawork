@@ -42,7 +42,7 @@ const smartMatchErrorMessage = (errorCode?: string, fallbackError?: string) => {
 };
 
 export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: JobFeedProps) {
-  const JOBS_PER_PAGE = 9;
+  const JOBS_PER_PAGE = 8;
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [showAIAgent, setShowAIAgent] = useState(false);
@@ -58,6 +58,11 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | "All">("All");
   const [durationFilter, setDurationFilter] = useState<JobDuration | "All">("All");
   const [categoryFilter, setCategoryFilter] = useState<FreelancerCategory | "All">("All");
+  const [savedOnlyFilter, setSavedOnlyFilter] = useState(false);
+  const [verifiedOnlyFilter, setVerifiedOnlyFilter] = useState(false);
+  const [minSalaryFilter, setMinSalaryFilter] = useState("");
+  const [maxSalaryFilter, setMaxSalaryFilter] = useState("");
+  const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [useSmartMatching, setUseSmartMatching] = useState(false);
   const [smartMatches, setSmartMatches] = useState<Record<string, SmartMatchResult>>({});
   const [smartMatchLoading, setSmartMatchLoading] = useState(false);
@@ -107,6 +112,14 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
         return false;
       }
 
+      if (savedOnlyFilter && !savedJobIds.includes(job.id)) {
+        return false;
+      }
+
+      if (verifiedOnlyFilter && (job as { verified?: boolean }).verified === false) {
+        return false;
+      }
+
       // 1. Category Filter
       if (categoryFilter !== "All" && job.category !== categoryFilter) {
         return false;
@@ -129,9 +142,19 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
         return false;
       }
 
+      const minSalary = Number(minSalaryFilter);
+      const maxSalary = Number(maxSalaryFilter);
+      const jobBudget = Number(job.budget || 0);
+      if (Number.isFinite(minSalary) && minSalary > 0 && jobBudget < minSalary) {
+        return false;
+      }
+      if (Number.isFinite(maxSalary) && maxSalary > 0 && jobBudget > maxSalary) {
+        return false;
+      }
+
       return true;
     });
-  }, [jobs, debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter]);
+  }, [jobs, debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, savedOnlyFilter, savedJobIds, verifiedOnlyFilter, minSalaryFilter, maxSalaryFilter]);
 
   useEffect(() => {
     if (!useSmartMatching) {
@@ -226,7 +249,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, useSmartMatching]);
+  }, [debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, savedOnlyFilter, verifiedOnlyFilter, minSalaryFilter, maxSalaryFilter, useSmartMatching]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -235,10 +258,16 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   }, [currentPage, totalPages]);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
+    <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <aside className="self-start rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="mb-5 border-b border-gray-100 pb-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Filters</p>
+          <h3 className="mt-1 text-lg font-bold text-slate-950">Find Jobs</h3>
+          <p className="mt-1 text-xs font-medium text-slate-500">{filteredJobs.length} jobs found</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
@@ -249,22 +278,22 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             />
           </div>
           
-          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:w-auto">
-            <div className="relative w-full sm:min-w-0 lg:w-44">
+          <div className="space-y-3">
+            <div className="relative w-full">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <select
                 className="w-full appearance-none rounded-xl border border-gray-200 pl-10 pr-8 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value as any)}
               >
-                <option value="All">All Payments</option>
+                <option value="All">All Budget Types</option>
                 <option value="Hourly">Hourly</option>
                 <option value="Flat-Rate">Flat-Rate</option>
               </select>
             </div>
 
             <select
-              className="w-full sm:min-w-0 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer lg:w-44"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
               value={durationFilter}
               onChange={(e) => setDurationFilter(e.target.value as any)}
             >
@@ -275,7 +304,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
             </select>
 
             <select
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer lg:w-52"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-hidden bg-white text-gray-700 cursor-pointer"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as any)}
             >
@@ -301,9 +330,49 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
               <option value="Other">Other</option>
             </select>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="number"
+              min={0}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-700 outline-hidden transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+              placeholder="Min salary"
+              value={minSalaryFilter}
+              onChange={(e) => setMinSalaryFilter(e.target.value)}
+            />
+            <input
+              type="number"
+              min={0}
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-700 outline-hidden transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+              placeholder="Max salary"
+              value={maxSalaryFilter}
+              onChange={(e) => setMaxSalaryFilter(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3">
+            <label className="flex items-center justify-between gap-3 text-sm font-semibold text-gray-700">
+              <span>Bookmarked jobs</span>
+              <input
+                type="checkbox"
+                checked={savedOnlyFilter}
+                onChange={(e) => setSavedOnlyFilter(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm font-semibold text-gray-700">
+              <span>Verified only</span>
+              <input
+                type="checkbox"
+                checked={verifiedOnlyFilter}
+                onChange={(e) => setVerifiedOnlyFilter(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+            </label>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 pt-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-3 pt-2">
           <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="smart-matching" className="relative inline-flex items-center cursor-pointer">
               <input
@@ -334,14 +403,11 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
               </span>
             )}
           </div>
-          
-          <span className="text-xs font-medium text-gray-500">
-            {filteredJobs.length} jobs found
-          </span>
         </div>
-      </div>
+      </aside>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <section className="min-w-0 space-y-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         {filteredJobs.length > 0 ? (
           paginatedJobs.map((job, index) => {
             const smartMatch = smartMatches[job.id];
@@ -388,6 +454,14 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                 energyRequirement={job.energyRequirement}
                 rateLabel={rateLabel}
                 rateSubLabel={rateSubLabel}
+                isSaved={savedJobIds.includes(job.id)}
+                onToggleSave={(jobId) =>
+                  setSavedJobIds((current) =>
+                    current.includes(jobId)
+                      ? current.filter((id) => id !== jobId)
+                      : [jobId, ...current],
+                  )
+                }
                 onViewSmartMatch={(j) => {
                   setSelectedJobForAI(j);
                   setShowAIAgent(true);
@@ -447,6 +521,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
           </div>
         </div>
       )}
+      </section>
       
       {/* AI Agent Modal */}
       <AIAgent 
