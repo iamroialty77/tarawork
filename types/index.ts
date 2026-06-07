@@ -254,6 +254,7 @@ export interface ProfileAboutSections {
 
 export interface ServiceOffering {
   serviceName: string;
+  description?: string;
   startingPrice: number;
   currency: string;
   typicalTurnaround: string;

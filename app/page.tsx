@@ -103,6 +103,7 @@ const normalizeServicesOffered = (services: unknown): ServiceOffering[] => {
       if (!service || typeof service !== "object") return null;
       const source = service as Record<string, unknown>;
       const serviceName = typeof source.serviceName === "string" ? source.serviceName.trim() : "";
+      const description = typeof source.description === "string" ? source.description.trim() : "";
       const typicalTurnaround = typeof source.typicalTurnaround === "string" ? source.typicalTurnaround.trim() : "";
       const currency = typeof source.currency === "string" && source.currency.trim().length > 0 ? source.currency.trim() : "PHP";
       const startingPriceRaw =
@@ -116,6 +117,7 @@ const normalizeServicesOffered = (services: unknown): ServiceOffering[] => {
       if (!serviceName) return null;
       return {
         serviceName,
+        description,
         startingPrice,
         currency,
         typicalTurnaround,
@@ -3184,27 +3186,6 @@ export default function Home() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-6"
                 >
-                  <div className="grid gap-4 xl:grid-cols-3">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Profile URL</p>
-                      <p className="mt-3 break-all text-sm font-semibold text-slate-900">
-                        {buildPublicProfileUrl({
-                          tier: "free",
-                          username: profile.username,
-                          id: profile.id,
-                        })}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Skills</p>
-                      <p className="mt-3 text-3xl font-black text-slate-900">{profile.skills?.length || 0}</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Portfolio Items</p>
-                      <p className="mt-3 min-w-[2ch] text-3xl font-black tabular-nums text-slate-900">{profile.portfolio?.length || 0}</p>
-                    </div>
-                  </div>
-
                   <div className="space-y-6">
                     <ProfileForm 
                       initialProfile={profile} 

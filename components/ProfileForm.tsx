@@ -23,6 +23,7 @@ interface ProfileFormProps {
 }
 
 type TabKey = "basics" | "portfolio" | "reviews";
+type BasicsSubTabKey = "overview" | "application" | "skills" | "services" | "experience";
 
 const ABOUT_SECTION_MAX = 200;
 const MAX_SERVICES = 6;
@@ -34,6 +35,7 @@ const EMPTY_ABOUT_SECTIONS = {
 };
 const DEFAULT_SERVICE_ENTRY: ServiceOffering = {
   serviceName: "",
+  description: "",
   startingPrice: 0,
   currency: "PHP",
   typicalTurnaround: "",
@@ -93,7 +95,7 @@ const normalizeAboutSections = (profile: UserProfile) => {
 const normalizeServices = (services: ServiceOffering[] | undefined): ServiceOffering[] => {
   if (!Array.isArray(services)) return [];
   return services
-    .map((service) => {
+    .map((service): ServiceOffering | null => {
       const serviceName = (service?.serviceName || "").trim();
       if (!serviceName) return null;
       const currency = (service?.currency || "PHP").trim() || "PHP";
@@ -102,6 +104,7 @@ const normalizeServices = (services: ServiceOffering[] | undefined): ServiceOffe
         : 0;
       return {
         serviceName,
+        description: (service?.description || "").trim() || undefined,
         startingPrice,
         currency,
         typicalTurnaround: (service?.typicalTurnaround || "").trim(),
@@ -137,7 +140,10 @@ export default function ProfileForm({
     duration: "",
     description: "",
   });
+  const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
+  const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
+  const [activeBasicsSubTab, setActiveBasicsSubTab] = useState<BasicsSubTabKey>("overview");
   const [serviceInput, setServiceInput] = useState<ServiceOffering>(DEFAULT_SERVICE_ENTRY);
   const resumeInputRef = useRef<HTMLInputElement>(null);
   const hasLocalEditsRef = useRef(false);
@@ -197,6 +203,31 @@ export default function ProfileForm({
     const description = experienceInput.description.trim();
     if (!role || !description) return;
 
+    if (editingExperienceId) {
+      updateLocalProfile({
+        ...profile,
+        experience: (profile.experience || []).map((item) =>
+          item.id === editingExperienceId
+            ? {
+                ...item,
+                company: experienceInput.company.trim() || "Company",
+                role,
+                duration: experienceInput.duration.trim() || "Not specified",
+                description,
+              }
+            : item,
+        ),
+      });
+      setEditingExperienceId(null);
+      setExperienceInput({
+        company: "",
+        role: "",
+        duration: "",
+        description: "",
+      });
+      return;
+    }
+
     const newExperience: ExperienceItem = {
       id: `exp-${Math.random().toString(36).slice(2, 9)}`,
       company: experienceInput.company.trim() || "Company",
@@ -223,6 +254,17 @@ export default function ProfileForm({
       ...profile,
       experience: (profile.experience || []).filter((item) => item.id !== id),
     });
+    if (editingExperienceId === id) setEditingExperienceId(null);
+  };
+
+  const startEditExperience = (item: ExperienceItem) => {
+    setEditingExperienceId(item.id);
+    setExperienceInput({
+      company: item.company || "",
+      role: item.role || "",
+      duration: item.duration || "",
+      description: item.description || "",
+    });
   };
 
   const handleBioChange = (value: string) => {
@@ -244,6 +286,7 @@ export default function ProfileForm({
 
   const addServiceEntry = () => {
     const serviceName = serviceInput.serviceName.trim();
+    const description = (serviceInput.description || "").trim();
     const typicalTurnaround = serviceInput.typicalTurnaround.trim();
     const startingPrice = Number.isFinite(serviceInput.startingPrice)
       ? Math.max(0, Number(serviceInput.startingPrice))
@@ -251,46 +294,41 @@ export default function ProfileForm({
     if (!serviceName) return;
 
     const currentServices = normalizeServices(profile.servicesOffered);
-    if (currentServices.length >= MAX_SERVICES) return;
+    if (editingServiceIndex === null && currentServices.length >= MAX_SERVICES) return;
+
+    const nextService: ServiceOffering = {
+      serviceName,
+      description,
+      startingPrice,
+      currency: serviceInput.currency || "PHP",
+      typicalTurnaround,
+    };
+
+    if (editingServiceIndex !== null) {
+      persistProfile({
+        ...profile,
+        servicesOffered: currentServices.map((service, index) =>
+          index === editingServiceIndex ? nextService : service,
+        ),
+      });
+      setEditingServiceIndex(null);
+      setServiceInput(DEFAULT_SERVICE_ENTRY);
+      return;
+    }
 
     persistProfile({
       ...profile,
-      servicesOffered: [
-        ...currentServices,
-        {
-          serviceName,
-          startingPrice,
-          currency: serviceInput.currency || "PHP",
-          typicalTurnaround,
-        },
-      ],
+      servicesOffered: [...currentServices, nextService],
     });
     setServiceInput(DEFAULT_SERVICE_ENTRY);
   };
 
-  const updateServiceEntry = (
-    index: number,
-    field: keyof ServiceOffering,
-    value: string | number,
-  ) => {
+  const startEditService = (index: number) => {
     const currentServices = normalizeServices(profile.servicesOffered);
-    if (!currentServices[index]) return;
-
-    const nextServices = currentServices.map((service, idx) => {
-      if (idx !== index) return service;
-      if (field === "startingPrice") {
-        const parsed = typeof value === "number" ? value : Number(value);
-        return {
-          ...service,
-          startingPrice: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
-        };
-      }
-      return {
-        ...service,
-        [field]: String(value),
-      };
-    });
-    persistProfile({ ...profile, servicesOffered: nextServices });
+    const service = currentServices[index];
+    if (!service) return;
+    setEditingServiceIndex(index);
+    setServiceInput(service);
   };
 
   const removeServiceEntry = (index: number) => {
@@ -299,6 +337,7 @@ export default function ProfileForm({
       ...profile,
       servicesOffered: currentServices.filter((_, idx) => idx !== index),
     });
+    if (editingServiceIndex === index) setEditingServiceIndex(null);
   };
 
   const addPortfolioItemLocal = (item: Partial<PortfolioItem>) => {
@@ -457,17 +496,6 @@ export default function ProfileForm({
     setShowAIAgent(false);
   };
 
-  const tabs: Array<{ key: TabKey; label: string; icon: typeof User }> = isFreelancer
-    ? [
-        { key: "basics", label: "Basics", icon: User },
-        { key: "portfolio", label: "Portfolio", icon: FolderKanban },
-        { key: "reviews", label: "Reviews", icon: MessageSquareText },
-      ]
-    : [
-        { key: "basics", label: "Basics", icon: User },
-        { key: "reviews", label: "Reviews", icon: MessageSquareText },
-      ];
-
   const inputClassName =
     "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100";
   const labelClassName =
@@ -477,6 +505,76 @@ export default function ProfileForm({
   const clientReviews = normalizeClientReviews((profile.aiInsights as Record<string, unknown> | undefined)?.clientReviews);
   const sectionCardClassName = "rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6";
   const visibleActiveTab: TabKey = !isFreelancer && activeTab === "portfolio" ? "basics" : activeTab;
+  const sectionNavItems: Array<{ key: string; label: string; icon: typeof User; onClick: () => void; isActive: boolean }> = [
+    {
+      key: "overview",
+      label: "Basic Information",
+      icon: User,
+      onClick: () => {
+        setActiveTab("basics");
+        setActiveBasicsSubTab("overview");
+      },
+      isActive: visibleActiveTab === "basics" && activeBasicsSubTab === "overview",
+    },
+    {
+      key: "application",
+      label: "Application Extras",
+      icon: FileText,
+      onClick: () => {
+        setActiveTab("basics");
+        setActiveBasicsSubTab("application");
+      },
+      isActive: visibleActiveTab === "basics" && activeBasicsSubTab === "application",
+    },
+    {
+      key: "skills",
+      label: "Skills",
+      icon: Sparkles,
+      onClick: () => {
+        setActiveTab("basics");
+        setActiveBasicsSubTab("skills");
+      },
+      isActive: visibleActiveTab === "basics" && activeBasicsSubTab === "skills",
+    },
+    {
+      key: "services",
+      label: "Services Offered",
+      icon: FolderKanban,
+      onClick: () => {
+        setActiveTab("basics");
+        setActiveBasicsSubTab("services");
+      },
+      isActive: visibleActiveTab === "basics" && activeBasicsSubTab === "services",
+    },
+    {
+      key: "experience",
+      label: "Experience",
+      icon: MessageSquareText,
+      onClick: () => {
+        setActiveTab("basics");
+        setActiveBasicsSubTab("experience");
+      },
+      isActive: visibleActiveTab === "basics" && activeBasicsSubTab === "experience",
+    },
+    ...(isFreelancer
+      ? [
+          {
+            key: "portfolio",
+            label: "Portfolio",
+            icon: FolderKanban,
+            onClick: () => setActiveTab("portfolio"),
+            isActive: visibleActiveTab === "portfolio",
+          },
+        ]
+      : []),
+    {
+      key: "reviews",
+      label: "Reviews",
+      icon: MessageSquareText,
+      onClick: () => setActiveTab("reviews"),
+      isActive: visibleActiveTab === "reviews",
+    },
+  ];
   const saveProfileButton = (
     <button
       type="submit"
@@ -520,19 +618,20 @@ export default function ProfileForm({
 
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
-      <div className="mt-5 flex flex-wrap gap-2">
-        {tabs.map((tab) => {
+      <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="rounded-3xl border border-slate-200 bg-slate-50 p-2 lg:sticky lg:top-24 lg:self-start">
+          <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+            {sectionNavItems.map((tab) => {
           const Icon = tab.icon;
-          const isActive = visibleActiveTab === tab.key;
           return (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                isActive
+                  onClick={tab.onClick}
+                  className={`inline-flex min-w-max items-center gap-2 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition-all lg:min-w-0 ${
+                tab.isActive
                   ? "bg-slate-900 text-white shadow-lg shadow-slate-900/15"
-                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                      : "text-slate-600 hover:bg-white hover:text-slate-900"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -540,11 +639,13 @@ export default function ProfileForm({
             </button>
           );
         })}
-      </div>
+          </nav>
+        </aside>
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+        <div className="space-y-5">
         {visibleActiveTab === "basics" && (
           <div className="space-y-5">
+            {activeBasicsSubTab === "overview" && (
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
               <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
                 <div className="mb-5 flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
@@ -688,9 +789,12 @@ export default function ProfileForm({
               )}
             </div>
             </div>
+            )}
 
             {isFreelancer && (
               <>
+                {activeBasicsSubTab === "application" && (
+                <>
                 <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
@@ -792,7 +896,10 @@ export default function ProfileForm({
                 </div>
 
                 {saveProfileButton}
+                </>
+                )}
 
+                {activeBasicsSubTab === "skills" && (
                 <div className={sectionCardClassName}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <h4 className="text-base font-bold text-slate-950">Skills</h4>
@@ -848,7 +955,9 @@ export default function ProfileForm({
                     </div>
                   </div>
                 </div>
+                )}
 
+                {activeBasicsSubTab === "services" && (
                 <div className={sectionCardClassName}>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -868,6 +977,13 @@ export default function ProfileForm({
                         placeholder="Service Name (e.g. Landing Page Build)"
                         value={serviceInput.serviceName}
                         onChange={(e) => setServiceInput((prev) => ({ ...prev, serviceName: e.target.value }))}
+                      />
+                      <textarea
+                        className={inputClassName}
+                        rows={3}
+                        placeholder="Service Description (scope, deliverables, or what clients get)"
+                        value={serviceInput.description || ""}
+                        onChange={(e) => setServiceInput((prev) => ({ ...prev, description: e.target.value }))}
                       />
                       <div className="grid grid-cols-2 gap-3">
                         <input
@@ -900,11 +1016,23 @@ export default function ProfileForm({
                       <button
                         type="button"
                         onClick={addServiceEntry}
-                        disabled={servicesOffered.length >= MAX_SERVICES}
+                        disabled={editingServiceIndex === null && servicesOffered.length >= MAX_SERVICES}
                         className="w-full rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Add Service
+                        {editingServiceIndex === null ? "Add Service" : "Update Service"}
                       </button>
+                      {editingServiceIndex !== null && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingServiceIndex(null);
+                            setServiceInput(DEFAULT_SERVICE_ENTRY);
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:text-slate-950"
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
                     </div>
                     <div className="max-h-72 space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3">
                       {servicesOffered.length === 0 && (
@@ -914,65 +1042,44 @@ export default function ProfileForm({
                       )}
                       {servicesOffered.map((service, index) => (
                         <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <div className="sm:col-span-2">
-                            <label className={labelClassName}>Service Name</label>
-                            <input
-                              type="text"
-                              className={inputClassName}
-                              value={service.serviceName}
-                              onChange={(e) => updateServiceEntry(index, "serviceName", e.target.value)}
-                            />
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{service.serviceName}</p>
+                              <p className="mt-1 text-xs font-semibold text-slate-500">
+                                {service.currency} {service.startingPrice} starting price
+                              </p>
+                              {service.description && (
+                                <p className="mt-2 text-sm text-slate-700">{service.description}</p>
+                              )}
+                              {service.typicalTurnaround && (
+                                <p className="mt-2 text-xs font-semibold text-slate-500">{service.typicalTurnaround}</p>
+                              )}
+                            </div>
+                            <div className="flex shrink-0 gap-3">
+                              <button
+                                type="button"
+                                onClick={() => startEditService(index)}
+                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeServiceEntry(index)}
+                                className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </div>
-                          <div>
-                            <label className={labelClassName}>Starting Price</label>
-                            <input
-                              type="number"
-                              min={0}
-                              className={inputClassName}
-                              value={service.startingPrice}
-                              onChange={(e) => updateServiceEntry(index, "startingPrice", e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label className={labelClassName}>Currency</label>
-                            <select
-                              className={inputClassName}
-                              value={service.currency}
-                              onChange={(e) => updateServiceEntry(index, "currency", e.target.value)}
-                            >
-                              {SERVICE_CURRENCIES.map((currency) => (
-                                <option key={currency} value={currency}>
-                                  {currency}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                            <div className="sm:col-span-2">
-                            <label className={labelClassName}>Typical Turnaround</label>
-                            <input
-                              type="text"
-                              className={inputClassName}
-                              value={service.typicalTurnaround}
-                              onChange={(e) => updateServiceEntry(index, "typicalTurnaround", e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => removeServiceEntry(index)}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-700"
-                          >
-                            Delete Service
-                          </button>
-                        </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
+                )}
 
+                {activeBasicsSubTab === "experience" && (
                 <div className={sectionCardClassName}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <h4 className="text-base font-bold text-slate-950">Experience</h4>
@@ -1015,8 +1122,25 @@ export default function ProfileForm({
                         onClick={addExperience}
                         className="w-full rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black"
                       >
-                        Add Experience
+                        {editingExperienceId ? "Update Experience" : "Add Experience"}
                       </button>
+                      {editingExperienceId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingExperienceId(null);
+                            setExperienceInput({
+                              company: "",
+                              role: "",
+                              duration: "",
+                              description: "",
+                            });
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:text-slate-950"
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
                     </div>
                     <div className="max-h-72 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3">
                       {(profile.experience || []).length === 0 && (
@@ -1026,27 +1150,37 @@ export default function ProfileForm({
                       )}
                       {(profile.experience || []).map((item) => (
                         <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-bold text-slate-900">{item.role}</p>
-                            <p className="text-xs font-medium text-slate-500">
-                              {item.company} - {item.duration}
-                            </p>
-                            <p className="mt-2 text-sm text-slate-700">{item.description}</p>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{item.role}</p>
+                              <p className="text-xs font-medium text-slate-500">
+                                {item.company} - {item.duration}
+                              </p>
+                              <p className="mt-2 text-sm text-slate-700">{item.description}</p>
+                            </div>
+                            <div className="flex shrink-0 gap-3">
+                              <button
+                                type="button"
+                                onClick={() => startEditExperience(item)}
+                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeExperience(item.id)}
+                                className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                              >
+                                Remove
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeExperience(item.id)}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-700"
-                          >
-                            Remove
-                          </button>
                         </div>
-                      </div>
                       ))}
                     </div>
                   </div>
                 </div>
+                )}
               </>
             )}
           </div>
@@ -1132,6 +1266,7 @@ export default function ProfileForm({
           </div>
         )}
 
+        </div>
       </form>
 
       <AIAgent 
