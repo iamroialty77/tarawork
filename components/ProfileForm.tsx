@@ -8,7 +8,6 @@ import {
   Sparkles,
   FolderKanban,
   MessageSquareText,
-  Video,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
@@ -141,10 +140,16 @@ export default function ProfileForm({
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const [serviceInput, setServiceInput] = useState<ServiceOffering>(DEFAULT_SERVICE_ENTRY);
   const resumeInputRef = useRef<HTMLInputElement>(null);
+  const hasLocalEditsRef = useRef(false);
+  const syncedProfileIdRef = useRef(initialProfile.id || "");
   const isFreelancer = profile.role === "freelancer";
 
   // Sync internal state when prop changes (after fetch)
   useEffect(() => {
+    const nextProfileId = initialProfile.id || "";
+    const isDifferentProfile = nextProfileId !== syncedProfileIdRef.current;
+    if (hasLocalEditsRef.current && !isDifferentProfile) return;
+
     const aboutSections = normalizeAboutSections(initialProfile);
     setProfile({
       ...initialProfile,
@@ -152,6 +157,8 @@ export default function ProfileForm({
       servicesOffered: normalizeServices(initialProfile.servicesOffered),
       bio: aboutSections.whatISpecializeIn || initialProfile.bio,
     });
+    syncedProfileIdRef.current = nextProfileId;
+    hasLocalEditsRef.current = false;
   }, [initialProfile]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -159,22 +166,27 @@ export default function ProfileForm({
     onUpdate(profile);
   };
 
+  const updateLocalProfile = (nextProfile: UserProfile) => {
+    hasLocalEditsRef.current = true;
+    setProfile(nextProfile);
+  };
+
   const handleFieldChange = (updates: Partial<UserProfile>) => {
     const newProfile = { ...profile, ...updates };
-    setProfile(newProfile);
+    updateLocalProfile(newProfile);
     // Note: We don't call onUpdate here for every keystroke, 
     // only for definitive actions or on submit
   };
 
   const addSkill = () => {
     if (skillInput && !profile.skills.includes(skillInput)) {
-      setProfile({ ...profile, skills: [...profile.skills, skillInput] });
+      updateLocalProfile({ ...profile, skills: [...profile.skills, skillInput] });
       setSkillInput("");
     }
   };
 
   const removeSkill = (skillToRemove: string) => {
-    setProfile({
+    updateLocalProfile({
       ...profile,
       skills: profile.skills.filter((s) => s !== skillToRemove),
     });
@@ -193,7 +205,7 @@ export default function ProfileForm({
       description,
     };
 
-    setProfile({
+    updateLocalProfile({
       ...profile,
       experience: [...(profile.experience || []), newExperience],
     });
@@ -207,7 +219,7 @@ export default function ProfileForm({
   };
 
   const removeExperience = (id: string) => {
-    setProfile({
+    updateLocalProfile({
       ...profile,
       experience: (profile.experience || []).filter((item) => item.id !== id),
     });
@@ -215,7 +227,7 @@ export default function ProfileForm({
 
   const handleBioChange = (value: string) => {
     const trimmed = value.slice(0, ABOUT_SECTION_MAX * 3);
-    setProfile({
+    updateLocalProfile({
       ...profile,
       bio: trimmed,
       aboutSections: {
@@ -226,7 +238,7 @@ export default function ProfileForm({
   };
 
   const persistProfile = (nextProfile: UserProfile) => {
-    setProfile(nextProfile);
+    updateLocalProfile(nextProfile);
     onUpdate(nextProfile);
   };
 
@@ -303,7 +315,7 @@ export default function ProfileForm({
       technologies: item.technologies || [],
       created_at: new Date().toISOString(),
     };
-    setProfile({
+    updateLocalProfile({
       ...profile,
       portfolio: [...(profile.portfolio || []), newItem],
     });
@@ -314,7 +326,7 @@ export default function ProfileForm({
       onUpdatePortfolio(item);
       return;
     }
-    setProfile({
+    updateLocalProfile({
       ...profile,
       portfolio: (profile.portfolio || []).map((i) => (i.id === item.id ? item : i)),
     });
@@ -325,7 +337,7 @@ export default function ProfileForm({
       onRemovePortfolio(id);
       return;
     }
-    setProfile({
+    updateLocalProfile({
       ...profile,
       portfolio: (profile.portfolio || []).filter((item) => item.id !== id),
     });
@@ -433,7 +445,7 @@ export default function ProfileForm({
       portfolio: [...(profile.portfolio || []), ...newPortfolioItems]
     };
     
-    setProfile(updatedProfile);
+    updateLocalProfile(updatedProfile);
     onUpdate(updatedProfile);
     
     // Also notify if there are parent handlers for individual portfolio additions
@@ -465,12 +477,32 @@ export default function ProfileForm({
   const clientReviews = normalizeClientReviews((profile.aiInsights as Record<string, unknown> | undefined)?.clientReviews);
   const sectionCardClassName = "rounded-3xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6";
   const visibleActiveTab: TabKey = !isFreelancer && activeTab === "portfolio" ? "basics" : activeTab;
+  const saveProfileButton = (
+    <button
+      type="submit"
+      disabled={isSaving}
+      className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+        isSaving
+          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+          : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 active:scale-95"
+      }`}
+    >
+      {isSaving ? (
+        <>
+          <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
+          Saving...
+        </>
+      ) : (
+        "Save Profile Changes"
+      )}
+    </button>
+  );
 
   const handleApplicationProfileChange = (
     field: "contactEmail" | "contactPhone" | "resumeUrl" | "portfolioUrl" | "interviewUrl" | "coverLetter",
     value: string,
   ) => {
-    setProfile({
+    updateLocalProfile({
       ...profile,
       aiInsights: {
         ...(profile.aiInsights || {
@@ -546,7 +578,7 @@ export default function ProfileForm({
                         placeholder="username"
                         className="min-w-0 flex-1 px-4 py-3 text-sm text-slate-900 outline-none"
                         value={profile.username || ""}
-                        onChange={(e) => setProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
+                        onChange={(e) => updateLocalProfile({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
                       />
                     </div>
                     <div className="mt-2 text-sm font-medium text-slate-600">
@@ -611,21 +643,7 @@ export default function ProfileForm({
                       onChange={(e) => handleFieldChange({ companyName: e.target.value })}
                     />
                   </div>
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-sm font-bold text-slate-950">Video Call Verification</p>
-                        <p className="mt-1 text-xs font-medium text-emerald-800">Verify employer identity before inviting freelancers.</p>
-                      </div>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700"
-                      >
-                        <Video className="h-4 w-4" />
-                        Start
-                      </button>
-                    </div>
-                  </div>
+                  {saveProfileButton}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -634,7 +652,7 @@ export default function ProfileForm({
                     <select
                       className={inputClassName}
                       value={profile.category}
-                      onChange={(e) => setProfile({ ...profile, category: e.target.value as FreelancerCategory })}
+                      onChange={(e) => updateLocalProfile({ ...profile, category: e.target.value as FreelancerCategory })}
                     >
                       <option value="General">General</option>
                       <option value="Developer">Developer</option>
@@ -663,7 +681,7 @@ export default function ProfileForm({
                       type="text"
                       className={inputClassName}
                       value={profile.hourlyRate}
-                      onChange={(e) => setProfile({ ...profile, hourlyRate: e.target.value })}
+                      onChange={(e) => updateLocalProfile({ ...profile, hourlyRate: e.target.value })}
                     />
                   </div>
                 </div>
@@ -673,27 +691,6 @@ export default function ProfileForm({
 
             {isFreelancer && (
               <>
-                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-200">
-                        <Video className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-base font-bold text-slate-950">Video Call Verification</h4>
-                        <p className="mt-1 text-sm font-medium text-emerald-800">Complete a short identity and work-readiness check.</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
-                    >
-                      <Video className="h-4 w-4" />
-                      Start Verification
-                    </button>
-                  </div>
-                </div>
-
                 <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-5 sm:p-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
@@ -793,6 +790,8 @@ export default function ProfileForm({
                     </div>
                   </div>
                 </div>
+
+                {saveProfileButton}
 
                 <div className={sectionCardClassName}>
                   <div className="mb-4 flex items-center justify-between gap-3">
@@ -1133,26 +1132,6 @@ export default function ProfileForm({
           </div>
         )}
 
-        {visibleActiveTab === "basics" && (
-          <button
-            type="submit"
-            disabled={isSaving}
-            className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-              isSaving 
-                ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
-                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 active:scale-95"
-            }`}
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
-                Saving...
-              </>
-            ) : (
-              "Save Profile Changes"
-            )}
-          </button>
-        )}
       </form>
 
       <AIAgent 

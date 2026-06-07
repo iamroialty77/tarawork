@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase_server";
 import { supabaseAdmin } from "@/lib/supabase_admin";
+import postgres from "postgres";
 
 type InvitationBody = {
   freelancerId?: string;
@@ -30,57 +31,74 @@ const invitationSelect = `
   employer:profiles!talent_invitations_employer_id_fkey(id, name, username, avatar_url, companyName)
 `;
 
+const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const sql = databaseUrl
+  ? postgres(databaseUrl, {
+      max: 1,
+      idle_timeout: 20,
+      connect_timeout: 15,
+    })
+  : null;
+
 export async function GET(req: Request) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
     const { searchParams } = new URL(req.url);
+    const userId = (searchParams.get("userId") || "").trim();
+    if (!userId) return NextResponse.json({ error: "Missing user id." }, { status: 400 });
+    if (!sql) return NextResponse.json({ error: "Database connection is not configured." }, { status: 500 });
+
     const scope = searchParams.get("scope") === "received" ? "received" : "sent";
-    const column = scope === "received" ? "freelancer_id" : "employer_id";
+    const userColumnFilter =
+      scope === "received"
+        ? sql`ti.freelancer_id = ${userId}::uuid`
+        : sql`ti.employer_id = ${userId}::uuid`;
 
-    const { data, error } = await supabaseAdmin
-      .from("talent_invitations")
-      .select(invitationSelect)
-      .eq(column, user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    const invitations = data || [];
-    const employerIds = [
-      ...new Set(
-        invitations
-          .map((invitation) => invitation.employer_id)
-          .filter((id): id is string => typeof id === "string" && id.length > 0),
-      ),
-    ];
-
-    let latestJobsByEmployer: Record<string, { id: string; title: string }> = {};
-    if (employerIds.length > 0) {
-      const { data: jobs } = await supabaseAdmin
-        .from("jobs")
-        .select('id, title, employer_id, "createdAt"')
-        .in("employer_id", employerIds)
-        .eq("status", "live")
-        .order("createdAt", { ascending: false });
-
-      latestJobsByEmployer = (jobs || []).reduce(
-        (acc: Record<string, { id: string; title: string }>, job: any) => {
-          if (!acc[job.employer_id]) {
-            acc[job.employer_id] = { id: job.id, title: job.title || "TaraWork Opportunity" };
-          }
-          return acc;
-        },
-        {},
-      );
-    }
+    const invitations = await sql`
+      select
+        ti.id,
+        ti.employer_id,
+        ti.freelancer_id,
+        ti.status,
+        ti.message,
+        ti.interview_at,
+        ti.interview_link,
+        ti.interview_request_at,
+        ti.interview_request_note,
+        ti.interview_request_status,
+        ti.created_at,
+        ti.updated_at,
+        jsonb_build_object(
+          'id', freelancer.id,
+          'name', freelancer.name,
+          'username', freelancer.username,
+          'avatar_url', freelancer.avatar_url,
+          'category', freelancer.category
+        ) as freelancer,
+        jsonb_build_object(
+          'id', employer.id,
+          'name', employer.name,
+          'username', employer.username,
+          'avatar_url', employer.avatar_url,
+          'companyName', employer."companyName"
+        ) as employer,
+        latest_job.latest_job as "latestJob"
+      from public.talent_invitations ti
+      left join public.profiles freelancer on freelancer.id = ti.freelancer_id
+      left join public.profiles employer on employer.id = ti.employer_id
+      left join lateral (
+        select jsonb_build_object('id', jobs.id, 'title', coalesce(jobs.title, 'TaraWork Opportunity')) as latest_job
+        from public.jobs jobs
+        where jobs.employer_id = ti.employer_id
+          and jobs.status = 'live'
+        order by jobs."createdAt" desc
+        limit 1
+      ) latest_job on true
+      where ${userColumnFilter}
+      order by ti.created_at desc
+    `;
 
     return NextResponse.json({
-      invitations: invitations.map((invitation) => ({
-        ...invitation,
-        latestJob: latestJobsByEmployer[invitation.employer_id] || null,
-      })),
+      invitations,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to fetch invitations.";

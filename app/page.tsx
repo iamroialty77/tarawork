@@ -573,7 +573,12 @@ export default function Home() {
         }
 
         // --- SMART PORTFOLIO FETCHING ---
-        let portfolioItems: PortfolioItem[] = [];
+        const previousPortfolioItems =
+          prevProfile?.id === userId && Array.isArray(prevProfile.portfolio)
+            ? prevProfile.portfolio
+            : [];
+        let portfolioItems: PortfolioItem[] = previousPortfolioItems;
+        let portfolioItemsLoaded = false;
         
         try {
           // 1. Try fetching from new schema: portfolios -> portfolio_projects
@@ -591,7 +596,7 @@ export default function Home() {
             .maybeSingle();
           
           if (!pErr && pData) {
-            if (Array.isArray(pData.portfolio_projects) && pData.portfolio_projects.length > 0) {
+            if (Array.isArray(pData.portfolio_projects)) {
               portfolioItems = pData.portfolio_projects.map((proj: any) => ({
                 id: proj.id,
                 profile_id: userId,
@@ -602,6 +607,7 @@ export default function Home() {
                 technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
                 created_at: proj.created_at
               }));
+              portfolioItemsLoaded = true;
             }
 
             const themeSettings = pData.theme_settings && typeof pData.theme_settings === "object"
@@ -674,7 +680,9 @@ export default function Home() {
                 clientTrustBoost: !!premiumProfile.verifiedProgram?.clientTrustBoost,
               },
             };
-          } else {
+          }
+
+          if (!portfolioItemsLoaded) {
             if (pErr) console.warn("Note: Portfolios table might be missing or empty, falling back:", pErr.message);
             // 2. Fallback to old portfolio_items table if new one is empty or errors
             const { data: oldData } = await supabase
@@ -682,8 +690,9 @@ export default function Home() {
               .select('*')
               .eq('profile_id', userId);
             
-            if (oldData && oldData.length > 0) {
+            if (Array.isArray(oldData)) {
               portfolioItems = oldData;
+              portfolioItemsLoaded = true;
             }
           }
         } catch (pFetchErr) {
@@ -693,7 +702,9 @@ export default function Home() {
             .from('portfolio_items')
             .select('*')
             .eq('profile_id', userId);
-          portfolioItems = lastResort || [];
+          if (Array.isArray(lastResort)) {
+            portfolioItems = lastResort;
+          }
         }
 
         setProfile({ ...normalizedData, portfolio: portfolioItems });
@@ -812,75 +823,41 @@ export default function Home() {
       // Always add updated_at
       profileToSave.updated_at = new Date().toISOString();
 
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
+      const savePayload = {
+        userId: user.id,
+        profile: {
           id: user.id,
           ...profileToSave,
+        },
+        portfolio: {
+          customDomain: buildPublicProfileUrl({ username: nextProfile.username, id: nextProfile.id || user.id }),
+          themeSettings: {
+            aboutSections: nextProfile.aboutSections || emptyAboutSections(),
+            servicesOffered: nextProfile.servicesOffered || [],
+            aesthetic: "professional",
+            primaryColor: "#4f46e5",
+          },
+        },
+      };
+      const saveProfileRequest = () =>
+        fetch("/api/profile/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(savePayload),
         });
 
-      if (error) {
-        // If error is about missing workflows column, try one more time without it
-        if (error.message?.includes("'workflows' column") || error.code === 'PGRST204') {
-          console.warn("Retrying profile save without workflows column...");
-          const { workflows, ...profileWithoutWorkflows } = profileToSave;
-          const { error: retryError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: user.id,
-              ...profileWithoutWorkflows,
-            });
-          if (retryError) throw retryError;
-        } else {
-          throw error;
-        }
+      let response: Response;
+      try {
+        response = await saveProfileRequest();
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        response = await saveProfileRequest();
       }
 
-      if (nextProfile.role === "freelancer") {
-        try {
-          const existingPortfolio = await supabase
-            .from("portfolios")
-            .select("id, theme_settings")
-            .eq("profile_id", user.id)
-            .maybeSingle();
+      const payload = await response.json().catch(() => ({}));
 
-          if (existingPortfolio.error && existingPortfolio.error.code !== "PGRST116") {
-            throw existingPortfolio.error;
-          }
-
-          const currentThemeSettings =
-            existingPortfolio.data?.theme_settings && typeof existingPortfolio.data.theme_settings === "object"
-              ? existingPortfolio.data.theme_settings
-              : { aesthetic: "professional", primaryColor: "#4f46e5" };
-
-          const portfolioPayload = {
-            profile_id: user.id,
-            about_me: nextProfile.bio,
-            tagline: nextProfile.bio || null,
-            custom_domain: buildPublicProfileUrl({ username: nextProfile.username, id: nextProfile.id || user.id }),
-            theme_settings: {
-              ...currentThemeSettings,
-              aboutSections: nextProfile.aboutSections || emptyAboutSections(),
-              servicesOffered: nextProfile.servicesOffered || [],
-              aesthetic: currentThemeSettings.aesthetic || "professional",
-              primaryColor: currentThemeSettings.primaryColor || "#4f46e5",
-            },
-            updated_at: new Date().toISOString(),
-          };
-
-          const portfolioSave = existingPortfolio.data?.id
-            ? await supabase
-                .from("portfolios")
-                .update(portfolioPayload)
-                .eq("id", existingPortfolio.data.id)
-            : await supabase.from("portfolios").insert([portfolioPayload]);
-
-          if (portfolioSave.error) {
-            throw portfolioSave.error;
-          }
-        } catch (portfolioError) {
-          console.warn("Profile saved, but portfolio sync was skipped:", portfolioError);
-        }
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to save profile.");
       }
       
       setProfile(nextProfile);
@@ -900,6 +877,12 @@ export default function Home() {
         setToastMsg("⚠️ Error: Username is already taken. Please choose another one.");
       } else if (err.code === 'PGRST205' || err.message?.includes("relation \"profiles\" does not exist")) {
         setToastMsg("⚠️ Database Error: 'profiles' table not found. Go to Admin tab for setup instructions.");
+      } else if (
+        err instanceof TypeError ||
+        err.message === "Failed to fetch" ||
+        err.message?.includes("Failed to fetch")
+      ) {
+        setToastMsg("Connection error: Cannot reach the profile save API right now. Check that the dev server is running, then try again.");
       } else {
         setToastMsg(`Error: ${err.message || "Failed to save profile"}`);
       }
@@ -1650,23 +1633,48 @@ export default function Home() {
     }
   };
 
-  const fetchTalentInvitations = async () => {
-    try {
-      const [sentResponse, receivedResponse] = await Promise.all([
-        fetch("/api/talent-invitations?scope=sent"),
-        fetch("/api/talent-invitations?scope=received"),
-      ]);
-      const sentPayload = await sentResponse.json().catch(() => ({}));
-      const receivedPayload = await receivedResponse.json().catch(() => ({}));
+  const fetchTalentInvitations = async (userId = user?.id) => {
+    if (!userId) {
+      setSentTalentInvitations([]);
+      setReceivedTalentInvitations([]);
+      return;
+    }
 
-      if (sentResponse.ok) {
+    try {
+      const fetchInvitationScope = async (scope: "sent" | "received") => {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 10000);
+        try {
+          return await fetch(`/api/talent-invitations?scope=${scope}&userId=${encodeURIComponent(userId)}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          });
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          return fetch(`/api/talent-invitations?scope=${scope}&userId=${encodeURIComponent(userId)}`, {
+            cache: "no-store",
+          });
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      };
+      const [sentResult, receivedResult] = await Promise.allSettled([
+        fetchInvitationScope("sent"),
+        fetchInvitationScope("received"),
+      ]);
+      const sentResponse = sentResult.status === "fulfilled" ? sentResult.value : null;
+      const receivedResponse = receivedResult.status === "fulfilled" ? receivedResult.value : null;
+      const sentPayload = sentResponse ? await sentResponse.json().catch(() => ({})) : {};
+      const receivedPayload = receivedResponse ? await receivedResponse.json().catch(() => ({})) : {};
+
+      if (sentResponse?.ok) {
         setSentTalentInvitations(Array.isArray(sentPayload.invitations) ? sentPayload.invitations : []);
       }
-      if (receivedResponse.ok) {
+      if (receivedResponse?.ok) {
         setReceivedTalentInvitations(Array.isArray(receivedPayload.invitations) ? receivedPayload.invitations : []);
       }
     } catch (err) {
-      console.error("Error fetching talent invitations:", err);
+      console.warn("Talent invitations are temporarily unavailable.");
     }
   };
 
@@ -2089,7 +2097,7 @@ export default function Home() {
         await fetchFreelancers();
         await fetchUnreadCount(session.user.id);
         await fetchNotifications(session.user.id);
-        await fetchTalentInvitations();
+        await fetchTalentInvitations(session.user.id);
         await fetchSavedTalents();
         await fetchFollows(session.user.id);
         await fetchPortfolioInquiries(session.user.id);
@@ -2215,7 +2223,7 @@ export default function Home() {
       } else {
         setUser(session.user);
         fetchProfile(session.user.id, session.user);
-        fetchTalentInvitations();
+        fetchTalentInvitations(session.user.id);
         fetchSavedTalents();
         setLoading(false);
       }
@@ -2318,6 +2326,13 @@ export default function Home() {
       setShowToast(true);
     }
   };
+
+  const toastLabel =
+    toastMsg.startsWith("Error:") || toastMsg.startsWith("Connection error:") || toastMsg.includes("Error:")
+      ? "Action Required"
+      : toastMsg.includes("success") || toastMsg.includes("Success") || toastMsg.includes("saved")
+        ? "Update Complete"
+        : "Notification";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
@@ -3157,7 +3172,7 @@ export default function Home() {
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Portfolio Items</p>
-                      <p className="mt-3 text-3xl font-black text-slate-900">{profile.portfolio?.length || 0}</p>
+                      <p className="mt-3 min-w-[2ch] text-3xl font-black tabular-nums text-slate-900">{profile.portfolio?.length || 0}</p>
                     </div>
                   </div>
 
@@ -4870,7 +4885,7 @@ export default function Home() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold tracking-tight">{toastMsg}</p>
-                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Security Notification</p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">{toastLabel}</p>
               </div>
               <button onClick={() => setShowToast(false)} className="text-slate-500 hover:text-white transition-colors">
                 &times;
