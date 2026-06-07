@@ -59,6 +59,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
   const [durationFilter, setDurationFilter] = useState<JobDuration | "All">("All");
   const [categoryFilter, setCategoryFilter] = useState<FreelancerCategory | "All">("All");
   const [savedOnlyFilter, setSavedOnlyFilter] = useState(false);
+  const [appliedOnlyFilter, setAppliedOnlyFilter] = useState(false);
   const [verifiedOnlyFilter, setVerifiedOnlyFilter] = useState(false);
   const [minSalaryFilter, setMinSalaryFilter] = useState("");
   const [maxSalaryFilter, setMaxSalaryFilter] = useState("");
@@ -116,6 +117,10 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
         return false;
       }
 
+      if (appliedOnlyFilter && !appliedJobs[job.id]) {
+        return false;
+      }
+
       if (verifiedOnlyFilter && (job as { verified?: boolean }).verified === false) {
         return false;
       }
@@ -154,7 +159,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
 
       return true;
     });
-  }, [jobs, debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, savedOnlyFilter, savedJobIds, verifiedOnlyFilter, minSalaryFilter, maxSalaryFilter]);
+  }, [jobs, debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, savedOnlyFilter, savedJobIds, appliedOnlyFilter, appliedJobs, verifiedOnlyFilter, minSalaryFilter, maxSalaryFilter]);
 
   useEffect(() => {
     if (!useSmartMatching) {
@@ -249,7 +254,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, savedOnlyFilter, verifiedOnlyFilter, minSalaryFilter, maxSalaryFilter, useSmartMatching]);
+  }, [debouncedSearchTerm, paymentFilter, durationFilter, categoryFilter, savedOnlyFilter, appliedOnlyFilter, verifiedOnlyFilter, minSalaryFilter, maxSalaryFilter, useSmartMatching]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -357,6 +362,15 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                 type="checkbox"
                 checked={savedOnlyFilter}
                 onChange={(e) => setSavedOnlyFilter(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm font-semibold text-gray-700">
+              <span>Applied jobs ({Object.keys(appliedJobs).length})</span>
+              <input
+                type="checkbox"
+                checked={appliedOnlyFilter}
+                onChange={(e) => setAppliedOnlyFilter(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
             </label>

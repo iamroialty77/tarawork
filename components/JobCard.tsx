@@ -111,17 +111,27 @@ export default function JobCard({
             </div>
             
             <div>
-              <div className="mb-1 flex flex-wrap items-center gap-2">
+              <div className="mb-2 space-y-2">
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1 tracking-tight">
                   {job.title}
                 </h3>
-                <div className="flex items-center gap-1.5 bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 transition-colors group/cat">
-                  <span className="text-[10px] font-bold uppercase tracking-widest">
+                <div className="flex flex-col items-start gap-1.5">
+                  <span className="inline-flex items-center bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 transition-colors text-[10px] font-bold uppercase tracking-widest">
                     {job.category}
+                  </span>
+                  {job.budget && job.budget > 4000 && (
+                    <span className="inline-flex items-center text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg border border-emerald-100 uppercase tracking-widest">
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      High Budget
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-500 font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    Verified Partner
                   </span>
                 </div>
                 {matchScore !== undefined && matchScore > 0 && (
-                  <div className="relative flex items-center gap-2">
+                  <div className="relative flex items-center gap-2 pt-1">
                     <button 
                       onClick={() => onViewSmartMatch?.(job)}
                       onMouseEnter={() => setShowMatchDetails(true)}
@@ -186,18 +196,6 @@ export default function JobCard({
                     )}
                   </div>
                 )}
-                {job.budget && job.budget > 4000 && (
-                  <span className="flex items-center text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg border border-emerald-100 uppercase tracking-widest">
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    High Budget
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                  Verified Partner
-                </span>
               </div>
             </div>
           </div>
