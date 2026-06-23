@@ -16,6 +16,22 @@ const normalizeTechnologies = (value: unknown): string[] => {
   return value.map((item) => String(item).trim()).filter(Boolean).slice(0, 20);
 };
 
+const isSchemaFallbackError = (error: { code?: string; message?: string } | null | undefined) => {
+  const message = error?.message || "";
+  return (
+    error?.code === "PGRST205" ||
+    error?.code === "42P01" ||
+    message.includes("Could not find the table") ||
+    message.includes("relation") ||
+    message.includes("portfolio_id")
+  );
+};
+
+const mapLegacyItem = (item: Record<string, unknown>, userId: string) => ({
+  ...item,
+  profile_id: (item.profile_id as string | undefined) || userId,
+});
+
 const getOrCreatePortfolioId = async (userId: string) => {
   const existing = await supabaseAdmin
     .from("portfolios")
@@ -64,6 +80,51 @@ const assertProjectOwner = async (projectId: string, userId: string) => {
   return profileId === userId;
 };
 
+const assertLegacyProjectOwner = async (projectId: string, userId: string) => {
+  const { data, error } = await supabaseAdmin
+    .from("portfolio_items")
+    .select("id, profile_id")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  if (error && error.code !== "PGRST116") {
+    throw error;
+  }
+
+  return data?.profile_id === userId;
+};
+
+const getPortfolioItemStorage = async (projectId: string, userId: string) => {
+  try {
+    if (await assertProjectOwner(projectId, userId)) return "portfolio_projects";
+  } catch (error) {
+    if (!isSchemaFallbackError(error as { code?: string; message?: string })) throw error;
+  }
+
+  if (await assertLegacyProjectOwner(projectId, userId)) return "portfolio_items";
+  return null;
+};
+
+const createLegacyPortfolioItem = async (body: PortfolioItemPayload, userId: string, title: string) => {
+  const { data, error } = await supabaseAdmin
+    .from("portfolio_items")
+    .insert([
+      {
+        profile_id: userId,
+        title,
+        description: (body.description || "").trim(),
+        image_url: (body.image_url || "").trim() || null,
+        project_url: (body.project_url || "").trim() || null,
+        technologies: normalizeTechnologies(body.technologies),
+      },
+    ])
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return mapLegacyItem(data as Record<string, unknown>, userId);
+};
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
@@ -78,27 +139,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Project title is required." }, { status: 400 });
     }
 
-    const portfolioId = await getOrCreatePortfolioId(user.id);
-    const { data, error } = await supabaseAdmin
-      .from("portfolio_projects")
-      .insert([
-        {
-          portfolio_id: portfolioId,
-          title,
-          description: (body.description || "").trim(),
-          image_url: (body.image_url || "").trim() || null,
-          project_url: (body.project_url || "").trim() || null,
-          technologies: normalizeTechnologies(body.technologies),
-        },
-      ])
-      .select("*")
-      .single();
+    try {
+      const portfolioId = await getOrCreatePortfolioId(user.id);
+      const { data, error } = await supabaseAdmin
+        .from("portfolio_projects")
+        .insert([
+          {
+            portfolio_id: portfolioId,
+            title,
+            description: (body.description || "").trim(),
+            image_url: (body.image_url || "").trim() || null,
+            project_url: (body.project_url || "").trim() || null,
+            technologies: normalizeTechnologies(body.technologies),
+          },
+        ])
+        .select("*")
+        .single();
 
-    if (error) {
+      if (error) {
+        if (isSchemaFallbackError(error)) {
+          const legacyItem = await createLegacyPortfolioItem(body, user.id, title);
+          return NextResponse.json({ item: legacyItem });
+        }
+        throw error;
+      }
+
+      return NextResponse.json({ item: { ...data, profile_id: user.id } });
+    } catch (error) {
+      if (isSchemaFallbackError(error as { code?: string; message?: string })) {
+        const legacyItem = await createLegacyPortfolioItem(body, user.id, title);
+        return NextResponse.json({ item: legacyItem });
+      }
       throw error;
     }
-
-    return NextResponse.json({ item: { ...data, profile_id: user.id } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save portfolio item.";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -120,13 +193,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Project id and title are required." }, { status: 400 });
     }
 
-    const isOwner = await assertProjectOwner(id, user.id);
-    if (!isOwner) {
+    const storageTable = await getPortfolioItemStorage(id, user.id);
+    if (!storageTable) {
       return NextResponse.json({ error: "Portfolio item was not found." }, { status: 404 });
     }
 
     const { data, error } = await supabaseAdmin
-      .from("portfolio_projects")
+      .from(storageTable)
       .update({
         title,
         description: (body.description || "").trim(),
@@ -142,7 +215,7 @@ export async function PATCH(req: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ item: { ...data, profile_id: user.id } });
+    return NextResponse.json({ item: mapLegacyItem(data as Record<string, unknown>, user.id) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update portfolio item.";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -161,12 +234,12 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Project id is required." }, { status: 400 });
     }
 
-    const isOwner = await assertProjectOwner(id, user.id);
-    if (!isOwner) {
+    const storageTable = await getPortfolioItemStorage(id, user.id);
+    if (!storageTable) {
       return NextResponse.json({ error: "Portfolio item was not found." }, { status: 404 });
     }
 
-    const { error } = await supabaseAdmin.from("portfolio_projects").delete().eq("id", id);
+    const { error } = await supabaseAdmin.from(storageTable).delete().eq("id", id);
     if (error) {
       throw error;
     }

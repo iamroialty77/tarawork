@@ -8,6 +8,8 @@ import {
   Sparkles,
   FolderKanban,
   MessageSquareText,
+  Camera,
+  Upload,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
@@ -19,6 +21,7 @@ interface ProfileFormProps {
   onAddPortfolio?: (item: Partial<PortfolioItem>) => void;
   onUpdatePortfolio?: (item: PortfolioItem) => void;
   onRemovePortfolio?: (id: string) => void;
+  onUploadAvatar?: (file: File) => Promise<string>;
   isSaving?: boolean;
 }
 
@@ -120,6 +123,7 @@ export default function ProfileForm({
   onAddPortfolio,
   onUpdatePortfolio,
   onRemovePortfolio,
+  onUploadAvatar,
   isSaving = false 
 }: ProfileFormProps) {
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -145,6 +149,8 @@ export default function ProfileForm({
   const [activeTab, setActiveTab] = useState<TabKey>("basics");
   const [activeBasicsSubTab, setActiveBasicsSubTab] = useState<BasicsSubTabKey>("overview");
   const [serviceInput, setServiceInput] = useState<ServiceOffering>(DEFAULT_SERVICE_ENTRY);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
   const hasLocalEditsRef = useRef(false);
   const syncedProfileIdRef = useRef(initialProfile.id || "");
@@ -390,6 +396,28 @@ export default function ProfileForm({
     setResumeParseFile(file);
     setShowAIAgent(true);
     if (resumeInputRef.current) resumeInputRef.current.value = "";
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadAvatar || isUploadingAvatar) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file.");
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const avatarUrl = await onUploadAvatar(file);
+      persistProfile({ ...profile, avatar_url: avatarUrl });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to upload profile photo.");
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
   };
 
   const handleAIParseComplete = (data: { 
@@ -647,6 +675,49 @@ export default function ProfileForm({
           <div className="space-y-5">
             {activeBasicsSubTab === "overview" && (
             <>
+            <div className={sectionCardClassName}>
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-400 shadow-sm">
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-8 w-8" />
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center bg-slate-950/70 py-1 text-white">
+                      <Camera className="h-3.5 w-3.5" />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-950">Profile Photo</h4>
+                    <p className="mt-1 max-w-md text-sm text-slate-500">
+                      Upload a clear headshot that clients will see on your profile, applications, and talent cards.
+                    </p>
+                  </div>
+                </div>
+                {onUploadAvatar && (
+                  <div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={isUploadingAvatar || isSaving}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {isUploadingAvatar ? "Uploading..." : "Upload Photo"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
               <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
                 <div className="mb-5 flex items-start justify-between gap-3 border-b border-slate-100 pb-4">

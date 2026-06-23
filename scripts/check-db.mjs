@@ -13,7 +13,11 @@ function loadEnvFile(filePath) {
     if (separatorIndex === -1) continue;
 
     const key = line.slice(0, separatorIndex).trim();
-    const value = line.slice(separatorIndex + 1).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+    const quote = value[0];
+    if ((quote === '"' || quote === "'") && value.endsWith(quote)) {
+      value = value.slice(1, -1);
+    }
 
     if (!(key in process.env)) {
       process.env[key] = value;

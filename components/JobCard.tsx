@@ -35,6 +35,8 @@ export interface JobCardProps {
   onViewSmartMatch?: (job: Job) => void;
   isSaved?: boolean;
   onToggleSave?: (jobId: string) => void;
+  isApplyLocked?: boolean;
+  applyLockedReason?: string;
 }
 
 export default function JobCard({ 
@@ -51,11 +53,14 @@ export default function JobCard({
   rateSubLabel,
   onViewSmartMatch,
   isSaved: controlledIsSaved,
-  onToggleSave
+  onToggleSave,
+  isApplyLocked = false,
+  applyLockedReason = "Complete your profile to apply."
 }: JobCardProps) {
   const isApplied = !!applicationStatus;
   const [localIsSaved, setLocalIsSaved] = useState(false);
   const [showMatchDetails, setShowMatchDetails] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const [isApplyingLocal, setIsApplyingLocal] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
@@ -63,6 +68,26 @@ export default function JobCard({
   const sharePath = getJobSharePath(job);
   const shareUrl = getJobShareUrl(job);
   const isSaved = controlledIsSaved ?? localIsSaved;
+  const isApplyDisabled = isApplied || isApplyingLocal || isApplyLocked;
+
+  const handleApplyClick = async () => {
+    if (isApplyDisabled) return;
+    setIsApplyingLocal(true);
+    if (onApply) {
+      await onApply(job.id);
+    }
+    setIsApplyingLocal(false);
+  };
+
+  const applyButtonLabel = isApplyingLocal
+    ? "Applying..."
+    : isApplied
+      ? applicationStatus === "hired"
+        ? "Hired"
+        : "Pending"
+      : isApplyLocked
+        ? "Complete Profile"
+        : "Apply Now";
 
   useEffect(() => {
     if (!showActionsMenu) return;
@@ -112,7 +137,7 @@ export default function JobCard({
             
             <div>
               <div className="mb-2 space-y-2">
-                <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1 tracking-tight">
+                <h3 className="text-lg font-bold leading-snug text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight break-words">
                   {job.title}
                 </h3>
                 <div className="flex flex-col items-start gap-1.5">
@@ -200,7 +225,20 @@ export default function JobCard({
             </div>
           </div>
 
-          <div className="flex gap-1 relative">
+          <div className="flex flex-wrap justify-end gap-2 relative">
+            <button
+              onClick={handleApplyClick}
+              disabled={isApplyDisabled}
+              title={isApplyLocked ? applyLockedReason : undefined}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95",
+                isApplied ? "bg-emerald-600" : isApplyLocked ? "bg-slate-300 text-slate-600" : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100",
+                isApplyDisabled && "cursor-not-allowed opacity-90",
+              )}
+            >
+              {isApplyingLocal && <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+              {applyButtonLabel}
+            </button>
             <button 
               onClick={() => {
                 if (onToggleSave) {
@@ -280,9 +318,21 @@ export default function JobCard({
           </div>
         </div>
         
-        <p className="text-slate-500 text-sm leading-relaxed mb-6 line-clamp-2 font-medium">
+        <p className={cn(
+          "text-slate-500 text-sm leading-relaxed mb-2 font-medium",
+          !showFullDescription && "line-clamp-4",
+        )}>
           {job.description}
         </p>
+        {job.description.length > 180 && (
+          <button
+            type="button"
+            onClick={() => setShowFullDescription((current) => !current)}
+            className="mb-5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+          >
+            {showFullDescription ? "Read less" : "Read more"}
+          </button>
+        )}
         
         <div className="flex flex-wrap gap-2 mb-6">
           {job.skills.slice(0, 4).map((skill) => (
@@ -313,19 +363,13 @@ export default function JobCard({
               Details
             </Link>
             <button 
-              onClick={async () => {
-                if (isApplied || isApplyingLocal) return;
-                setIsApplyingLocal(true);
-                if (onApply) {
-                  await onApply(job.id);
-                }
-                setIsApplyingLocal(false);
-              }}
-              disabled={isApplied || isApplyingLocal}
+              onClick={handleApplyClick}
+              disabled={isApplyDisabled}
+              title={isApplyLocked ? applyLockedReason : undefined}
               className={cn(
                 "flex items-center gap-2 px-4 sm:px-5 py-2 text-xs font-bold text-white rounded-lg transition-all active:scale-95 cursor-pointer uppercase tracking-wider",
-                isApplied ? "bg-emerald-600 shadow-emerald-100" : "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200",
-                (isApplied || isApplyingLocal) && "opacity-80 cursor-not-allowed"
+                isApplied ? "bg-emerald-600 shadow-emerald-100" : isApplyLocked ? "bg-slate-300 text-slate-600" : "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200",
+                isApplyDisabled && "opacity-80 cursor-not-allowed"
               )}
             >
               {isApplyingLocal ? (
@@ -336,6 +380,8 @@ export default function JobCard({
                 </span>
               ) : isApplied ? (
                 applicationStatus === 'hired' ? "Hired ✓" : "Pending"
+              ) : isApplyLocked ? (
+                "Complete Profile"
               ) : (
                 <>
                   <span className="hidden xs:inline">Apply Now</span>

@@ -1,8 +1,9 @@
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
+import { getAuthenticatedUser } from '@/lib/supabase_server';
 import { supabaseAdmin } from '@/lib/supabase_admin';
 import { ClientReview, FreelancerProfile, ServiceOffering } from '@/types/portfolio';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -524,6 +525,13 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
 
   const role = (profile.role || "").toLowerCase();
   const isHirer = role === "employer" || role === "client" || role === "hirer";
+
+  if (!isHirer) {
+    const viewer = await getAuthenticatedUser();
+    if (!viewer) {
+      redirect(`/auth?next=${encodeURIComponent(`/${username}`)}`);
+    }
+  }
 
   if (isHirer) {
     const { count: liveJobs } = await supabaseAdmin

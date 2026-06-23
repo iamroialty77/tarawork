@@ -75,6 +75,14 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
     : isCurrencyCode(profile.aiInsights?.preferredCurrency)
       ? profile.aiInsights.preferredCurrency
       : "PHP";
+  const hasCompleteApplicationProfile = Boolean(
+    profile.name?.trim() &&
+    profile.bio?.trim() &&
+    profile.username?.trim() &&
+    profile.hourlyRate?.trim() &&
+    (profile.skills?.length ?? 0) > 0 &&
+    (profile.portfolio?.length ?? 0) > 0,
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -264,7 +272,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="self-start rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <aside className="self-start rounded-2xl border border-blue-100 bg-blue-50/80 p-5 shadow-sm">
         <div className="mb-5 border-b border-gray-100 pb-4">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Filters</p>
           <h3 className="mt-1 text-lg font-bold text-slate-950">Find Jobs</h3>
@@ -421,7 +429,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
       </aside>
 
       <section className="min-w-0 space-y-6">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {filteredJobs.length > 0 ? (
           paginatedJobs.map((job, index) => {
             const smartMatch = smartMatches[job.id];
@@ -480,6 +488,8 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                   setSelectedJobForAI(j);
                   setShowAIAgent(true);
                 }}
+                isApplyLocked={!hasCompleteApplicationProfile}
+                applyLockedReason="Complete your profile to apply."
               />
             );
           })

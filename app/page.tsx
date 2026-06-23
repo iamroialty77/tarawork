@@ -484,7 +484,7 @@ export default function Home() {
   const [isVetting, setIsVetting] = useState(false);
   const [vettingData, setVettingData] = useState<any>(null);
 
-  const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "profile">("overview");
+  const [freelancerTab, setFreelancerTab] = useState<"overview" | "jobs" | "profile">("jobs");
   const [clientTab, setClientTab] = useState<"overview" | "jobs" | "talents" | "profile">("overview");
 
   useEffect(() => {
@@ -771,6 +771,31 @@ export default function Home() {
         console.warn("Profile fetch issue:", err);
       }
     }
+  };
+
+  const uploadProfilePhoto = async (file: File) => {
+    if (!user) throw new Error("Please sign in before uploading a profile photo.");
+
+    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const objectPath = `avatars/${user.id}/${Date.now()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("attachments")
+      .upload(objectPath, file, {
+        cacheControl: "3600",
+        contentType: file.type || "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      throw new Error(uploadError.message || "Unable to upload profile photo.");
+    }
+
+    const { data } = supabase.storage.from("attachments").getPublicUrl(objectPath);
+    if (!data.publicUrl) throw new Error("Unable to create public profile photo URL.");
+
+    const nextProfile = { ...profile, avatar_url: data.publicUrl };
+    setProfile(nextProfile);
+    return data.publicUrl;
   };
 
   const handleProfileSave = async (updatedProfile: UserProfile) => {
@@ -3187,6 +3212,7 @@ export default function Home() {
                       onAddPortfolio={addPortfolioItem}
                       onUpdatePortfolio={updatePortfolioItem}
                       onRemovePortfolio={removePortfolioItem}
+                      onUploadAvatar={uploadProfilePhoto}
                       isSaving={isSaving}
                     />
                   </div>
@@ -4038,6 +4064,7 @@ export default function Home() {
                 <ProfileForm 
                   initialProfile={profile} 
                   onUpdate={handleProfileSave} 
+                  onUploadAvatar={uploadProfilePhoto}
                   isSaving={isSaving}
                 />
               </motion.div>
