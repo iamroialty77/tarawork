@@ -234,20 +234,20 @@ export default function JobCard({
           </div>
 
           <div className="flex flex-wrap justify-end gap-2 relative">
-            <button
-              onClick={handleApplyClick}
-              disabled={isApplyDisabled}
-              title={isApplyLocked ? applyLockedReason : undefined}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95",
-                isApplied ? "bg-emerald-600" : isApplyLocked ? "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200" : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100",
-                isApplyDisabled && "cursor-not-allowed opacity-90",
-              )}
-            >
-              {isApplyingLocal && <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />}
-              {isApplyLocked && !isApplyingLocal && <Share2 className="h-3.5 w-3.5" />}
-              {applyButtonLabel}
-            </button>
+            {!isApplyLocked && (
+              <button
+                onClick={handleApplyClick}
+                disabled={isApplyDisabled}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95",
+                  isApplied ? "bg-emerald-600" : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100",
+                  isApplyDisabled && "cursor-not-allowed opacity-90",
+                )}
+              >
+                {isApplyingLocal && <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+                {applyButtonLabel}
+              </button>
+            )}
             <button 
               onClick={() => {
                 if (onToggleSave) {
