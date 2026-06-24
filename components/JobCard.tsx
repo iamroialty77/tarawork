@@ -55,7 +55,7 @@ export default function JobCard({
   isSaved: controlledIsSaved,
   onToggleSave,
   isApplyLocked = false,
-  applyLockedReason = "Complete your profile to apply."
+  applyLockedReason = "Copy public job link"
 }: JobCardProps) {
   const isApplied = !!applicationStatus;
   const [localIsSaved, setLocalIsSaved] = useState(false);
@@ -68,10 +68,25 @@ export default function JobCard({
   const sharePath = getJobSharePath(job);
   const shareUrl = getJobShareUrl(job);
   const isSaved = controlledIsSaved ?? localIsSaved;
-  const isApplyDisabled = isApplied || isApplyingLocal || isApplyLocked;
+  const isApplyDisabled = isApplied || isApplyingLocal;
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareStatus("copied");
+    } catch {
+      setShareStatus("failed");
+    } finally {
+      setTimeout(() => setShareStatus("idle"), 2500);
+    }
+  };
 
   const handleApplyClick = async () => {
     if (isApplyDisabled) return;
+    if (isApplyLocked) {
+      await copyShareLink();
+      return;
+    }
     setIsApplyingLocal(true);
     if (onApply) {
       await onApply(job.id);
@@ -86,7 +101,7 @@ export default function JobCard({
         ? "Hired"
         : "Pending"
       : isApplyLocked
-        ? "Complete Profile"
+        ? "Copy link"
         : "Apply Now";
 
   useEffect(() => {
@@ -103,15 +118,8 @@ export default function JobCard({
   }, [showActionsMenu]);
 
   const handleShareLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setShareStatus("copied");
-    } catch {
-      setShareStatus("failed");
-    } finally {
-      setShowActionsMenu(false);
-      setTimeout(() => setShareStatus("idle"), 2500);
-    }
+    await copyShareLink();
+    setShowActionsMenu(false);
   };
 
   return (
@@ -232,11 +240,12 @@ export default function JobCard({
               title={isApplyLocked ? applyLockedReason : undefined}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-95",
-                isApplied ? "bg-emerald-600" : isApplyLocked ? "bg-slate-300 text-slate-600" : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100",
+                isApplied ? "bg-emerald-600" : isApplyLocked ? "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200" : "bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100",
                 isApplyDisabled && "cursor-not-allowed opacity-90",
               )}
             >
               {isApplyingLocal && <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+              {isApplyLocked && !isApplyingLocal && <Share2 className="h-3.5 w-3.5" />}
               {applyButtonLabel}
             </button>
             <button 
@@ -368,7 +377,7 @@ export default function JobCard({
               title={isApplyLocked ? applyLockedReason : undefined}
               className={cn(
                 "flex items-center gap-2 px-4 sm:px-5 py-2 text-xs font-bold text-white rounded-lg transition-all active:scale-95 cursor-pointer uppercase tracking-wider",
-                isApplied ? "bg-emerald-600 shadow-emerald-100" : isApplyLocked ? "bg-slate-300 text-slate-600" : "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200",
+                isApplied ? "bg-emerald-600 shadow-emerald-100" : "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200",
                 isApplyDisabled && "opacity-80 cursor-not-allowed"
               )}
             >
@@ -381,7 +390,10 @@ export default function JobCard({
               ) : isApplied ? (
                 applicationStatus === 'hired' ? "Hired ✓" : "Pending"
               ) : isApplyLocked ? (
-                "Complete Profile"
+                <>
+                  <span>Copy link</span>
+                  <Share2 className="w-3.5 h-3.5" />
+                </>
               ) : (
                 <>
                   <span className="hidden xs:inline">Apply Now</span>

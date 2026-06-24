@@ -489,7 +489,7 @@ export default function JobFeed({ jobs, profile, onApply, appliedJobs = {} }: Jo
                   setShowAIAgent(true);
                 }}
                 isApplyLocked={!hasCompleteApplicationProfile}
-                applyLockedReason="Complete your profile to apply."
+                applyLockedReason="Copy public job link"
               />
             );
           })
