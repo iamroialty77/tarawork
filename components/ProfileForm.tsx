@@ -10,6 +10,11 @@ import {
   MessageSquareText,
   Camera,
   Upload,
+  Building2,
+  Globe,
+  Mail,
+  MapPin,
+  Phone,
 } from "lucide-react";
 import PortfolioManager from "./PortfolioManager";
 import AIAgent from "./AIAgent";
@@ -624,6 +629,33 @@ export default function ProfileForm({
     </button>
   );
 
+  const companyProfile = ((profile.aiInsights as Record<string, any> | undefined)?.companyProfile || {}) as {
+    website?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    address?: string;
+    industry?: string;
+    companySize?: string;
+    hiringNote?: string;
+  };
+
+  const updateCompanyProfile = (updates: Partial<typeof companyProfile>) => {
+    updateLocalProfile({
+      ...profile,
+      aiInsights: {
+        ...(profile.aiInsights || {
+          gapAnalysis: [],
+          compatibilityScore: 0,
+          cultureMatch: [],
+        }),
+        companyProfile: {
+          ...companyProfile,
+          ...updates,
+        },
+      } as UserProfile["aiInsights"] & { companyProfile: typeof companyProfile },
+    });
+  };
+
   const handleApplicationProfileChange = (
     field: "contactEmail" | "contactPhone" | "resumeUrl" | "portfolioUrl" | "interviewUrl" | "coverLetter",
     value: string,
@@ -643,6 +675,219 @@ export default function ProfileForm({
       },
     });
   };
+
+  if (!isFreelancer) {
+    return (
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white sm:p-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-5">
+                <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/10 text-white shadow-sm">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Company logo" className="h-full w-full object-cover" />
+                  ) : (
+                    <Building2 className="h-10 w-10" />
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center bg-black/60 py-1.5 text-white">
+                    <Camera className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-indigo-300">Company Profile</p>
+                  <h2 className="mt-2 truncate text-2xl font-black tracking-tight sm:text-3xl">
+                    {profile.companyName || profile.name || "Your company"}
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-slate-300">
+                    This profile is shown to freelancers when they review your company and job opportunities.
+                  </p>
+                </div>
+              </div>
+              {onUploadAvatar && (
+                <div className="shrink-0">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar || isSaving}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition-all hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {isUploadingAvatar ? "Uploading..." : "Upload Logo"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
+              <div className="mb-5 border-b border-slate-100 pb-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Company Basics</p>
+                <h3 className="mt-1 text-lg font-bold text-slate-950">Business Information</h3>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClassName}>Company Name</label>
+                  <input
+                    type="text"
+                    className={inputClassName}
+                    placeholder="e.g. Acme Digital Services"
+                    value={profile.companyName || ""}
+                    onChange={(event) => handleFieldChange({ companyName: event.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClassName}>Representative Name</label>
+                  <input
+                    type="text"
+                    className={inputClassName}
+                    placeholder="Your name"
+                    value={profile.name}
+                    onChange={(event) => handleFieldChange({ name: event.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClassName}>Industry</label>
+                  <input
+                    type="text"
+                    className={inputClassName}
+                    placeholder="e.g. Ecommerce, Real Estate, SaaS"
+                    value={companyProfile.industry || ""}
+                    onChange={(event) => updateCompanyProfile({ industry: event.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClassName}>Company Size</label>
+                  <select
+                    className={inputClassName}
+                    value={companyProfile.companySize || ""}
+                    onChange={(event) => updateCompanyProfile({ companySize: event.target.value })}
+                  >
+                    <option value="">Select size</option>
+                    <option value="1-10 employees">1-10 employees</option>
+                    <option value="11-50 employees">11-50 employees</option>
+                    <option value="51-200 employees">51-200 employees</option>
+                    <option value="201-500 employees">201-500 employees</option>
+                    <option value="500+ employees">500+ employees</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className={labelClassName}>Company Description</label>
+                    <span className="text-[11px] font-bold text-slate-400">{(profile.bio || "").length}/600</span>
+                  </div>
+                  <textarea
+                    className={inputClassName}
+                    rows={6}
+                    maxLength={600}
+                    placeholder="Describe what your company does, who you serve, your working style, and why freelancers should work with you."
+                    value={profile.bio || ""}
+                    onChange={(event) => {
+                      const value = event.target.value.slice(0, 600);
+                      updateLocalProfile({
+                        ...profile,
+                        bio: value,
+                        aboutSections: {
+                          ...(profile.aboutSections || EMPTY_ABOUT_SECTIONS),
+                          whatISpecializeIn: value,
+                        },
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm sm:p-6">
+              <div className="mb-5 border-b border-slate-200 pb-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Contact</p>
+                <h3 className="mt-1 text-lg font-bold text-slate-950">Public Contact Details</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClassName}>Business Email</label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="email"
+                      className={`${inputClassName} pl-11`}
+                      placeholder="hiring@company.com"
+                      value={companyProfile.contactEmail || ""}
+                      onChange={(event) => updateCompanyProfile({ contactEmail: event.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClassName}>Contact Number</label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="tel"
+                      className={`${inputClassName} pl-11`}
+                      placeholder="+63..."
+                      value={companyProfile.contactPhone || ""}
+                      onChange={(event) => updateCompanyProfile({ contactPhone: event.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClassName}>Website</label>
+                  <div className="relative">
+                    <Globe className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="url"
+                      className={`${inputClassName} pl-11`}
+                      placeholder="https://company.com"
+                      value={companyProfile.website || ""}
+                      onChange={(event) => updateCompanyProfile({ website: event.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClassName}>Office Address</label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-slate-400" />
+                    <textarea
+                      className={`${inputClassName} pl-11`}
+                      rows={3}
+                      placeholder="City, province, country or full business address"
+                      value={companyProfile.address || ""}
+                      onChange={(event) => updateCompanyProfile({ address: event.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
+            <div className="mb-5 border-b border-slate-100 pb-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Hiring Presentation</p>
+              <h3 className="mt-1 text-lg font-bold text-slate-950">What Freelancers Should Know</h3>
+            </div>
+            <textarea
+              className={inputClassName}
+              rows={4}
+              placeholder="Example: We usually hire for content, admin, and operations roles. We value clear communication, weekly updates, and long-term collaboration."
+              value={companyProfile.hiringNote || ""}
+              onChange={(event) => updateCompanyProfile({ hiringNote: event.target.value })}
+            />
+          </section>
+
+          {saveProfileButton}
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full min-h-[calc(100vh-12rem)] overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/40 sm:p-6">

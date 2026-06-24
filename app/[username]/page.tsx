@@ -123,7 +123,7 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
     if (isCritical || !profile) {
       console.log(`[Portfolio] Attempting basic fallback fetch for "${identifier}"...`);
       // Basic query without complex joins
-      const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights');
+      const basicQuery = supabaseAdmin.from('profiles').select('id, name, role, avatar_url, bio, hourlyRate, username, skills, category, companyName, aiInsights');
       
       let refinedBasicQuery;
       // Try to match identifier in ID or username or name
@@ -292,7 +292,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     const query1 = supabaseAdmin
       .from('profiles')
       .select(`
-        id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
+        id, name, role, avatar_url, bio, hourlyRate, username, skills, category, companyName, aiInsights,
         portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
       .filter('username', 'ilike', normalizedUsername)
@@ -319,7 +319,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       const query2 = supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
+          id, name, role, avatar_url, bio, hourlyRate, username, skills, category, companyName, aiInsights,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .eq('id', normalizedUsername)
@@ -338,7 +338,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     const { data: candidates, error: candidateError } = await supabaseAdmin
       .from('profiles')
       .select(`
-        id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
+        id, name, role, avatar_url, bio, hourlyRate, username, skills, category, companyName, aiInsights,
         portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
       `)
       .or(`name.ilike.%${flexibleSearch}%,username.ilike.%${flexibleSearch}%`)
@@ -404,7 +404,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
       const query4 = supabaseAdmin
         .from('profiles')
         .select(`
-          id, name, role, avatar_url, bio, hourlyRate, username, skills, category, aiInsights,
+          id, name, role, avatar_url, bio, hourlyRate, username, skills, category, companyName, aiInsights,
           portfolios (id, about_me, tagline, theme_settings, portfolio_projects(*), portfolio_skills(*), portfolio_links(*))
         `)
         .filter('id', 'ilike', `${normalizedUsername}%`)
@@ -479,6 +479,7 @@ function mapProfile(profile: any): FreelancerProfile {
     id: profile.id,
     name: profile.name || 'Anonymous',
     role: profile.role || 'Freelancer',
+    companyName: profile.companyName || '',
     avatar_url: profile.avatar_url,
     bio: aboutSections.whatISpecializeIn || profile.bio,
     skills: Array.isArray(profile.skills) ? profile.skills.filter(Boolean) : [],
@@ -547,33 +548,93 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
       typeof aiInsights?.hirerReviewCount === "number"
         ? aiInsights.hirerReviewCount
         : 0;
+    const companyProfile =
+      aiInsights.companyProfile && typeof aiInsights.companyProfile === "object"
+        ? (aiInsights.companyProfile as Record<string, string>)
+        : {};
+    const companyName = profile.companyName || profile.name || "Company";
+    const companyInitial = companyName.trim().charAt(0).toUpperCase() || "C";
+    const contactItems = [
+      { label: "Email", value: companyProfile.contactEmail },
+      { label: "Phone", value: companyProfile.contactPhone },
+      { label: "Website", value: companyProfile.website },
+      { label: "Address", value: companyProfile.address },
+    ].filter((item) => typeof item.value === "string" && item.value.trim().length > 0);
 
     return (
-      <main className="min-h-screen bg-slate-50 py-10 px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="h-2 bg-slate-900" />
-            <div className="p-8 space-y-8">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">TaraWork Hirer Profile</p>
-                <h1 className="mt-2 text-3xl font-black text-slate-900">{profile.name || "Hirer"}</h1>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                  {profile.bio || "This hirer prefers to keep profile details concise. Review active jobs for current opportunities."}
-                </p>
+      <main className="min-h-screen bg-slate-50 px-4 py-10">
+        <div className="mx-auto max-w-5xl">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="bg-slate-950 p-8 text-white sm:p-10">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/10 text-3xl font-black">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt={`${companyName} logo`} className="h-full w-full object-cover" />
+                  ) : (
+                    companyInitial
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-indigo-300">TaraWork Company Profile</p>
+                  <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{companyName}</h1>
+                  <p className="mt-2 text-sm font-semibold text-slate-300">
+                    {companyProfile.industry || "Employer"}{companyProfile.companySize ? ` · ${companyProfile.companySize}` : ""}
+                  </p>
+                </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-8 p-6 sm:p-8">
+              <section className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Jobs</p>
                   <p className="mt-1 text-2xl font-black text-slate-900">{liveJobs || 0}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Hirer Reviews</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Employer Reviews</p>
                   <p className="mt-1 text-sm font-black text-slate-900">
                     {reviewScore !== null ? `${reviewScore.toFixed(1)}/5 (${reviewCount} reviews)` : "No reviews yet"}
                   </p>
                 </div>
-              </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Representative</p>
+                  <p className="mt-1 text-sm font-black text-slate-900">{profile.name || "Not provided"}</p>
+                </div>
+              </section>
+
+              <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                  <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Company Description</h2>
+                  <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-slate-700">
+                    {profile.bio || "This company has not added a description yet."}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Contact Details</h2>
+                  {contactItems.length > 0 ? (
+                    <div className="mt-4 space-y-3">
+                      {contactItems.map((item) => (
+                        <div key={item.label}>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{item.label}</p>
+                          <p className="mt-1 break-words text-sm font-bold text-slate-900">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm font-semibold text-slate-500">Contact details not provided.</p>
+                  )}
+                </div>
+              </section>
+
+              {companyProfile.hiringNote && (
+                <section className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
+                  <h2 className="text-sm font-black uppercase tracking-[0.18em] text-indigo-700">Hiring Notes</h2>
+                  <p className="mt-3 whitespace-pre-line text-sm font-semibold leading-relaxed text-slate-700">
+                    {companyProfile.hiringNote}
+                  </p>
+                </section>
+              )}
 
               <div className="flex items-center gap-3 pt-2">
                 <Link

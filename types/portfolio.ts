@@ -67,6 +67,7 @@ export interface FreelancerProfile {
   id: string;
   name: string;
   role: string;
+  companyName?: string;
   avatar_url?: string;
   bio?: string;
   skills?: string[];
