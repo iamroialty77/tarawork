@@ -134,6 +134,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const [invitedTalentIds, setInvitedTalentIds] = useState<string[]>([]);
   const [contactUnlockedPulse, setContactUnlockedPulse] = useState(false);
   const [contactUnlockMessage, setContactUnlockMessage] = useState('');
+  const [isEmployerRegisterModalOpen, setIsEmployerRegisterModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -165,6 +166,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const hasSentInvite = invitedTalentIds.includes(profile.id) || inviteStatus === 'Invitation sent';
   const isSavedTalent = savedTalentIds.includes(profile.id);
   const hasUnlockedContact = isEmployerViewer && (isSavedTalent || hasSentInvite);
+  const employerRegisterHref =
+    typeof window === 'undefined'
+      ? '/auth?role=employer'
+      : `/auth?role=employer&next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
 
   useEffect(() => {
     let isMounted = true;
@@ -266,15 +271,23 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
     window.setTimeout(() => setContactUnlockMessage(''), 2200);
   };
 
+  const requireEmployerAccount = () => {
+    setIsEmployerRegisterModalOpen(true);
+  };
+
   const handleHireMe = () => {
     if (!isPublic) return;
+    if (!viewerUserId || !isEmployerViewer) {
+      requireEmployerAccount();
+      return;
+    }
     setIsInquiryModalOpen(true);
   };
 
   const handleSaveTalent = () => {
     if (!isPublic) return;
     if (!viewerUserId || !isEmployerViewer) {
-      setSaveStatus('Sign in as an employer to save talents');
+      requireEmployerAccount();
       return;
     }
 
@@ -322,7 +335,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   const handleInvite = async () => {
     if (!isPublic || isInviting) return;
     if (!viewerUserId || !isEmployerViewer) {
-      setInviteStatus('Sign in as an employer to invite');
+      requireEmployerAccount();
       return;
     }
     if (invitedTalentIds.includes(profile.id)) {
@@ -348,7 +361,11 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       showContactUnlockChip('Contact details unlocked');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to send invitation.';
-      setInviteStatus(message === 'Unauthorized.' ? 'Sign in as an employer to invite' : message);
+      if (message === 'Unauthorized.') {
+        requireEmployerAccount();
+      } else {
+        setInviteStatus(message);
+      }
     } finally {
       setIsInviting(false);
     }
@@ -875,6 +892,57 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {isEmployerRegisterModalOpen && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-600">Employer Access</p>
+                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Register as an employer</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEmployerRegisterModalOpen(false)}
+                  className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-white hover:text-slate-700"
+                  aria-label="Close employer registration prompt"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-5 px-6 py-6">
+              <p className="text-sm leading-relaxed text-slate-600">
+                Create a TaraWork employer account to save freelancers, send invitations, unlock contact details, and manage hiring conversations professionally.
+              </p>
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4">
+                <p className="text-sm font-bold text-slate-900">What you get as an employer</p>
+                <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                  <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" /> Shortlist and save freelancer profiles.</li>
+                  <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" /> Invite talent directly to your jobs.</li>
+                  <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" /> Unlock verified contact and inquiry tools.</li>
+                </ul>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <a
+                  href={employerRegisterHref}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition-all hover:bg-black"
+                >
+                  Register as Employer
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsEmployerRegisterModalOpen(false)}
+                  className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50"
+                >
+                  Continue Browsing
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
