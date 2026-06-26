@@ -267,16 +267,33 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
   const deleteJob = async (jobId: string) => {
     if (!confirm("Are you sure you want to delete this job posting?")) return;
-    
-    const { error } = await supabase
-      .from('jobs')
-      .delete()
-      .eq('id', jobId);
-    
-    if (error) notify("Error deleting job: " + error.message);
-    else {
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/admin/delete-job", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete job posting.");
+      }
+
+      setJobs((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
+      setCounts((currentCounts) => ({
+        ...currentCounts,
+        jobs: Math.max(0, currentCounts.jobs - 1),
+      }));
       notify("Job deleted successfully");
-      fetchData();
+      await fetchData();
+    } catch (err: any) {
+      notify("Error deleting job: " + (err?.message || "Unknown error"));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -324,7 +341,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "users", label: "Verification Queue", icon: ShieldCheck },
     { id: "jobs", label: "Marketplace", icon: Briefcase },
-    { id: "escrow", label: "Financials", icon: CreditCard },
     { id: "disputes", label: "Disputes", icon: Scale },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
@@ -668,11 +684,31 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-8 border-b border-slate-50">
-                <h3 className="text-xl font-bold text-slate-900">Job Posting Moderation</h3>
-                <p className="text-sm text-slate-500 font-medium">Monitor marketplace content and take down invalid jobs.</p>
-                <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Total Posts</p>
+                <p className="mt-2 text-3xl font-black text-slate-900">{jobs.length}</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Live</p>
+                <p className="mt-2 text-3xl font-black text-emerald-800">{jobs.filter((job) => (job.status || "live") === "live").length}</p>
+              </div>
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-700">Needs Review</p>
+                <p className="mt-2 text-3xl font-black text-rose-800">{jobs.filter((job) => (job.status || "live") !== "live").length}</p>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 p-8">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Marketplace Operations</p>
+                    <h3 className="mt-1 text-2xl font-black text-slate-900">Job Posting Moderation</h3>
+                    <p className="mt-1 text-sm font-medium text-slate-500">Review live marketplace content and remove invalid or duplicate job posts.</p>
+                  </div>
+                </div>
+                <div className="mt-5 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700">Job Categories</p>
                   <p className="mt-1 text-xs font-medium text-indigo-700/80">Admins can manage the list used by the hirer job form.</p>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -707,6 +743,15 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   </div>
                 </div>
               </div>
+              {jobs.length === 0 ? (
+                <div className="p-10 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                    <Briefcase className="h-6 w-6" />
+                  </div>
+                  <p className="mt-4 text-sm font-black text-slate-900">No job posts found.</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">New marketplace posts will appear here for moderation.</p>
+                </div>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
@@ -739,16 +784,18 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                             {job.status !== 'live' && (
                               <button 
                                 onClick={() => updateJobStatus(job.id, 'live')}
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 hover:bg-emerald-100"
                               >
                                 <Check className="w-4 h-4" />
+                                Restore
                               </button>
                             )}
                             <button 
                               onClick={() => deleteJob(job.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-50"
                             >
                               <Trash2 className="w-4 h-4" />
+                              Delete
                             </button>
                           </div>
                         </td>
@@ -757,6 +804,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           </motion.div>
         )}
