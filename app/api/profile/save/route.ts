@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import postgres from "postgres";
+import { getAuthenticatedUser } from "@/lib/supabase_server";
+import { assertSameOrigin, getClientIp, isUuid, rateLimit } from "@/lib/security";
 
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
@@ -48,7 +51,7 @@ function pickExistingColumns(row: Record<string, unknown>, existingColumns: Set<
   );
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   if (!sql) {
     return NextResponse.json(
       { error: "Database connection is not configured." },
@@ -57,6 +60,23 @@ export async function POST(request: Request) {
   }
 
   try {
+    const originError = assertSameOrigin(request);
+    if (originError) return originError;
+
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json(
+        { error: "Unauthorized." },
+        { status: 401, headers: responseHeaders },
+      );
+    }
+    const limited = rateLimit({
+      key: `profile:save:${authUser.id || getClientIp(request)}`,
+      limit: 30,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
+
     const body = await request.json();
     const profile = body.profile || {};
     const userId = String(body.userId || profile.id || "").trim();
@@ -67,17 +87,38 @@ export async function POST(request: Request) {
         { status: 400, headers: responseHeaders },
       );
     }
+    if (!isUuid(userId)) {
+      return NextResponse.json(
+        { error: "Invalid profile user id." },
+        { status: 400, headers: responseHeaders },
+      );
+    }
+    if (userId !== authUser.id) {
+      return NextResponse.json(
+        { error: "Forbidden: you can only save your own profile." },
+        { status: 403, headers: responseHeaders },
+      );
+    }
 
     const aiInsights = profile.aiInsights || {};
     const aboutSections = aiInsights.aboutSections || {};
     const bio = aboutSections.whatISpecializeIn || profile.bio || "";
     const updatedAt = profile.updated_at || new Date().toISOString();
     const existingProfileColumns = await getTableColumns("profiles");
+    const [existingProfile] = await sql<{ role: string | null }[]>`
+      select role
+      from public.profiles
+      where id = ${userId}::uuid
+      limit 1
+    `;
+    const requestedRole = typeof profile.role === "string" ? profile.role.trim().toLowerCase() : "";
+    const safeSignupRole = requestedRole === "employer" || requestedRole === "client" ? "employer" : "freelancer";
+    const preservedRole = existingProfile?.role || safeSignupRole;
     const profileRow = pickExistingColumns(
       {
         id: userId,
         name: profile.name || null,
-        role: profile.role || "freelancer",
+        role: preservedRole,
         category: profile.category || "General",
         skills: Array.isArray(profile.skills) ? profile.skills : [],
         hourlyRate: profile.hourlyRate || "$0",
@@ -111,7 +152,7 @@ export async function POST(request: Request) {
       on conflict (id) do update set ${sql(profileUpdateRow, ...profileUpdateColumns)}
     `;
 
-    if (profile.role === "freelancer") {
+    if (preservedRole === "freelancer") {
       const portfolio = body.portfolio || {};
       const existingPortfolioColumns = await getTableColumns("portfolios");
       const portfolioRow = pickExistingColumns(

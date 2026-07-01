@@ -1,4 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase_admin";
+import { requireAdminUser } from "@/lib/authz";
+import { assertNotLikelyBot, assertSameOrigin, getClientIp, isSafeJobId, rateLimit } from "@/lib/security";
 import { NextRequest, NextResponse } from "next/server";
 
 const isIgnorableCleanupError = (error: any) => {
@@ -15,11 +17,32 @@ const isIgnorableCleanupError = (error: any) => {
 
 export async function POST(req: NextRequest) {
   try {
+    const originError = assertSameOrigin(req);
+    if (originError) return originError;
+
+    const botError = assertNotLikelyBot(req);
+    if (botError) return botError;
+
+    const admin = await requireAdminUser();
+    if (admin.error) {
+      return NextResponse.json({ error: admin.error }, { status: admin.status });
+    }
+
+    const limited = rateLimit({
+      key: `admin:delete-job:${admin.user?.id || getClientIp(req)}`,
+      limit: 20,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
+
     const { jobId: rawJobId } = await req.json();
     const jobId = typeof rawJobId === "string" ? rawJobId.trim() : "";
 
     if (!jobId) {
       return NextResponse.json({ error: "Job ID is required." }, { status: 400 });
+    }
+    if (!isSafeJobId(jobId)) {
+      return NextResponse.json({ error: "Invalid job ID format." }, { status: 400 });
     }
 
     const { error: applicationsError } = await supabaseAdmin

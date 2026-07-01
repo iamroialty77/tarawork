@@ -69,6 +69,54 @@ DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
 CREATE POLICY "Users can update own profile." ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
+CREATE OR REPLACE FUNCTION public.prevent_profile_role_escalation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    requester_is_admin BOOLEAN;
+    jwt_role TEXT;
+BEGIN
+    jwt_role := current_setting('request.jwt.claim.role', true);
+
+    IF jwt_role = 'service_role' THEN
+        RETURN NEW;
+    END IF;
+
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.role = 'admin' THEN
+            NEW.role := 'freelancer';
+        ELSIF NEW.role NOT IN ('freelancer', 'employer', 'client') THEN
+            NEW.role := 'freelancer';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.role IS DISTINCT FROM OLD.role THEN
+        SELECT EXISTS (
+            SELECT 1
+            FROM public.profiles
+            WHERE id = auth.uid()
+              AND role = 'admin'
+        ) INTO requester_is_admin;
+
+        IF NOT COALESCE(requester_is_admin, false) THEN
+            NEW.role := OLD.role;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS prevent_profile_role_escalation_trigger ON public.profiles;
+CREATE TRIGGER prevent_profile_role_escalation_trigger
+    BEFORE INSERT OR UPDATE OF role ON public.profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION public.prevent_profile_role_escalation();
+
 
 -- 2. Create JOBS table
 -- This table stores all job postings in the marketplace.

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase_server";
 import { supabaseAdmin } from "@/lib/supabase_admin";
+import { assertSameOrigin, getClientIp, isUuid, rateLimit } from "@/lib/security";
 import postgres from "postgres";
 
 type InvitationBody = {
@@ -43,7 +44,7 @@ const sql = databaseUrl
     })
   : null;
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = (searchParams.get("userId") || "").trim();
@@ -111,15 +112,28 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const originError = assertSameOrigin(req);
+    if (originError) return originError;
+
     const user = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+    const limited = rateLimit({
+      key: `talent-invite:${user.id || getClientIp(req)}`,
+      limit: 25,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
 
     const body = (await req.json()) as InvitationBody;
     const freelancerId = (body.freelancerId || "").trim();
     if (!freelancerId) {
       return NextResponse.json({ error: "Missing freelancer id." }, { status: 400 });
+    }
+    if (!isUuid(freelancerId)) {
+      return NextResponse.json({ error: "Invalid freelancer id." }, { status: 400 });
     }
     if (freelancerId === user.id) {
       return NextResponse.json({ error: "You cannot invite yourself." }, { status: 400 });
@@ -187,10 +201,20 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
   try {
+    const originError = assertSameOrigin(req);
+    if (originError) return originError;
+
     const user = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+    const limited = rateLimit({
+      key: `talent-invite:update:${user.id || getClientIp(req)}`,
+      limit: 40,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
 
     const body = (await req.json()) as InvitationBody;
     const invitationId = (body.invitationId || "").trim();
@@ -204,6 +228,9 @@ export async function PATCH(req: Request) {
     const hasWorkStatusUpdate = body.workStatus === "completed";
     if (!invitationId || (!nextStatus && !hasInterviewUpdate && !hasInterviewRequest && !hasWorkStatusUpdate)) {
       return NextResponse.json({ error: "Missing invitation update." }, { status: 400 });
+    }
+    if (!isUuid(invitationId)) {
+      return NextResponse.json({ error: "Invalid invitation id." }, { status: 400 });
     }
 
     const { data: existing, error: existingError } = await supabaseAdmin

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { getAuthenticatedUser } from "@/lib/supabase_server";
+import { assertSameOrigin, getClientIp, isUuid, rateLimit } from "@/lib/security";
 
 type ReviewBody = {
   freelancerId?: string;
@@ -13,10 +14,20 @@ type ReviewBody = {
 const isCompletedInvitation = (invitation: Record<string, unknown>) =>
   invitation.work_status === "completed" || Boolean(invitation.completed_at);
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const originError = assertSameOrigin(req);
+    if (originError) return originError;
+
     const user = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+    const limited = rateLimit({
+      key: `freelancer-review:${user.id || getClientIp(req)}`,
+      limit: 15,
+      windowMs: 60_000,
+    });
+    if (limited) return limited;
 
     const body = (await req.json()) as ReviewBody;
     const freelancerId = (body.freelancerId || "").trim();
@@ -27,6 +38,9 @@ export async function POST(req: Request) {
 
     if (!freelancerId || !invitationId) {
       return NextResponse.json({ error: "Missing freelancer or invitation id." }, { status: 400 });
+    }
+    if (!isUuid(freelancerId) || !isUuid(invitationId)) {
+      return NextResponse.json({ error: "Invalid freelancer or invitation id." }, { status: 400 });
     }
     if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
       return NextResponse.json({ error: "Rating must be between 1 and 5." }, { status: 400 });

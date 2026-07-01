@@ -141,6 +141,12 @@ const normalizeUserRole = (
   return fallback;
 };
 
+const normalizeSignupRole = (value: unknown): "freelancer" | "employer" => {
+  if (typeof value !== "string") return "freelancer";
+  const normalized = value.trim().toLowerCase();
+  return normalized === "employer" || normalized === "client" ? "employer" : "freelancer";
+};
+
 const buildSuggestedCoverLetter = (
   job: Job | null,
   freelancer: UserProfile,
@@ -543,10 +549,7 @@ export default function Home() {
       }
 
       if (data) {
-        const fallbackRole = normalizeUserRole(
-          prevProfile?.role || userAuth?.user_metadata?.role,
-          "freelancer",
-        );
+        const fallbackRole = prevProfile?.role || normalizeSignupRole(userAuth?.user_metadata?.role);
         const resolvedRole = normalizeUserRole(data.role, fallbackRole);
 
         // Normalize profile data to ensure arrays are not null/undefined
@@ -740,7 +743,7 @@ export default function Home() {
         }
       } else {
         // Create initial profile if it doesn't exist
-        const role = normalizeUserRole(userAuth?.user_metadata?.role, "freelancer");
+        const role = normalizeSignupRole(userAuth?.user_metadata?.role);
         const initialData: UserProfile = {
           id: userId,
           name: userAuth?.user_metadata?.full_name || userAuth?.email?.split('@')[0] || "User",
@@ -782,7 +785,6 @@ export default function Home() {
         }
         setProfile(prev => ({ ...prev, ...initialData }));
         if (role === 'employer') setView('client');
-        else if (role === 'admin') setView('admin');
         else setView('freelancer');
       }
     } catch (err: any) {
@@ -836,7 +838,7 @@ export default function Home() {
 
       // List of columns that definitely exist in the profiles table base on supabase_schema.sql
       const dbColumns = [
-        'id', 'name', 'role', 'category', 'skills', 'hourlyRate', 'bio', 
+        'id', 'name', 'category', 'skills', 'hourlyRate', 'bio', 
         'avatar_url', 'companyName', 'verifiedSkills', 'softSkills', 
         'activeProjects', 'squad', 'aiInsights', 'ranking', 'status', 
         'verification_documents', 'wellness', 'updated_at', 'username', 

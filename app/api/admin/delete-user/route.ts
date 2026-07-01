@@ -1,12 +1,35 @@
 import { supabaseAdmin } from '@/lib/supabase_admin'
+import { requireAdminUser } from '@/lib/authz'
+import { assertSameOrigin, getClientIp, isUuid, rateLimit } from '@/lib/security'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
+    const originError = assertSameOrigin(req)
+    if (originError) return originError
+
+    const admin = await requireAdminUser()
+    if (admin.error) {
+      return NextResponse.json({ error: admin.error }, { status: admin.status })
+    }
+
+    const limited = rateLimit({
+      key: `admin:delete-user:${admin.user?.id || getClientIp(req)}`,
+      limit: 10,
+      windowMs: 60_000,
+    })
+    if (limited) return limited
+
     const { userId } = await req.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    }
+    if (!isUuid(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 })
+    }
+    if (admin.user?.id === userId) {
+      return NextResponse.json({ error: 'Admins cannot delete their own account from this panel.' }, { status: 400 })
     }
 
     // 1. Check if the user exists in profiles to identify their role and data
