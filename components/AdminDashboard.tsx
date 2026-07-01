@@ -8,8 +8,7 @@ import {
   Briefcase, 
   ShieldCheck, 
   AlertTriangle, 
-  TrendingUp, 
-  DollarSign,
+  TrendingUp,
   Search,
   MoreVertical,
   ArrowUpRight,
@@ -31,15 +30,12 @@ import {
   Check,
   BarChart3,
   Trash2,
-  Lock,
-  Unlock,
-  CreditCard,
   Ban,
   Scale,
   Mail
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "escrow" | "disputes" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 interface AdminDashboardProps {
@@ -49,11 +45,10 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
-  const [counts, setCounts] = useState({ users: 0, jobs: 0, employers: 0, freelancers: 0, escrows: 0, disputes: 0 });
+  const [counts, setCounts] = useState({ users: 0, jobs: 0, employers: 0, freelancers: 0, disputes: 0 });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
-  const [escrows, setEscrows] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
@@ -64,7 +59,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [healthStatus, setHealthStatus] = useState({
     profiles: { exists: false, loading: true },
     jobs: { exists: false, loading: true },
-    escrows: { exists: false, loading: true },
     messages: { exists: false, loading: true },
     conversations: { exists: false, loading: true },
     disputes: { exists: false, loading: true },
@@ -72,7 +66,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   });
 
   const checkTableHealth = async () => {
-    const tables = ['profiles', 'jobs', 'escrows', 'messages', 'conversations', 'disputes', 'admin_audit_logs'];
+    const tables = ['profiles', 'jobs', 'messages', 'conversations', 'disputes', 'admin_audit_logs'];
     const newStatus = { ...healthStatus };
 
     for (const table of tables) {
@@ -101,7 +95,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       const { count: employerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'employer');
       const { count: freelancerCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'freelancer');
       const { count: jobCount } = await supabase.from('jobs').select('*', { count: 'exact', head: true });
-      const { count: escrowCount } = await supabase.from('escrows').select('*', { count: 'exact', head: true });
       const { count: disputeCount } = await supabase.from('disputes').select('*', { count: 'exact', head: true });
 
       setCounts({
@@ -109,7 +102,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         employers: employerCount || 0,
         freelancers: freelancerCount || 0,
         jobs: jobCount || 0,
-        escrows: escrowCount || 0,
         disputes: disputeCount || 0
       });
 
@@ -126,13 +118,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         .select('*, hirer_profile:profiles!jobs_employer_id_fkey(name)')
         .order('createdAt', { ascending: false });
       if (jobData) setJobs(jobData);
-
-      // Fetch Escrows
-      const { data: escrowData } = await supabase
-        .from('escrows')
-        .select('*, jobs(title)')
-        .order('created_at', { ascending: false });
-      if (escrowData) setEscrows(escrowData);
 
       // Fetch Disputes
       const { data: disputeData } = await supabase
@@ -322,21 +307,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     fetchData();
   };
 
-  const deleteEscrow = async (escrowId: string) => {
-    if (!confirm("Are you sure you want to delete this escrow?")) return;
-    
-    const { error } = await supabase
-      .from('escrows')
-      .delete()
-      .eq('id', escrowId);
-    
-    if (error) notify("Error removing escrow: " + error.message);
-    else {
-      notify("Escrow removed successfully");
-      fetchData();
-    }
-  };
-
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "users", label: "Verification Queue", icon: ShieldCheck },
@@ -420,27 +390,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { label: "Total Platform Users", value: counts.users || 12842, icon: Users, color: "indigo" },
-                { 
-                  label: "Funds in Escrow", 
-                  value: `₱${escrows.reduce((sum, e) => sum + (e.status === 'funded' ? e.amount : 0), 0).toLocaleString()}`, 
-                  subValue: `₱${escrows.reduce((sum, e) => sum + (e.status === 'disputed' ? e.amount : 0), 0).toLocaleString()} Locked in Dispute`,
-                  icon: CreditCard, 
-                  color: "emerald" 
-                },
-                { label: "Active Disputes", value: counts.disputes || 14, icon: AlertTriangle, color: "red" },
-                { 
-                  label: "Dispute Rate", 
-                  value: `${counts.escrows > 0 ? ((counts.disputes / counts.escrows) * 100).toFixed(1) : '0.1'}%`, 
-                  icon: Scale, 
-                  color: "purple" 
-                },
-                { 
-                  label: "Platform Fees (Total)", 
-                  value: `₱${escrows.reduce((sum, e) => sum + (Number(e.platform_fee) || 0), 0).toLocaleString()}`, 
-                  icon: DollarSign, 
-                  color: "amber" 
-                },
+                { label: "Total Platform Users", value: counts.users, icon: Users, color: "indigo" },
+                { label: "Job Posts", value: counts.jobs, icon: Briefcase, color: "emerald" },
+                { label: "Employers", value: counts.employers, icon: UserCheck, color: "amber" },
+                { label: "Freelancers", value: counts.freelancers, icon: ShieldCheck, color: "purple" },
+                { label: "Active Disputes", value: counts.disputes, icon: AlertTriangle, color: "red" },
               ].map((stat, i) => (
                 <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                   <div className="flex justify-between items-start">
@@ -451,11 +405,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   <div className="mt-4">
                     <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
                     <h3 className="text-3xl font-black text-slate-900 mt-1">{stat.value.toLocaleString()}</h3>
-                    {stat.subValue && (
-                      <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-tighter">
-                        {stat.subValue}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
@@ -809,124 +758,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
           </motion.div>
         )}
 
-        {activeTab === "escrow" && (
-          <motion.div
-            key="escrow"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="space-y-6"
-          >
-            {/* Financial Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                    <TrendingUp className="w-5 h-5" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Total Inflow (Funded)</p>
-                </div>
-                <h3 className="text-2xl font-black text-slate-900">
-                  ₱{escrows.reduce((sum, e) => sum + (e.status === 'funded' || e.status === 'released' ? e.amount : 0), 0).toLocaleString()}
-                </h3>
-                <p className="text-[10px] text-slate-400 font-medium mt-1">Gross volume currently managed by platform</p>
-              </div>
-
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                    <ArrowUpRight className="w-5 h-5" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Total Outflow (Released)</p>
-                </div>
-                <h3 className="text-2xl font-black text-slate-900">
-                  ₱{escrows.reduce((sum, e) => sum + (e.status === 'released' ? e.amount : 0), 0).toLocaleString()}
-                </h3>
-                <p className="text-[10px] text-slate-400 font-medium mt-1">Total payments successfully completed to freelancers</p>
-              </div>
-
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Currently Held in Escrow</p>
-                </div>
-                <h3 className="text-2xl font-black text-amber-600">
-                  ₱{escrows.reduce((sum, e) => sum + (e.status === 'funded' || e.status === 'disputed' ? e.amount : 0), 0).toLocaleString()}
-                </h3>
-                <p className="text-[10px] text-slate-400 font-medium mt-1">Funds waiting for milestone approval or dispute resolution</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Financial Transparency</h3>
-                  <p className="text-sm text-slate-500 font-medium">Detailed audit of all escrow transactions and platform fees.</p>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenue (Platform Fees)</p>
-                    <p className="text-lg font-black text-indigo-600">₱{escrows.reduce((sum, e) => sum + (Number(e.platform_fee) || 0), 0).toLocaleString()}</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
-                    <DollarSign className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Job</th>
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Total Amount</th>
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Platform Fee</th>
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {escrows.map((escrow) => (
-                      <tr key={escrow.id} className="hover:bg-slate-50/30 transition-colors">
-                        <td className="px-8 py-6">
-                          <div className="font-bold text-slate-900">{escrow.jobs?.title || 'Unknown Job'}</div>
-                          <div className="text-[10px] font-mono text-slate-400">{escrow.id.slice(0, 8)}...</div>
-                        </td>
-                        <td className="px-8 py-6 font-bold text-slate-700">₱{escrow.amount.toLocaleString()}</td>
-                        <td className="px-8 py-6 font-bold text-indigo-600">₱{(Number(escrow.platform_fee) || 0).toLocaleString()}</td>
-                        <td className="px-8 py-6">
-                          <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
-                            escrow.status === 'released' ? 'bg-emerald-50 text-emerald-600' : 
-                            escrow.status === 'disputed' ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'
-                          }`}>
-                            {escrow.status}
-                          </span>
-                        </td>
-                        <td className="px-8 py-6 text-right">
-                          <button 
-                            onClick={() => deleteEscrow(escrow.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                            title="Remove Escrow"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {escrows.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-8 py-12 text-center text-slate-400 italic">
-                          No escrow records found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
         {activeTab === "disputes" && (
           <motion.div
             key="disputes"
@@ -1149,7 +980,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   <h3 className="text-xl font-bold mb-4">Manual Database Setup</h3>
                   <p className="text-slate-400 text-sm mb-8 max-w-2xl leading-relaxed">
                     If you are seeing "Missing" tables, you need to run our schema script in your Supabase SQL Editor. 
-                    This will create all the necessary tables (profiles, jobs, escrows, messages) and enable Realtime sync.
+                    This will create the necessary core tables (profiles, jobs, messages) and enable Realtime sync.
                   </p>
                   <div className="flex flex-wrap gap-4">
                     <button 

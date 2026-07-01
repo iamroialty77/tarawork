@@ -11,6 +11,8 @@ import { DEFAULT_JOB_CATEGORIES, fetchJobCategoryOptions } from "@/lib/jobCatego
 
 interface JobPostingFormProps {
   onPublish?: () => void;
+  editingJob?: Job | null;
+  onCancelEdit?: () => void;
   preferredCurrency?: CurrencyCode;
   onCurrencyPreferenceChange?: (currency: CurrencyCode) => void;
 }
@@ -41,6 +43,8 @@ const DURATION_OPTIONS: Array<{
 
 export default function JobPostingForm({
   onPublish,
+  editingJob = null,
+  onCancelEdit,
   preferredCurrency = "PHP",
   onCurrencyPreferenceChange,
 }: JobPostingFormProps) {
@@ -69,10 +73,58 @@ export default function JobPostingForm({
   const [customDurationText, setCustomDurationText] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>(preferredCurrency);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([...DEFAULT_JOB_CATEGORIES]);
+  const isEditMode = !!editingJob?.id;
 
   useEffect(() => {
     setSelectedCurrency(preferredCurrency);
   }, [preferredCurrency]);
+
+  useEffect(() => {
+    if (!editingJob) {
+      setStep(1);
+      setPublishStatus(null);
+      setFormData({
+        title: "",
+        description: "",
+        skills: [],
+        jobType: "Contract",
+        duration: "1-3 months",
+        paymentMethod: "Flat-Rate",
+        budget: 0,
+        milestones: [],
+        customQuestions: [],
+        deadline: "",
+        category: "General",
+      });
+      setDurationPreset("1-3 months");
+      setCustomDurationText("");
+      return;
+    }
+
+    const nextDuration = editingJob.duration || "1-3 months";
+    const preset = DURATION_OPTIONS.some((option) => option.value === nextDuration)
+      ? (nextDuration as DurationPreset)
+      : "custom";
+
+    setStep(1);
+    setPublishStatus(null);
+    setFormData({
+      title: editingJob.title || "",
+      description: editingJob.description || "",
+      skills: Array.isArray(editingJob.skills) ? editingJob.skills : [],
+      jobType: editingJob.jobType || "Contract",
+      duration: nextDuration,
+      paymentMethod: editingJob.paymentMethod || "Flat-Rate",
+      budget: Number.isFinite(Number(editingJob.budget)) ? Number(editingJob.budget) : 0,
+      milestones: Array.isArray(editingJob.milestones) ? editingJob.milestones : [],
+      customQuestions: Array.isArray(editingJob.customQuestions) ? editingJob.customQuestions : [],
+      deadline: editingJob.deadline || "",
+      category: editingJob.category || "General",
+    });
+    setDurationPreset(preset);
+    setCustomDurationText(preset === "custom" ? nextDuration : "");
+    setSelectedCurrency(editingJob.currencyCode || preferredCurrency);
+  }, [editingJob, preferredCurrency]);
 
   useEffect(() => {
     let isMounted = true;
@@ -194,7 +246,7 @@ export default function JobPostingForm({
       }
 
       const jobData = {
-        id: Math.random().toString(36).substr(2, 9),
+        ...(isEditMode ? {} : { id: Math.random().toString(36).substr(2, 9) }),
         title: formData.title,
         description: formData.description,
         skills: formData.skills,
@@ -210,20 +262,32 @@ export default function JobPostingForm({
         category: formData.category,
         company: profile?.companyName || user.email?.split('@')[0] || "Anonymous Employer",
         employer_id: user.id,
-        createdAt: new Date().toISOString(),
+        ...(isEditMode ? {} : { createdAt: new Date().toISOString() }),
       };
 
-      const { error } = await supabase
-        .from('jobs')
-        .insert([jobData]);
+      const { error } = isEditMode
+        ? await supabase
+            .from('jobs')
+            .update(jobData)
+            .eq('id', editingJob.id)
+            .eq('employer_id', user.id)
+        : await supabase
+            .from('jobs')
+            .insert([jobData]);
 
       if (error) {
         if (/currency_code|currencyCode/i.test(error.message || "")) {
           const { currency_code, ...legacyJobData } = jobData;
-          const { error: fallbackInsertError } = await supabase
-            .from("jobs")
-            .insert([legacyJobData]);
-          if (fallbackInsertError) throw fallbackInsertError;
+          const { error: fallbackError } = isEditMode
+            ? await supabase
+                .from("jobs")
+                .update(legacyJobData)
+                .eq("id", editingJob.id)
+                .eq("employer_id", user.id)
+            : await supabase
+                .from("jobs")
+                .insert([legacyJobData]);
+          if (fallbackError) throw fallbackError;
         } else if (error.message.includes("relation \"jobs\" does not exist")) {
           throw new Error("Initialization Required: The 'jobs' table is not yet set up on the platform. Please check Admin Dashboard > System Health.");
         } else {
@@ -231,8 +295,12 @@ export default function JobPostingForm({
         }
       }
 
-      setPublishStatus({ type: 'success', msg: "Job published successfully! It's now live on the marketplace." });
+      setPublishStatus({
+        type: 'success',
+        msg: isEditMode ? "Job post updated successfully." : "Job published successfully! It's now live on the marketplace."
+      });
       if (onPublish) onPublish();
+      if (isEditMode) onCancelEdit?.();
       setStep(1);
       setFormData({
         title: "",
@@ -250,8 +318,8 @@ export default function JobPostingForm({
       setDurationPreset("1-3 months");
       setCustomDurationText("");
     } catch (err: any) {
-      console.error("Error publishing job:", err);
-      setPublishStatus({ type: 'error', msg: `Failed to publish job: ${err.message}` });
+      console.error("Error saving job:", err);
+      setPublishStatus({ type: 'error', msg: `Failed to save job: ${err.message}` });
     } finally {
       setIsPublishing(false);
     }
@@ -788,7 +856,9 @@ export default function JobPostingForm({
         <div className="lg:col-span-12 bg-white p-8 rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100">
           <div className="mb-10">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Post your project</h2>
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+            {isEditMode ? "Edit job post" : "Post your project"}
+          </h2>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               {[1, 2, 3].map((s) => (
@@ -855,14 +925,26 @@ export default function JobPostingForm({
               </div>
               
               <div className="flex gap-4">
-                <TooltipAction text="Save job as draft">
-                  <button
-                    type="button"
-                    className="px-6 py-3 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
-                  >
-                    Save as Draft
-                  </button>
-                </TooltipAction>
+                {isEditMode ? (
+                  <TooltipAction text="Cancel editing and return to a blank post form">
+                    <button
+                      type="button"
+                      onClick={onCancelEdit}
+                      className="px-6 py-3 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
+                    >
+                      Cancel Edit
+                    </button>
+                  </TooltipAction>
+                ) : (
+                  <TooltipAction text="Save job as draft">
+                    <button
+                      type="button"
+                      className="px-6 py-3 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors"
+                    >
+                      Save as Draft
+                    </button>
+                  </TooltipAction>
+                )}
                 {step < 3 ? (
                   <TooltipAction text="Proceed to next section">
                     <button
@@ -875,7 +957,7 @@ export default function JobPostingForm({
                     </button>
                   </TooltipAction>
                 ) : (
-                  <TooltipAction text="Publish this job listing">
+                  <TooltipAction text={isEditMode ? "Save changes to this job listing" : "Publish this job listing"}>
                     <button
                       type="submit"
                       disabled={isPublishing}
@@ -884,11 +966,11 @@ export default function JobPostingForm({
                       {isPublishing ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          PUBLISHING...
+                          {isEditMode ? "SAVING..." : "PUBLISHING..."}
                         </>
                       ) : (
                         <>
-                          PUBLISH NOW 🚀
+                          {isEditMode ? "SAVE CHANGES" : "PUBLISH NOW 🚀"}
                         </>
                       )}
                     </button>

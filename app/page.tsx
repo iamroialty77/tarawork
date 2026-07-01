@@ -55,7 +55,9 @@ import {
   Building2,
   Menu,
   UserPlus,
-  X
+  X,
+  Pencil,
+  MoreHorizontal
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -210,6 +212,9 @@ export default function Home() {
   const [adminViewMode, setAdminViewMode] = useState<"admin" | "freelancer" | "client">("admin");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [employerJobs, setemployerJobs] = useState<Job[]>([]);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [employerJobFilter, setEmployerJobFilter] = useState<"all" | "live" | "closed">("all");
+  const [openJobActionsId, setOpenJobActionsId] = useState<string | null>(null);
   const [appliedJobs, setAppliedJobs] = useState<Record<string, string>>({});
   const [freelancers, setFreelancers] = useState<UserProfile[]>([]);
   const [dbError, setDbError] = useState<boolean>(false);
@@ -218,7 +223,7 @@ export default function Home() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [freelancerSearchTerm, setFreelancerSearchTerm] = useState("");
   const [debouncedFreelancerSearchTerm, setDebouncedFreelancerSearchTerm] = useState("");
-  const [talentsFilter, setTalentsFilter] = useState<"all">("all");
+  const [talentsFilter, setTalentsFilter] = useState<"all" | "saved">("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
   const [visibleTalentsCount, setVisibleTalentsCount] = useState(12);
@@ -246,6 +251,7 @@ export default function Home() {
   const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
   const jobsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const jobPostingFormRef = useRef<HTMLDivElement>(null);
   const loadedSessionIdRef = useRef<string | null>(null);
 
   const [profile, setProfile] = useState<UserProfile>({
@@ -311,6 +317,10 @@ export default function Home() {
       ),
     [freelancers, savedTalentIds],
   );
+  const filteredEmployerJobs = useMemo(() => {
+    if (employerJobFilter === "all") return employerJobs;
+    return employerJobs.filter((job) => ((job as any).status || "live") === employerJobFilter);
+  }, [employerJobFilter, employerJobs]);
   const selectedApplicationJob = useMemo(
     () => jobs.find((job) => job.id === applicationDraftJobId) || null,
     [applicationDraftJobId, jobs],
@@ -1130,7 +1140,6 @@ export default function Home() {
         .from('jobs')
         .select('*, applications(count)')
         .eq('employer_id', userId)
-        .eq('status', 'live')
         .order('createdAt', { ascending: false });
 
       if (error) {
@@ -1171,8 +1180,9 @@ export default function Home() {
 
       if (!response.ok) throw new Error(payload?.error || "Unable to close job.");
 
-      setemployerJobs((prev) => prev.filter((job) => job.id !== jobId));
+      setemployerJobs((prev) => prev.map((job) => job.id === jobId ? { ...job, status: "closed" } as Job : job));
       setJobs((prev) => prev.filter((job) => job.id !== jobId));
+      setEmployerJobFilter("closed");
       setToastMsg("Job closed.");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2200);
@@ -2081,8 +2091,11 @@ export default function Home() {
           (freelancer.servicesOffered || []).some(
             (service) => service.serviceName.toLowerCase() === serviceTypeFilter.toLowerCase(),
           );
+        const matchesSavedFilter =
+          talentsFilter === "all" ||
+          (!!freelancer.id && savedTalentIds.includes(freelancer.id));
 
-        return matchesServiceType;
+        return matchesServiceType && matchesSavedFilter;
       })
       .sort((a, b) => {
         if (talentsSort === "rate_low") {
@@ -2114,7 +2127,7 @@ export default function Home() {
 
         return bScore - aScore;
       });
-  }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter]);
+  }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter, savedTalentIds]);
 
   const visibleFreelancers = useMemo(
     () => filteredFreelancers.slice(0, visibleTalentsCount),
@@ -2125,7 +2138,7 @@ export default function Home() {
 
   useEffect(() => {
     setVisibleTalentsCount(12);
-  }, [debouncedFreelancerSearchTerm, serviceTypeFilter, talentsSort]);
+  }, [debouncedFreelancerSearchTerm, serviceTypeFilter, talentsSort, talentsFilter]);
 
   useEffect(() => {
     async function checkUser() {
@@ -3669,7 +3682,7 @@ export default function Home() {
               >
                 <div className="grid gap-8 xl:grid-cols-12">
                   <div className="xl:col-span-7">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/20 p-8 w-full">
+                <div ref={jobPostingFormRef} className="bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/20 p-8 w-full">
                   <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
@@ -3677,11 +3690,15 @@ export default function Home() {
                       </div>
                       <div>
                         <h2 className="text-2xl font-bold text-slate-900">Post a New Job</h2>
-                        <p className="text-slate-500 font-medium">Find the perfect talent for your project.</p>
+                        <p className="text-slate-500 font-medium">
+                          {editingJob ? "Update the selected job post before saving changes." : "Find the perfect talent for your project."}
+                        </p>
                       </div>
                     </div>
                   </div>
                   <JobPostingForm
+                    editingJob={editingJob}
+                    onCancelEdit={() => setEditingJob(null)}
                     preferredCurrency={profile.preferredCurrency || "PHP"}
                     onCurrencyPreferenceChange={(currency) => {
                       setProfile((prev) => ({
@@ -3693,7 +3710,7 @@ export default function Home() {
                         },
                       }));
                     }}
-                    onPublish={() => { fetchEmployerJobs(user.id); setClientTab("jobs"); }}
+                    onPublish={() => { setEditingJob(null); fetchEmployerJobs(user.id); setClientTab("jobs"); }}
                   />
                 </div>
                   </div>
@@ -3701,16 +3718,37 @@ export default function Home() {
                     <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                       <div className="mb-5">
                         <h2 className="text-2xl font-bold text-slate-900">Your Job Postings</h2>
-                        <p className="text-slate-500 mt-1">Manage and track your active opportunities.</p>
+                        <p className="text-slate-500 mt-1">Manage and track all jobs you have posted.</p>
+                        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                          {[
+                            { id: "all", label: "All Posts", count: employerJobs.length },
+                            { id: "live", label: "Live", count: employerJobs.filter((job) => ((job as any).status || "live") === "live").length },
+                            { id: "closed", label: "Closed", count: employerJobs.filter((job) => ((job as any).status || "live") === "closed").length },
+                          ].map((tab) => (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => setEmployerJobFilter(tab.id as "all" | "live" | "closed")}
+                              className={cn(
+                                "rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                employerJobFilter === tab.id
+                                  ? "bg-slate-900 text-white shadow-sm"
+                                  : "text-slate-500 hover:bg-white hover:text-slate-900",
+                              )}
+                            >
+                              {tab.label} <span className="opacity-70">({tab.count})</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
-                {employerJobs.length > 0 ? (
+                {filteredEmployerJobs.length > 0 ? (
                   <div className="grid max-h-[720px] gap-4 overflow-y-auto pr-1">
-                    {employerJobs.map((job) => (
+                    {filteredEmployerJobs.map((job) => (
                       <div key={job.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-100 transition-all">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <div className="flex items-center gap-3 mb-1">
+                        <div className="flex justify-between items-start gap-4 mb-4">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-3 mb-1">
                               <h3 className="text-lg font-bold text-slate-900">{job.title}</h3>
                               <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-widest">{job.category}</span>
                               <span className={cn(
@@ -3727,8 +3765,77 @@ export default function Home() {
                               Duration: {job.duration || "Not specified"}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-slate-900">{job.rate || (job.budget ? `₱${job.budget}` : "Not specified")}</p>
+                          <div className="flex shrink-0 items-start gap-2">
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-slate-900">{job.rate || (job.budget ? `PHP ${job.budget}` : "Not specified")}</p>
+                            </div>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setOpenJobActionsId((current) => current === job.id ? null : job.id)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900"
+                                aria-label={`Actions for ${job.title}`}
+                                aria-expanded={openJobActionsId === job.id}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                              {openJobActionsId === job.id && (
+                                <div className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenJobActionsId(null);
+                                      setEditingJob(job);
+                                      jobPostingFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                                    Edit
+                                  </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenJobActionsId(null);
+                                    const shareUrl = getJobShareUrl(job);
+                                    navigator.clipboard.writeText(shareUrl);
+                                    setToastMsg("Job share link copied.");
+                                    setShowToast(true);
+                                    setTimeout(() => setShowToast(false), 2500);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Copy className="h-3.5 w-3.5 text-indigo-600" />
+                                  Share Link
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenJobActionsId(null);
+                                    fetchApplicants(job.id, job.title);
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Users className="h-3.5 w-3.5 text-slate-500" />
+                                  View Applicants
+                                </button>
+                              {(job as any).status !== "closed" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenJobActionsId(null);
+                                      void closeJob(job.id);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-rose-600 hover:bg-rose-50"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                    Close Job
+                                  </button>
+                              )}
+                                </div>
+                              )}
+                            </div>
+
                           </div>
                         </div>
                         
@@ -3739,49 +3846,15 @@ export default function Home() {
                               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Proposals</span>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <TooltipAction text="Copy public share link for this job">
-                              <button
-                                onClick={() => {
-                                  const shareUrl = getJobShareUrl(job);
-                                  navigator.clipboard.writeText(shareUrl);
-                                  setToastMsg("Job share link copied.");
-                                  setShowToast(true);
-                                  setTimeout(() => setShowToast(false), 2500);
-                                }}
-                                className="px-4 py-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg hover:bg-indigo-100 transition-all uppercase tracking-wider inline-flex items-center gap-1.5"
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                                Share Link
-                              </button>
-                            </TooltipAction>
-                            <TooltipAction text="Review applicants for this job">
-                              <button 
-                                onClick={() => fetchApplicants(job.id, job.title)}
-                                className="px-4 py-2 text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all uppercase tracking-wider"
-                              >
-                                View Applicants
-                              </button>
-                            </TooltipAction>
-                            {(job as any).status !== "closed" && (
-                              <TooltipAction text="Close this job posting">
-                                <button
-                                  type="button"
-                                  onClick={() => void closeJob(job.id)}
-                                  className="px-4 py-2 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all uppercase tracking-wider"
-                                >
-                                  Close Job
-                                </button>
-                              </TooltipAction>
-                            )}
-                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-slate-100">
-                    <p className="text-slate-500 text-sm">No jobs posted yet.</p>
+                    <p className="text-slate-500 text-sm">
+                      {employerJobs.length === 0 ? "No jobs posted yet." : "No jobs found in this tab."}
+                    </p>
                   </div>
                 )}
                     </div>
@@ -3798,13 +3871,26 @@ export default function Home() {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
               >
-                <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900">Find Talents</h2>
                     <p className="text-slate-500 mt-1">Discover freelancers based on role, skills, services, and portfolio fit.</p>
                   </div>
-                  <div className="flex w-full flex-col gap-2 md:max-w-3xl md:flex-row md:flex-wrap md:items-center md:justify-end">
-                    <div className="relative w-full md:w-72">
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+                  <aside className="xl:sticky xl:top-24 xl:self-start">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="mb-5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Filters</p>
+                        <h3 className="mt-1 text-lg font-black text-slate-900">Talent Search</h3>
+                      </div>
+                      <div className="space-y-5">
+                        <div>
+                          <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Search
+                          </label>
+                    <div className="relative w-full">
                       <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type="text"
@@ -3814,8 +3900,38 @@ export default function Home() {
                         onChange={(e) => setFreelancerSearchTerm(e.target.value)}
                       />
                     </div>
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            View
+                          </label>
+                          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                            {[
+                              { id: "all", label: "All", count: freelancers.length },
+                              { id: "saved", label: "Saved", count: savedTalents.length },
+                            ].map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => setTalentsFilter(option.id as "all" | "saved")}
+                                className={cn(
+                                  "rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                  talentsFilter === option.id
+                                    ? "bg-slate-900 text-white shadow-sm"
+                                    : "text-slate-500 hover:bg-white hover:text-slate-900",
+                                )}
+                              >
+                                {option.label} ({option.count})
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Service
+                          </label>
                     <select
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-56"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
                       value={serviceTypeFilter}
                       onChange={(e) => setServiceTypeFilter(e.target.value)}
                     >
@@ -3826,8 +3942,13 @@ export default function Home() {
                         </option>
                       ))}
                     </select>
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Sort
+                          </label>
                     <select
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500 md:w-48"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
                       value={talentsSort}
                       onChange={(e) => setTalentsSort(e.target.value as "recommended" | "rate_low" | "rate_high")}
                     >
@@ -3835,8 +3956,24 @@ export default function Home() {
                       <option value="rate_low">Sort: Rate Low-High</option>
                       <option value="rate_high">Sort: Rate High-Low</option>
                     </select>
-                  </div>
-                </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFreelancerSearchTerm("");
+                            setServiceTypeFilter("all");
+                            setTalentsSort("recommended");
+                            setTalentsFilter("all");
+                          }}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50"
+                        >
+                          Reset Filters
+                        </button>
+                      </div>
+                    </div>
+                  </aside>
+
+                  <div className="space-y-6">
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -4050,6 +4187,8 @@ export default function Home() {
                     <p className="mt-1 text-xs text-slate-400">Try changing search keywords or filter settings.</p>
                   </div>
                 )}
+                  </div>
+                </div>
               </motion.div>
             )}
 
