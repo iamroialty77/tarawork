@@ -180,6 +180,8 @@ type TalentInvitation = {
   interview_request_at?: string | null;
   interview_request_note?: string | null;
   interview_request_status?: "none" | "pending" | "resolved" | "declined" | null;
+  work_status?: "not_started" | "in_progress" | "completed" | null;
+  completed_at?: string | null;
   created_at: string;
   updated_at?: string | null;
   freelancer?: {
@@ -226,8 +228,10 @@ export default function Home() {
   const [talentsFilter, setTalentsFilter] = useState<"all" | "saved">("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
+  const [talentRatingFilter, setTalentRatingFilter] = useState<"all" | "4" | "4.5" | "5">("all");
   const [visibleTalentsCount, setVisibleTalentsCount] = useState(12);
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
+  const [activeFreelancerProfileTab, setActiveFreelancerProfileTab] = useState<"overview" | "portfolio" | "feedback">("overview");
   const [contactUnlockTalentId, setContactUnlockTalentId] = useState<string | null>(null);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
@@ -306,6 +310,11 @@ export default function Home() {
   const [feedbackType, setFeedbackType] = useState<"feature" | "bug" | "rating">("feature");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [freelancerFeedbackRating, setFreelancerFeedbackRating] = useState(5);
+  const [freelancerFeedbackComment, setFreelancerFeedbackComment] = useState("");
+  const [freelancerFeedbackProjectTitle, setFreelancerFeedbackProjectTitle] = useState("");
+  const [isSubmittingFreelancerFeedback, setIsSubmittingFreelancerFeedback] = useState(false);
+  const [isMarkingTalentWorkComplete, setIsMarkingTalentWorkComplete] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const effectiveView = profile.role === "admin" ? adminViewMode : view;
   const isEmployerView = effectiveView === "client" || profile.role === "employer";
@@ -1627,6 +1636,7 @@ export default function Home() {
             ...f,
             aboutSections: normalizedAbout,
             servicesOffered: normalizedServices,
+            clientReviews: Array.isArray(f.aiInsights?.clientReviews) ? f.aiInsights.clientReviews : [],
             bio: normalizedAbout.whatISpecializeIn || f.bio || "",
             portfolio: f.portfolio_items || []
           };
@@ -1967,6 +1977,93 @@ export default function Home() {
     }
   };
 
+  const markTalentWorkCompleted = async (invitation: TalentInvitation) => {
+    if (!invitation?.id) return;
+    try {
+      setIsMarkingTalentWorkComplete(true);
+      const response = await fetch("/api/talent-invitations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invitationId: invitation.id,
+          workStatus: "completed",
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Unable to mark work completed.");
+
+      if (payload.invitation) {
+        const nextInvitation = payload.invitation as TalentInvitation;
+        setSentTalentInvitations((prev) =>
+          prev.map((item) => (item.id === nextInvitation.id ? nextInvitation : item)),
+        );
+      }
+
+      setToastMsg("Work marked completed. Feedback is now unlocked.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2600);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to mark work completed.";
+      setToastMsg(`Error: ${message}`);
+      setShowToast(true);
+    } finally {
+      setIsMarkingTalentWorkComplete(false);
+    }
+  };
+
+  const submitFreelancerReview = async () => {
+    if (!selectedFreelancer?.id || !selectedFreelancerAcceptedInvitation) return;
+    try {
+      setIsSubmittingFreelancerFeedback(true);
+      const response = await fetch("/api/freelancer-reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          freelancerId: selectedFreelancer.id,
+          invitationId: selectedFreelancerAcceptedInvitation.id,
+          rating: freelancerFeedbackRating,
+          comment: freelancerFeedbackComment,
+          projectTitle:
+            freelancerFeedbackProjectTitle.trim() ||
+            selectedFreelancerAcceptedInvitation.latestJob?.title ||
+            "Completed TaraWork engagement",
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Unable to submit freelancer feedback.");
+
+      if (payload.review) {
+        const review = payload.review;
+        const updateReviews = (freelancer: UserProfile) => ({
+          ...freelancer,
+          clientReviews: [review, ...(Array.isArray((freelancer as any).clientReviews) ? (freelancer as any).clientReviews : [])],
+          aiInsights: {
+            ...(freelancer.aiInsights || { gapAnalysis: [], compatibilityScore: 0, cultureMatch: [] }),
+            clientReviews: [review, ...(Array.isArray((freelancer as any).clientReviews) ? (freelancer as any).clientReviews : [])],
+          },
+        });
+
+        setSelectedFreelancer((prev) => (prev ? updateReviews(prev) : prev));
+        setFreelancers((prev) =>
+          prev.map((freelancer) => (freelancer.id === selectedFreelancer.id ? updateReviews(freelancer) : freelancer)),
+        );
+      }
+
+      setFreelancerFeedbackComment("");
+      setFreelancerFeedbackProjectTitle("");
+      setFreelancerFeedbackRating(5);
+      setToastMsg("Feedback submitted for completed work.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2600);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to submit freelancer feedback.";
+      setToastMsg(`Error: ${message}`);
+      setShowToast(true);
+    } finally {
+      setIsSubmittingFreelancerFeedback(false);
+    }
+  };
+
   const requestInterviewReschedule = async (invitation: TalentInvitation) => {
     const draft = rescheduleDrafts[invitation.id] || { requestAt: "", note: "" };
     if (!draft.requestAt) {
@@ -2059,6 +2156,52 @@ export default function Home() {
     };
   };
 
+  const getFreelancerRating = (freelancer: UserProfile) => {
+    const reviews = Array.isArray((freelancer as any).clientReviews)
+      ? (freelancer as any).clientReviews
+      : [];
+    const validRatings = reviews
+      .map((review: any) => Number(review?.rating))
+      .filter((rating: number) => Number.isFinite(rating) && rating > 0);
+    const average =
+      validRatings.length > 0
+        ? validRatings.reduce((total: number, rating: number) => total + rating, 0) / validRatings.length
+        : 0;
+
+    return {
+      average,
+      count: validRatings.length,
+    };
+  };
+
+  const selectedFreelancerAcceptedInvitation = useMemo(() => {
+    if (!selectedFreelancer?.id) return null;
+    return (
+      sentTalentInvitations.find(
+        (invitation) =>
+          invitation.freelancer_id === selectedFreelancer.id && invitation.status === "accepted",
+      ) || null
+    );
+  }, [selectedFreelancer?.id, sentTalentInvitations]);
+
+  const selectedFreelancerWorkCompleted = Boolean(
+    selectedFreelancerAcceptedInvitation &&
+      (selectedFreelancerAcceptedInvitation.work_status === "completed" ||
+        selectedFreelancerAcceptedInvitation.completed_at),
+  );
+
+  const selectedFreelancerAlreadyReviewed = useMemo(() => {
+    if (!selectedFreelancerAcceptedInvitation || !user?.id || !selectedFreelancer) return false;
+    const reviews = Array.isArray((selectedFreelancer as any).clientReviews)
+      ? (selectedFreelancer as any).clientReviews
+      : [];
+    return reviews.some(
+      (review: any) =>
+        review?.invitationId === selectedFreelancerAcceptedInvitation.id ||
+        review?.employerId === user.id,
+    );
+  }, [selectedFreelancer, selectedFreelancerAcceptedInvitation, user?.id]);
+
   const searchedFreelancers = useMemo(() => {
     const normalizedSearch = debouncedFreelancerSearchTerm.toLowerCase();
     return freelancers.filter((freelancer) =>
@@ -2094,8 +2237,12 @@ export default function Home() {
         const matchesSavedFilter =
           talentsFilter === "all" ||
           (!!freelancer.id && savedTalentIds.includes(freelancer.id));
+        const rating = getFreelancerRating(freelancer);
+        const matchesRating =
+          talentRatingFilter === "all" ||
+          (rating.count > 0 && rating.average >= Number(talentRatingFilter));
 
-        return matchesServiceType && matchesSavedFilter;
+        return matchesServiceType && matchesSavedFilter && matchesRating;
       })
       .sort((a, b) => {
         if (talentsSort === "rate_low") {
@@ -2127,7 +2274,7 @@ export default function Home() {
 
         return bScore - aScore;
       });
-  }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter, savedTalentIds]);
+  }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter, savedTalentIds, talentRatingFilter]);
 
   const visibleFreelancers = useMemo(
     () => filteredFreelancers.slice(0, visibleTalentsCount),
@@ -2138,7 +2285,7 @@ export default function Home() {
 
   useEffect(() => {
     setVisibleTalentsCount(12);
-  }, [debouncedFreelancerSearchTerm, serviceTypeFilter, talentsSort, talentsFilter]);
+  }, [debouncedFreelancerSearchTerm, serviceTypeFilter, talentsSort, talentsFilter, talentRatingFilter]);
 
   useEffect(() => {
     async function checkUser() {
@@ -3945,6 +4092,21 @@ export default function Home() {
                         </div>
                         <div>
                           <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Rating
+                          </label>
+                          <select
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={talentRatingFilter}
+                            onChange={(e) => setTalentRatingFilter(e.target.value as "all" | "4" | "4.5" | "5")}
+                          >
+                            <option value="all">Any Rating</option>
+                            <option value="4">4.0+ Stars</option>
+                            <option value="4.5">4.5+ Stars</option>
+                            <option value="5">5.0 Stars</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
                             Sort
                           </label>
                     <select
@@ -3964,6 +4126,7 @@ export default function Home() {
                             setServiceTypeFilter("all");
                             setTalentsSort("recommended");
                             setTalentsFilter("all");
+                            setTalentRatingFilter("all");
                           }}
                           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50"
                         >
@@ -4015,6 +4178,7 @@ export default function Home() {
                           <button
                             onClick={() => {
                               setSelectedFreelancer(freelancer);
+                              setActiveFreelancerProfileTab("overview");
                               setShowFreelancerModal(true);
                             }}
                             className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700"
@@ -4031,6 +4195,7 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {visibleFreelancers.map((freelancer) => {
                     const trustSignals = getFreelancerTrustSignals(freelancer);
+                    const rating = getFreelancerRating(freelancer);
                     const highlightedPortfolio = freelancer.portfolio?.[0];
                     const displayedServices = (freelancer.servicesOffered || []).slice(0, 2);
 
@@ -4047,6 +4212,15 @@ export default function Home() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{freelancer.name}</h3>
+                              <span className={cn(
+                                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest",
+                                rating.count > 0
+                                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                                  : "border-slate-200 bg-slate-50 text-slate-400",
+                              )}>
+                                <Star className={cn("h-3 w-3", rating.count > 0 && "fill-amber-400 text-amber-400")} />
+                                {rating.count > 0 ? `${rating.average.toFixed(1)} (${rating.count})` : "No rating"}
+                              </span>
                               {savedTalentIds.includes(freelancer.id || "") && (
                                 <span className="inline-flex items-center gap-1 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-widest">
                                   <Bookmark className="w-3 h-3" />
@@ -4138,6 +4312,7 @@ export default function Home() {
                               <button
                                 onClick={() => {
                                   setSelectedFreelancer(freelancer);
+                                  setActiveFreelancerProfileTab("overview");
                                   setShowFreelancerModal(true);
                                 }}
                                 className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
@@ -4480,75 +4655,221 @@ export default function Home() {
                     </div>}
                   </div>
 
-                    <div className="lg:col-span-2 space-y-8">
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-widest">About</h4>
-                        {(selectedFreelancer.bio || selectedFreelancer.aboutSections?.whatISpecializeIn || "").trim().length > 0 ? (
-                          <div className="rounded-xl border border-slate-200 bg-white p-4">
-                            <p className="mt-1 text-sm font-medium leading-relaxed text-slate-700">
-                              {selectedFreelancer.bio || selectedFreelancer.aboutSections?.whatISpecializeIn}
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-slate-600 leading-relaxed font-medium">No bio provided yet.</p>
-                        )}
+                    <div className="lg:col-span-2 space-y-6">
+                      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
+                        {[
+                          { id: "overview", label: "Overview" },
+                          { id: "portfolio", label: "Portfolio" },
+                          { id: "feedback", label: "Feedback" },
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveFreelancerProfileTab(tab.id as "overview" | "portfolio" | "feedback")}
+                            className={cn(
+                              "rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all",
+                              activeFreelancerProfileTab === tab.id
+                                ? "bg-slate-900 text-white shadow-sm"
+                                : "text-slate-500 hover:bg-white hover:text-slate-900",
+                            )}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
                       </div>
 
-                    <div className="pt-6 border-t border-slate-100">
-                      <h4 className="text-sm font-bold text-slate-900 mb-6 uppercase tracking-widest">Portfolio Showcase</h4>
-                      <div className="grid grid-cols-1 gap-4">
-                        {selectedFreelancer.portfolio && selectedFreelancer.portfolio.length > 0 ? (
-                          selectedFreelancer.portfolio.slice(0, 3).map((item) => (
-                            <div key={item.id} className="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 transition-all group">
-                              <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 bg-white rounded-xl border border-slate-100 flex items-center justify-center shrink-0">
-                                  <Code className="w-6 h-6 text-indigo-500" />
-                                </div>
-                                <div className="flex-1">
-                                  <h5 className="font-bold text-slate-900 mb-1">{item.title}</h5>
-                                  <p className="text-xs text-slate-500 leading-relaxed mb-4">{item.description}</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {item.technologies.map(t => (
-                                      <span key={t} className="px-2 py-0.5 bg-white border border-slate-100 rounded text-[9px] font-bold text-slate-400">
-                                        {t}
-                                      </span>
-                                    ))}
+                      {activeFreelancerProfileTab === "overview" && (
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-widest">About</h4>
+                          {(selectedFreelancer.bio || selectedFreelancer.aboutSections?.whatISpecializeIn || "").trim().length > 0 ? (
+                            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                              <p className="mt-1 text-sm font-medium leading-relaxed text-slate-700">
+                                {selectedFreelancer.bio || selectedFreelancer.aboutSections?.whatISpecializeIn}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-slate-600 leading-relaxed font-medium">No bio provided yet.</p>
+                          )}
+                        </div>
+                      )}
+
+                      {activeFreelancerProfileTab === "portfolio" && (
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-6 uppercase tracking-widest">Portfolio Showcase</h4>
+                          <div className="grid grid-cols-1 gap-4">
+                            {selectedFreelancer.portfolio && selectedFreelancer.portfolio.length > 0 ? (
+                              selectedFreelancer.portfolio.slice(0, 3).map((item) => (
+                                <div key={item.id} className="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5 transition-all group">
+                                  <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 bg-white rounded-xl border border-slate-100 flex items-center justify-center shrink-0">
+                                      <Code className="w-6 h-6 text-indigo-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <h5 className="font-bold text-slate-900 mb-1">{item.title}</h5>
+                                      <p className="text-xs text-slate-500 leading-relaxed mb-4">{item.description}</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {item.technologies.map(t => (
+                                          <span key={t} className="px-2 py-0.5 bg-white border border-slate-100 rounded text-[9px] font-bold text-slate-400">
+                                            {t}
+                                          </span>
+                                        ))}
+                                      </div>
+                                      {item.project_url && (
+                                        <a 
+                                          href={item.project_url} 
+                                          target="_blank" 
+                                          className="inline-flex items-center gap-1.5 text-indigo-600 text-[10px] font-bold mt-4 hover:underline"
+                                        >
+                                          View Project <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      )}
+                                    </div>
                                   </div>
-                                  {item.project_url && (
-                                    <a 
-                                      href={item.project_url} 
-                                      target="_blank" 
-                                      className="inline-flex items-center gap-1.5 text-indigo-600 text-[10px] font-bold mt-4 hover:underline"
+                                </div>
+                              ))
+                            ) : (
+                              <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-2xl">
+                                <p className="text-slate-400 text-sm">No portfolio items shown.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {activeFreelancerProfileTab === "feedback" && (() => {
+                        const reviews = Array.isArray((selectedFreelancer as any).clientReviews)
+                          ? (selectedFreelancer as any).clientReviews
+                          : [];
+                        const rating = getFreelancerRating(selectedFreelancer);
+                        const canLeaveFeedback =
+                          isEmployerView &&
+                          Boolean(selectedFreelancerAcceptedInvitation) &&
+                          selectedFreelancerWorkCompleted &&
+                          !selectedFreelancerAlreadyReviewed;
+
+                        return (
+                          <div>
+                            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Feedback & Comments</h4>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">Client ratings and project comments for this freelancer.</p>
+                              </div>
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
+                                <Star className={cn("h-3.5 w-3.5", rating.count > 0 && "fill-amber-400 text-amber-400")} />
+                                {rating.count > 0 ? `${rating.average.toFixed(1)} average` : "No rating yet"}
+                              </span>
+                            </div>
+                            {isEmployerView && (
+                              <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Feedback Eligibility</p>
+                                    <h5 className="mt-2 text-sm font-black text-slate-900">
+                                      {selectedFreelancerAlreadyReviewed
+                                        ? "Feedback already submitted"
+                                        : canLeaveFeedback
+                                          ? "Completed work verified"
+                                          : selectedFreelancerWorkCompleted
+                                            ? "Ready for feedback"
+                                            : selectedFreelancerAcceptedInvitation
+                                              ? "Accepted invitation found"
+                                              : "Invite must be accepted first"}
+                                    </h5>
+                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                      Employers can only leave feedback after the freelancer accepts the invitation and the engagement is marked completed.
+                                    </p>
+                                  </div>
+                                  {selectedFreelancerAcceptedInvitation && !selectedFreelancerWorkCompleted && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void markTalentWorkCompleted(selectedFreelancerAcceptedInvitation)}
+                                      disabled={isMarkingTalentWorkComplete}
+                                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                                     >
-                                      View Project <ExternalLink className="w-3 h-3" />
-                                    </a>
+                                      <CheckCircle2 className="h-4 w-4" />
+                                      {isMarkingTalentWorkComplete ? "Saving..." : "Mark Work Completed"}
+                                    </button>
                                   )}
                                 </div>
+
+                                {canLeaveFeedback && (
+                                  <div className="mt-5 grid gap-3 border-t border-slate-200 pt-5">
+                                    <input
+                                      value={freelancerFeedbackProjectTitle}
+                                      onChange={(event) => setFreelancerFeedbackProjectTitle(event.target.value)}
+                                      placeholder={selectedFreelancerAcceptedInvitation?.latestJob?.title || "Project title"}
+                                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50"
+                                    />
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {[1, 2, 3, 4, 5].map((value) => (
+                                        <button
+                                          key={value}
+                                          type="button"
+                                          onClick={() => setFreelancerFeedbackRating(value)}
+                                          className={cn(
+                                            "inline-flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-black transition",
+                                            freelancerFeedbackRating >= value
+                                              ? "border-amber-200 bg-amber-50 text-amber-600"
+                                              : "border-slate-200 bg-white text-slate-300 hover:text-amber-500",
+                                          )}
+                                          aria-label={`${value} star rating`}
+                                        >
+                                          <Star className={cn("h-4 w-4", freelancerFeedbackRating >= value && "fill-amber-400 text-amber-400")} />
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <textarea
+                                      value={freelancerFeedbackComment}
+                                      onChange={(event) => setFreelancerFeedbackComment(event.target.value)}
+                                      placeholder="Write a fair, specific comment about the completed work."
+                                      rows={4}
+                                      className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => void submitFreelancerReview()}
+                                      disabled={isSubmittingFreelancerFeedback || freelancerFeedbackComment.trim().length < 10}
+                                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                    >
+                                      <Star className="h-4 w-4" />
+                                      {isSubmittingFreelancerFeedback ? "Submitting..." : "Submit Feedback"}
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-2xl">
-                            <p className="text-slate-400 text-sm">No portfolio items shown.</p>
+                            )}
+                            {reviews.length > 0 ? (
+                              <div className="space-y-4">
+                                {reviews.map((review: any, index: number) => (
+                                  <article key={review.id || `${review.clientName || "review"}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                      <div>
+                                        <h5 className="text-sm font-black text-slate-900">{review.clientName || "Client"}</h5>
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">{review.projectTitle || "Completed project"}</p>
+                                      </div>
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-700">
+                                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                        {Number(review.rating || 0).toFixed(1)}
+                                      </span>
+                                    </div>
+                                    <p className="mt-4 text-sm leading-relaxed text-slate-700">{review.comment || "No written comment provided."}</p>
+                                    {review.date && (
+                                      <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-400">{review.date}</p>
+                                    )}
+                                  </article>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+                                <Star className="mx-auto h-8 w-8 text-slate-300" />
+                                <p className="mt-4 text-sm font-black text-slate-700">No feedback yet</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">Client feedback and comments will appear here after completed work is reviewed.</p>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      {selectedFreelancer.portfolio && selectedFreelancer.portfolio.length > 3 && (
-                        <Link
-                          href={buildPublicProfileUrl({
-                            tier: "free",
-                            username: selectedFreelancer.username,
-                            id: selectedFreelancer.id,
-                          })}
-                          target="_blank"
-                          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 hover:bg-indigo-100"
-                        >
-                          See more
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
-                      )}
+                        );
+                      })()}
                     </div>
-                  </div>
                 </div>
               </div>
             </motion.div>

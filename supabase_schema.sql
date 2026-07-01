@@ -490,10 +490,19 @@ CREATE TABLE IF NOT EXISTS public.talent_invitations (
     interview_request_at TIMESTAMP WITH TIME ZONE,
     interview_request_note TEXT,
     interview_request_status TEXT DEFAULT 'none' CHECK (interview_request_status IN ('none', 'pending', 'resolved', 'declined')),
+    work_status TEXT DEFAULT 'not_started' CHECK (work_status IN ('not_started', 'in_progress', 'completed')),
+    completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     UNIQUE(employer_id, freelancer_id)
 );
+
+ALTER TABLE public.talent_invitations
+    ADD COLUMN IF NOT EXISTS work_status TEXT DEFAULT 'not_started'
+    CHECK (work_status IN ('not_started', 'in_progress', 'completed'));
+
+ALTER TABLE public.talent_invitations
+    ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
 
 ALTER TABLE public.talent_invitations ENABLE ROW LEVEL SECURITY;
 
