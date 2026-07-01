@@ -2202,6 +2202,34 @@ export default function Home() {
     );
   }, [selectedFreelancer, selectedFreelancerAcceptedInvitation, user?.id]);
 
+  const openTalentProfile = (freelancerLike: Partial<UserProfile> & { id?: string | null }) => {
+    const freelancerId = freelancerLike.id || "";
+    const fullProfile = freelancers.find((freelancer) => freelancer.id === freelancerId);
+    const nextProfile =
+      fullProfile ||
+      ({
+        ...freelancerLike,
+        id: freelancerId,
+        name: freelancerLike.name || "Freelancer",
+        role: "freelancer",
+        category: freelancerLike.category || "General",
+        skills: freelancerLike.skills || [],
+        hourlyRate: freelancerLike.hourlyRate || "$0",
+        bio: freelancerLike.bio || "",
+        portfolio: freelancerLike.portfolio || [],
+        aboutSections: freelancerLike.aboutSections || emptyAboutSections(),
+        servicesOffered: freelancerLike.servicesOffered || [],
+        clientReviews: Array.isArray((freelancerLike as any).clientReviews) ? (freelancerLike as any).clientReviews : [],
+      } as UserProfile);
+
+    setSelectedFreelancer(nextProfile);
+    setActiveFreelancerProfileTab("overview");
+    setFreelancerFeedbackComment("");
+    setFreelancerFeedbackProjectTitle("");
+    setFreelancerFeedbackRating(5);
+    setShowFreelancerModal(true);
+  };
+
   const searchedFreelancers = useMemo(() => {
     const normalizedSearch = debouncedFreelancerSearchTerm.toLowerCase();
     return freelancers.filter((freelancer) =>
@@ -3724,13 +3752,16 @@ export default function Home() {
                                   {new Date(invitation.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="py-4 pl-4 text-right">
-                                  <Link
-                                    href={`/${getProfileSlug(freelancer?.username, freelancer?.id)}`}
-                                    onClick={(event) => event.stopPropagation()}
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      if (freelancer?.id) openTalentProfile(freelancer as Partial<UserProfile>);
+                                    }}
                                     className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
                                   >
-                                    View Profile
-                                  </Link>
+                                    Open Talent Profile
+                                  </button>
                                 </td>
                               </tr>
                               {invitation.status === "accepted" && expandedInvitationIds.includes(invitation.id) ? (
@@ -4176,14 +4207,10 @@ export default function Home() {
                             </button>
                           </div>
                           <button
-                            onClick={() => {
-                              setSelectedFreelancer(freelancer);
-                              setActiveFreelancerProfileTab("overview");
-                              setShowFreelancerModal(true);
-                            }}
+                            onClick={() => openTalentProfile(freelancer)}
                             className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700"
                           >
-                            View Profile
+                            Open Talent Profile
                             <ArrowUpRight className="w-3 h-3" />
                           </button>
                         </div>
@@ -4311,13 +4338,11 @@ export default function Home() {
                             <TooltipAction text="Open freelancer profile details">
                               <button
                                 onClick={() => {
-                                  setSelectedFreelancer(freelancer);
-                                  setActiveFreelancerProfileTab("overview");
-                                  setShowFreelancerModal(true);
+                                  openTalentProfile(freelancer);
                                 }}
                                 className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all uppercase tracking-widest"
                               >
-                                View Profile
+                                Open Profile
                               </button>
                             </TooltipAction>
                           </div>
@@ -4658,9 +4683,9 @@ export default function Home() {
                     <div className="lg:col-span-2 space-y-6">
                       <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
                         {[
-                          { id: "overview", label: "Overview" },
+                          { id: "overview", label: "Profile" },
                           { id: "portfolio", label: "Portfolio" },
-                          { id: "feedback", label: "Feedback" },
+                          { id: "feedback", label: "Reviews" },
                         ].map((tab) => (
                           <button
                             key={tab.id}
@@ -4751,8 +4776,8 @@ export default function Home() {
                           <div>
                             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                               <div>
-                                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Feedback & Comments</h4>
-                                <p className="mt-1 text-xs font-semibold text-slate-500">Client ratings and project comments for this freelancer.</p>
+                                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Reviews & Employer Feedback</h4>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">Public reviews are shown here. New feedback is only unlocked after verified completed work.</p>
                               </div>
                               <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
                                 <Star className={cn("h-3.5 w-3.5", rating.count > 0 && "fill-amber-400 text-amber-400")} />
@@ -4763,7 +4788,7 @@ export default function Home() {
                               <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
                                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                   <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Feedback Eligibility</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Employer Review Controls</p>
                                     <h5 className="mt-2 text-sm font-black text-slate-900">
                                       {selectedFreelancerAlreadyReviewed
                                         ? "Feedback already submitted"
@@ -4963,17 +4988,20 @@ export default function Home() {
                           </div>
 
                           <div className="flex flex-wrap gap-3 pt-2">
-                            <TooltipAction text="Open public freelancer profile">
-                              <Link
-                                href={`/${getProfileSlug(
-                                  (app.freelancer_profile || app.profiles)?.username,
-                                  (app.freelancer_profile || app.profiles)?.id || app.freelancer_id,
-                                )}`}
+                            <TooltipAction text="Open employer talent profile with hiring and review controls">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openTalentProfile({
+                                    ...((app.freelancer_profile || app.profiles) || {}),
+                                    id: (app.freelancer_profile || app.profiles)?.id || app.freelancer_id,
+                                  } as Partial<UserProfile>)
+                                }
                                 className="px-6 py-3 bg-white text-slate-700 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest flex items-center gap-2 border border-slate-200 active:scale-95"
                               >
-                                <ExternalLink className="w-4 h-4" />
-                                View Profile
-                              </Link>
+                                <User className="w-4 h-4" />
+                                Open Talent Profile
+                              </button>
                             </TooltipAction>
                             {app.status === 'pending' && (
                               <TooltipAction text="Add this applicant to your candidates">
