@@ -78,6 +78,12 @@ export default function LandingPage() {
             <a href="#features" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
               Features
             </a>
+            <Link href="/hire-filipino-freelancers" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
+              Hire Freelancers
+            </Link>
+            <Link href="/virtual-assistant-philippines" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
+              Virtual Assistants
+            </Link>
             <a href="#plans" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
               Plans
             </a>
@@ -110,6 +116,15 @@ export default function LandingPage() {
               <a href="#features" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                 Features
               </a>
+              <Link href="/hire-filipino-freelancers" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                Hire Freelancers
+              </Link>
+              <Link href="/virtual-assistant-philippines" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                Virtual Assistants
+              </Link>
+              <Link href="/remote-jobs-philippines" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                Remote Jobs
+              </Link>
               <a href="#plans" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                 Plans
               </a>
@@ -190,6 +205,26 @@ export default function LandingPage() {
               <h3 className="mt-4 text-xl font-bold text-slate-900">Professional Workflow</h3>
               <p className="mt-2 text-sm text-slate-600">Keep communication and project details organized in one platform.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white px-4 py-12 sm:px-6">
+        <div className="mx-auto w-full max-w-6xl">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Popular Hiring Guides</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <Link href="/hire-filipino-freelancers" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
+              <h2 className="text-lg font-black text-slate-900">Hire Filipino Freelancers</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Find remote Filipino talent for design, development, writing, admin, support, ecommerce, and business operations.</p>
+            </Link>
+            <Link href="/virtual-assistant-philippines" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
+              <h2 className="text-lg font-black text-slate-900">Virtual Assistant Philippines</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Hire virtual assistants for inbox management, scheduling, customer support, research, ecommerce, and daily admin work.</p>
+            </Link>
+            <Link href="/remote-jobs-philippines" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
+              <h2 className="text-lg font-black text-slate-900">Remote Jobs Philippines</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Help Filipino freelancers and online professionals discover remote jobs and build stronger public profiles.</p>
+            </Link>
           </div>
         </div>
       </section>
