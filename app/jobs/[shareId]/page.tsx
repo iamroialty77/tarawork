@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Briefcase, Clock, DollarSign, MapPin } from "lucide-react";
 import { extractJobIdFromShareToken } from "../../../lib/jobShare";
+import { absoluteUrl, siteName, truncateSeoText } from "../../../lib/seo";
 import { supabaseAdmin } from "../../../lib/supabase_admin";
 import { formatRelativeTime } from "../../../lib/utils";
 import { Job } from "../../../types";
@@ -47,6 +49,48 @@ const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?
     hirerReviewLabel,
   };
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ shareId: string }>;
+}): Promise<Metadata> {
+  const { shareId } = await params;
+  const job = await getPublicJob(shareId);
+  const canonical = absoluteUrl(`/jobs/${shareId}`);
+
+  if (!job) {
+    return {
+      title: "Job Not Found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const title = `${job.title} Remote Job`;
+  const description = truncateSeoText(
+    `${job.title} on ${siteName}. ${job.rate ? `${job.rate}. ` : ""}${job.description}`,
+  );
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "article",
+      url: canonical,
+      siteName,
+      title,
+      description,
+      images: ["/tarawork-removebg-preview.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/tarawork-removebg-preview.png"],
+    },
+  };
+}
 
 export default async function PublicJobPage({
   params,

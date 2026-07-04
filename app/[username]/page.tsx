@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
 import { supabaseAdmin } from '@/lib/supabase_admin';
+import { absoluteUrl, siteName, truncateSeoText } from '@/lib/seo';
 import { ClientReview, FreelancerProfile, ServiceOffering } from '@/types/portfolio';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -505,6 +507,54 @@ function mapProfile(profile: any): FreelancerProfile {
         : profileLinks,
     } : undefined,
     premiumProfile: normalizedPremiumProfile
+  };
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params;
+  const profile = await getPortfolio(username);
+  const canonical = absoluteUrl(`/${encodeURIComponent(username)}`);
+
+  if (!profile) {
+    return {
+      title: 'Profile Not Found',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const role = (profile.role || '').toLowerCase();
+  const isHirer = role === 'employer' || role === 'client' || role === 'hirer';
+  const displayName = isHirer ? profile.companyName || profile.name : profile.name;
+  const category = profile.category || (isHirer ? 'Employer' : 'Freelancer');
+  const title = isHirer
+    ? `${displayName} Company Profile`
+    : `${displayName} - ${category} Freelancer`;
+  const skills = Array.isArray(profile.skills) && profile.skills.length > 0
+    ? ` Skills: ${profile.skills.slice(0, 6).join(', ')}.`
+    : '';
+  const description = truncateSeoText(
+    `${displayName} on ${siteName}. ${profile.bio || `Professional ${category} profile.`}${skills}`,
+  );
+  const image = profile.avatar_url || '/tarawork-removebg-preview.png';
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: 'profile',
+      url: canonical,
+      siteName,
+      title,
+      description,
+      images: [image],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   };
 }
 

@@ -194,6 +194,44 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="border-y border-slate-200 bg-white px-4 py-16 sm:px-6">
+        <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Freelance Marketplace Philippines</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+              Hire Filipino freelancers and virtual assistants with confidence
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-600">
+              TaraWork.online is built for business owners, founders, agencies, and remote teams that need dependable online talent from the Philippines. Whether you need a virtual assistant, web developer, designer, writer, customer support specialist, marketing specialist, data entry professional, bookkeeper, project coordinator, or automation expert, TaraWork gives you a focused place to find people who understand remote work and professional client service.
+            </p>
+          </div>
+
+          <div className="space-y-5 text-sm leading-7 text-slate-700">
+            <p>
+              Employers can post remote jobs, review freelancer profiles, compare skills, check portfolios, and start hiring conversations without wasting time on scattered messages. Each public profile can show practical details such as services offered, hourly rate, portfolio projects, work background, client feedback, contact preferences, and role category. This helps companies evaluate talent based on real work context instead of short, incomplete profiles.
+            </p>
+            <p>
+              For freelancers and virtual assistants in the Philippines, TaraWork helps create a professional online presence that can be shared with clients. A freelancer profile is more than a basic resume. It can present skills, project examples, service packages, work style, achievements, and availability in a format designed for hiring decisions. This is useful for Filipino freelancers who want to attract remote clients, build trust, and compete for quality online work.
+            </p>
+            <p>
+              TaraWork focuses on the work categories that businesses search for most: virtual assistance, administrative support, social media management, content writing, graphic design, web development, ecommerce support, customer service, lead generation, data management, finance support, and project operations. The platform is structured so search engines can understand the marketplace, public job pages, and public freelancer pages while private account areas, admin tools, APIs, dashboards, and messages stay out of search results.
+            </p>
+            <p>
+              If you are searching for a Filipino virtual assistant, a remote freelancer in the Philippines, or a reliable online worker for a growing business, TaraWork is designed to make discovery and hiring cleaner. If you are a freelancer, TaraWork helps you publish a credible profile that can rank for your name, skill category, services, and portfolio work. The goal is a marketplace where clients find the right talent faster and professionals have a better chance to be discovered by serious employers.
+            </p>
+            <p>
+              Many teams hire from the Philippines because Filipino professionals are known for strong English communication, adaptability, client support experience, and familiarity with global remote work tools. TaraWork supports that hiring journey by giving employers public job pages that can be shared, indexed, and discovered by applicants who are actively looking for remote work. Job seekers can understand the role, expected skills, compensation details, duration, and application path before they commit time to applying.
+            </p>
+            <p>
+              Good SEO for a freelance platform depends on clean public pages, meaningful page titles, accurate descriptions, structured internal links, and crawl rules that keep private software areas away from search engines. TaraWork now separates the public marketplace, job opportunities, and profile pages from account-only areas such as dashboards, admin screens, authentication, API routes, messages, webhooks, and integrations. This helps search engines focus crawl budget on pages that should appear in search results: the homepage, live job posts, company profiles, and freelancer portfolios.
+            </p>
+            <p>
+              TaraWork is not only for one-time hiring. It can support long-term remote staffing, project-based freelance work, part-time virtual assistant roles, specialist services, and growing agency teams. Clients can use it to find help for daily operations, content production, sales support, website updates, design tasks, customer communication, reporting, and administrative work. Freelancers can use it to describe their niche clearly, show relevant proof, and make it easier for employers to decide whether they are a strong fit.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section id="contact" className="px-4 py-16 sm:px-6">
         <div className="mx-auto w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
           <div className="text-center">
