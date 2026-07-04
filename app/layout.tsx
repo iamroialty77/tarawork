@@ -15,11 +15,75 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": absoluteUrl("/#organization"),
+      name: siteName,
+      url: absoluteUrl("/"),
+      logo: absoluteUrl("/tarawork-removebg-preview.png"),
+      sameAs: [],
+    },
+    {
+      "@type": "WebSite",
+      "@id": absoluteUrl("/#website"),
+      name: "TaraWork.online",
+      url: absoluteUrl("/"),
+      publisher: {
+        "@id": absoluteUrl("/#organization"),
+      },
+      inLanguage: "en-PH",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: `${absoluteUrl("/")}?q={search_term_string}`,
+        "query-input": "required name=search_term_string",
+      },
+    },
+    {
+      "@type": "Service",
+      "@id": absoluteUrl("/#freelance-marketplace"),
+      name: "Filipino freelance marketplace and virtual assistant hiring",
+      serviceType: "Freelance hiring marketplace",
+      provider: {
+        "@id": absoluteUrl("/#organization"),
+      },
+      areaServed: [
+        {
+          "@type": "Country",
+          name: "Philippines",
+        },
+        {
+          "@type": "Place",
+          name: "Worldwide remote clients",
+        },
+      ],
+      audience: [
+        {
+          "@type": "Audience",
+          audienceType: "Employers hiring remote Filipino freelancers",
+        },
+        {
+          "@type": "Audience",
+          audienceType: "Freelancers and virtual assistants in the Philippines",
+        },
+      ],
+      description: defaultSeoDescription,
+      offers: {
+        "@type": "Offer",
+        availability: "https://schema.org/InStock",
+        url: absoluteUrl("/"),
+      },
+    },
+  ],
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: siteName,
   title: {
-    default: "TaraWork | Filipino Freelancers and Virtual Assistants",
+    default: "Explore Filipino Freelance Services and Virtual Assistants",
     template: `%s | ${siteName}`,
   },
   description: defaultSeoDescription,
@@ -35,7 +99,7 @@ export const metadata: Metadata = {
     locale: "en_PH",
     url: absoluteUrl("/"),
     siteName,
-    title: "TaraWork | Filipino Freelancers and Virtual Assistants",
+    title: "Explore Filipino Freelance Services and Virtual Assistants",
     description: defaultSeoDescription,
     images: [
       {
@@ -48,7 +112,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "TaraWork | Filipino Freelancers and Virtual Assistants",
+    title: "Explore Filipino Freelance Services and Virtual Assistants",
     description: defaultSeoDescription,
     images: ["/tarawork-removebg-preview.png"],
   },
@@ -79,6 +143,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
         {children}
         <Analytics />
         <SpeedInsights />

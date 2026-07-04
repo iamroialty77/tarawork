@@ -7,7 +7,7 @@ export const siteUrl = (
 export const siteName = "TaraWork";
 
 export const defaultSeoDescription =
-  "Hire skilled Filipino freelancers and virtual assistants, or find remote freelance work through TaraWork's professional marketplace.";
+  "A professional way to hire Filipino freelancers and virtual assistants. Post remote jobs, review skilled talent, compare portfolios, and start work with confidence.";
 
 export const seoKeywords = [
   "Filipino freelancers",
