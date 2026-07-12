@@ -131,6 +131,11 @@ export const metadata: Metadata = {
     icon: "/tarawork-removebg-preview.png",
     apple: "/tarawork-removebg-preview.png",
   },
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? {
+        google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+      }
+    : undefined,
 };
 
 export default function RootLayout({

@@ -39,6 +39,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    {
+      url: absoluteUrl("/hire-filipino-web-developer"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.88,
+    },
+    {
+      url: absoluteUrl("/hire-filipino-social-media-manager"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.88,
+    },
+    {
+      url: absoluteUrl("/virtual-assistant-rates-philippines"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.86,
+    },
   ];
 
   const [{ data: jobs }, { data: profiles }] = await Promise.all([

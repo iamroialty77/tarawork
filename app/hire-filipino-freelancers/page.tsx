@@ -33,6 +33,7 @@ export default function HireFilipinoFreelancersPage() {
       title="Hire Filipino freelancers for remote work, business support, and project-based services"
       subtitle="TaraWork helps employers discover Filipino freelancers with professional profiles, service details, skills, portfolios, and public job pages built for remote hiring."
       primaryKeyword="hire Filipino freelancers"
+      path="/hire-filipino-freelancers"
       sections={[
         {
           heading: "Why companies hire Filipino freelancers",

@@ -33,6 +33,7 @@ export default function VirtualAssistantPhilippinesPage() {
       title="Hire a virtual assistant in the Philippines for remote business support"
       subtitle="TaraWork connects businesses with Filipino virtual assistants for administrative work, inbox management, customer support, ecommerce tasks, scheduling, research, social media, and daily operations."
       primaryKeyword="virtual assistant Philippines"
+      path="/virtual-assistant-philippines"
       sections={[
         {
           heading: "What a Filipino virtual assistant can help with",

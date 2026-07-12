@@ -33,6 +33,7 @@ export default function RemoteJobsPhilippinesPage() {
       title="Remote jobs in the Philippines for freelancers and virtual assistants"
       subtitle="TaraWork helps Filipino professionals build public profiles, discover remote opportunities, and apply to roles from employers looking for skilled online talent."
       primaryKeyword="remote jobs Philippines"
+      path="/remote-jobs-philippines"
       sections={[
         {
           heading: "Remote work categories on TaraWork",

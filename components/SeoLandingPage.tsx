@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Briefcase, CheckCircle2, Search, ShieldCheck, Users } from "lucide-react";
+import { absoluteUrl } from "@/lib/seo";
 
 type SeoLandingPageProps = {
   eyebrow: string;
   title: string;
   subtitle: string;
   primaryKeyword: string;
+  path: string;
   sections: {
     heading: string;
     body: string;
@@ -21,6 +23,7 @@ export default function SeoLandingPage({
   title,
   subtitle,
   primaryKeyword,
+  path,
   sections,
   faqs,
 }: SeoLandingPageProps) {
@@ -36,12 +39,34 @@ export default function SeoLandingPage({
       },
     })),
   };
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "TaraWork",
+        item: absoluteUrl("/"),
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: title,
+        item: absoluteUrl(path),
+      },
+    ],
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
@@ -147,6 +172,26 @@ export default function SeoLandingPage({
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
               TaraWork keeps public marketplace pages indexable while private dashboards, messages, admin routes, APIs, and integrations stay out of search results.
             </p>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-3 text-sm font-bold">
+            <Link href="/hire-filipino-freelancers" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">
+              Hire Filipino Freelancers
+            </Link>
+            <Link href="/virtual-assistant-philippines" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">
+              Virtual Assistant Philippines
+            </Link>
+            <Link href="/remote-jobs-philippines" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">
+              Remote Jobs Philippines
+            </Link>
+            <Link href="/hire-filipino-web-developer" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">
+              Filipino Web Developers
+            </Link>
+            <Link href="/hire-filipino-social-media-manager" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">
+              Social Media Managers
+            </Link>
+            <Link href="/virtual-assistant-rates-philippines" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100">
+              VA Rates Philippines
+            </Link>
           </div>
         </div>
       </section>

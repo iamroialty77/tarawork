@@ -145,7 +145,10 @@ export default function LandingPage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 px-4 py-16 text-white sm:px-6 sm:py-20">
         <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-2 lg:items-center">
           <div className="text-center lg:text-left">
-            <h1 className="text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">Tara, Work Together</h1>
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-white/80">Tara, Work Together</p>
+            <h1 className="mt-3 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+              Hire Filipino freelancers and virtual assistants
+            </h1>
             <p className="mt-4 text-lg font-semibold text-white/90 sm:text-2xl">Need an extra hand? You are in the right place.</p>
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/85 lg:mx-0">
               TaraWork.online connects businesses with skilled freelancers and virtual assistants across the Philippines.
@@ -224,6 +227,18 @@ export default function LandingPage() {
             <Link href="/remote-jobs-philippines" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
               <h2 className="text-lg font-black text-slate-900">Remote Jobs Philippines</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">Help Filipino freelancers and online professionals discover remote jobs and build stronger public profiles.</p>
+            </Link>
+            <Link href="/hire-filipino-web-developer" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
+              <h2 className="text-lg font-black text-slate-900">Hire Filipino Web Developers</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Find web developers for websites, dashboards, ecommerce, React, Next.js, WordPress, APIs, and technical support.</p>
+            </Link>
+            <Link href="/hire-filipino-social-media-manager" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
+              <h2 className="text-lg font-black text-slate-900">Hire Social Media Managers</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Hire remote social media talent for captions, calendars, community replies, scheduling, and reporting.</p>
+            </Link>
+            <Link href="/virtual-assistant-rates-philippines" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
+              <h2 className="text-lg font-black text-slate-900">VA Rates Philippines</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Learn what affects virtual assistant rates, task scope, experience, hours, and hiring expectations.</p>
             </Link>
           </div>
         </div>
