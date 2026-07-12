@@ -75,9 +75,124 @@ Use varied anchor text:
 - Add featured freelancer profiles on the homepage.
 - Add real reviews/testimonials only when available.
 
+## Freelancer Profile Optimization Email Campaign
+
+Goal: convince freelancers to improve their profiles so TaraWork looks more professional to employers and public profile pages become stronger SEO assets.
+
+Recommended audience:
+
+- Freelancers with missing or short bio.
+- Freelancers with fewer than 3 skills.
+- Freelancers with no avatar or portfolio project.
+- Freelancers with no hourly rate or unclear category.
+- Freelancers who signed up but have not updated their profile in 7 days.
+
+Do not send one generic blast to everyone. Segment users by what is missing and make the email feel specific.
+
+Email sequence:
+
+1. Day 0: Profile improvement reminder.
+2. Day 3: Portfolio and proof reminder.
+3. Day 7: Final visibility reminder.
+
+Email 1 subject options:
+
+- Improve your TaraWork profile so employers can trust you faster
+- Your TaraWork profile can get more professional in 10 minutes
+- A stronger profile helps employers understand what you offer
+
+Email 1 copy:
+
+Subject: Improve your TaraWork profile so employers can trust you faster
+
+Hi {{name}},
+
+Your TaraWork profile is your public freelancer page. Employers use it to decide if they should message, invite, or shortlist you.
+
+Right now, your profile can be stronger if you add:
+
+- A clear professional headline or service category.
+- A short bio that explains what you do and who you help.
+- 5 to 10 relevant skills.
+- At least 1 portfolio project or work sample.
+- Your rate or preferred project type.
+
+Profiles with clear services, proof of work, and complete details look more trustworthy and are easier for employers to compare.
+
+Update your profile here:
+{{profile_edit_url}}
+
+TaraWork Team
+
+Email 2 subject options:
+
+- Add proof of work to make your profile easier to hire from
+- Employers need proof before they shortlist freelancers
+- Your portfolio can make your TaraWork profile stronger
+
+Email 2 copy:
+
+Subject: Add proof of work to make your profile easier to hire from
+
+Hi {{name}},
+
+Employers do not only look at skills. They also want proof that you can do the work.
+
+Add 1 to 3 examples to your TaraWork profile:
+
+- Previous project results.
+- Screenshots or links to work samples.
+- Tools you used.
+- The problem you helped solve.
+- A short explanation of your role.
+
+Even one clear project can make your profile feel more professional.
+
+Update your portfolio here:
+{{profile_edit_url}}
+
+TaraWork Team
+
+Email 3 subject options:
+
+- Last reminder: make your TaraWork profile ready for employers
+- Complete profiles are easier for employers to trust
+- Finish your TaraWork profile before sharing it with clients
+
+Email 3 copy:
+
+Subject: Last reminder: make your TaraWork profile ready for employers
+
+Hi {{name}},
+
+Before you share your TaraWork profile with employers, make sure it answers these questions:
+
+- What service do you offer?
+- What tools or skills do you use?
+- What kind of client or business can you help?
+- What proof of work can employers review?
+- How can employers understand your rate or availability?
+
+A complete profile gives employers fewer reasons to skip and more reasons to start a conversation.
+
+Finish your profile here:
+{{profile_edit_url}}
+
+TaraWork Team
+
+Implementation notes:
+
+- Use the existing SMTP setup only for low-volume sending.
+- Add unsubscribe or email preference handling before sending recurring campaigns.
+- Rate-limit campaign sending to protect the TaraWork email domain.
+- Track `last_profile_nudge_sent_at` and `profile_nudge_count` before sending repeats.
+- Prefer a preview-and-send admin tool over automatic mass email at first.
+- Avoid sending to users who have unsubscribed, bounced, or recently completed their profile.
+
 ## What Not To Do
 
 - Do not add fake reviews or fake ratings.
 - Do not keyword-stuff paragraphs.
 - Do not buy spammy backlinks.
 - Do not index dashboards, messages, admin pages, API routes, callbacks, or webhook URLs.
+- Do not send profile reminder emails without unsubscribe or preference controls.

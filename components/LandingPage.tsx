@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
-import { Mail, Menu, X, Sparkles, CheckCircle2, Users, Briefcase, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Briefcase,
+  Mail,
+  Menu,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -63,18 +73,18 @@ export default function LandingPage() {
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
       <header
         className={`sticky top-0 z-50 border-b transition-all ${
-          scrolled ? "border-slate-200 bg-white/95 backdrop-blur" : "border-transparent bg-transparent"
+          scrolled ? "border-slate-200 bg-white/95 shadow-sm backdrop-blur" : "border-slate-200 bg-white"
         }`}
       >
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 text-white">
               <Sparkles className="h-5 w-5" />
             </div>
-            <span className="text-lg font-black tracking-tight text-blue-700">TaraWork.online</span>
+            <span className="text-lg font-black tracking-tight text-slate-950">TaraWork.online</span>
           </Link>
 
-          <nav className="hidden items-center gap-7 md:flex">
+          <nav className="hidden items-center gap-6 lg:flex">
             <a href="#features" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
               Features
             </a>
@@ -84,8 +94,8 @@ export default function LandingPage() {
             <Link href="/virtual-assistant-philippines" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
               Virtual Assistants
             </Link>
-            <a href="#plans" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
-              Plans
+            <a href="#guides" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
+              Guides
             </a>
             <a href="#contact" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
               Contact
@@ -93,10 +103,10 @@ export default function LandingPage() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <Link href="/auth" className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
+            <Link href="/auth" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
               Sign In
             </Link>
-            <Link href="/auth" className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
+            <Link href="/auth" className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800">
               Join Now
             </Link>
           </div>
@@ -125,8 +135,8 @@ export default function LandingPage() {
               <Link href="/remote-jobs-philippines" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                 Remote Jobs
               </Link>
-              <a href="#plans" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-                Plans
+              <a href="#guides" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                Guides
               </a>
               <a href="#contact" onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                 Contact
@@ -134,7 +144,7 @@ export default function LandingPage() {
               <Link href="/auth" className="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-bold text-slate-700">
                 Sign In
               </Link>
-              <Link href="/auth" className="rounded-lg bg-blue-600 px-3 py-2 text-center text-sm font-bold text-white">
+              <Link href="/auth" className="rounded-lg bg-slate-950 px-3 py-2 text-center text-sm font-bold text-white">
                 Join Now
               </Link>
             </div>
@@ -142,110 +152,144 @@ export default function LandingPage() {
         )}
       </header>
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 px-4 py-16 text-white sm:px-6 sm:py-20">
-        <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-2 lg:items-center">
-          <div className="text-center lg:text-left">
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-white/80">Tara, Work Together</p>
-            <h1 className="mt-3 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+      <section className="border-b border-slate-200 bg-white px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+              <Sparkles className="h-3.5 w-3.5" />
+              Tara, Work Together
+            </div>
+            <h1 className="mt-6 max-w-4xl text-4xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
               Hire Filipino freelancers and virtual assistants
             </h1>
-            <p className="mt-4 text-lg font-semibold text-white/90 sm:text-2xl">Need an extra hand? You are in the right place.</p>
-            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/85 lg:mx-0">
-              TaraWork.online connects businesses with skilled freelancers and virtual assistants across the Philippines.
-              Hire faster, collaborate better, and move projects forward with confidence.
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+              TaraWork.online connects businesses with skilled remote talent across the Philippines. Post roles, compare public profiles, review portfolios, and start hiring conversations in one professional marketplace.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-              <Link href="/auth" className="rounded-xl bg-white px-6 py-3 text-center text-base font-black text-blue-700 hover:bg-slate-100">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/auth" className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-6 py-3 text-base font-black text-white hover:bg-slate-800">
+                Post a Job
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/auth" className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-6 py-3 text-base font-black text-slate-800 hover:bg-slate-50">
                 Join as a Freelancer
               </Link>
-              <Link href="/auth" className="rounded-xl border border-white/40 px-6 py-3 text-center text-base font-black text-white hover:bg-white/10">
-                Post a Job
-              </Link>
+            </div>
+            <div className="mt-8 grid max-w-2xl grid-cols-3 divide-x divide-slate-200 border-y border-slate-200 py-4">
+              <div className="pr-4">
+                <p className="text-2xl font-black text-slate-950">6+</p>
+                <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Service guides</p>
+              </div>
+              <div className="px-4">
+                <p className="text-2xl font-black text-slate-950">24/7</p>
+                <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Remote access</p>
+              </div>
+              <div className="pl-4">
+                <p className="text-2xl font-black text-slate-950">PH</p>
+                <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Talent focus</p>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/30 bg-white/95 p-6 text-slate-900 shadow-2xl">
-            <h3 className="text-xl font-black text-slate-900">Why teams choose TaraWork</h3>
-            <div className="mt-5 space-y-3">
-              {[
-                "AI-assisted candidate matching",
-                "Verified freelancer profiles",
-                "Fast hiring workflow",
-                "Clear collaboration tools",
-              ].map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-                  <p className="text-sm font-semibold text-slate-700">{item}</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-950 p-4 shadow-2xl">
+            <div className="rounded-xl bg-white p-5">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Talent Search</p>
+                  <h2 className="mt-1 text-xl font-black text-slate-950">Shortlist remote talent</h2>
                 </div>
-              ))}
+                <Search className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="mt-5 space-y-3">
+                {[
+                  ["Virtual Assistant", "Admin, inbox, scheduling", "92%"],
+                  ["Web Developer", "React, Next.js, ecommerce", "88%"],
+                  ["Social Media Manager", "Content, captions, reporting", "84%"],
+                ].map(([role, detail, score]) => (
+                  <div key={role} className="grid grid-cols-[1fr_auto] gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div>
+                      <p className="text-sm font-black text-slate-900">{role}</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">{detail}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-emerald-600">{score}</p>
+                      <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Match</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50 p-4">
+                <p className="flex items-start gap-3 text-sm font-bold leading-6 text-blue-950">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
+                  Public job and profile pages are built to be discoverable while private account areas stay blocked from search.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section id="features" className="px-4 py-16 sm:px-6">
-        <div className="mx-auto w-full max-w-6xl">
-          <div className="text-center">
-            <h2 className="text-3xl font-black text-slate-900 sm:text-4xl">Built for modern hiring</h2>
-            <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-              A cleaner way to connect freelancers and employers without complicated setup.
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Marketplace Workflow</p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Built for modern remote hiring</h2>
+            </div>
+            <p className="text-base leading-8 text-slate-600">
+              TaraWork gives employers and freelancers a more structured way to present work, evaluate fit, and move from discovery to collaboration without scattered messages or incomplete profiles.
             </p>
           </div>
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <Users className="h-8 w-8 text-blue-600" />
-              <h3 className="mt-4 text-xl font-bold text-slate-900">Trusted Talent</h3>
-              <p className="mt-2 text-sm text-slate-600">Discover qualified freelancers with clear skills and portfolio context.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <Briefcase className="h-8 w-8 text-teal-600" />
-              <h3 className="mt-4 text-xl font-bold text-slate-900">Faster Hiring</h3>
-              <p className="mt-2 text-sm text-slate-600">Post jobs quickly, review matches, and start collaboration in less time.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <ShieldCheck className="h-8 w-8 text-indigo-600" />
-              <h3 className="mt-4 text-xl font-bold text-slate-900">Professional Workflow</h3>
-              <p className="mt-2 text-sm text-slate-600">Keep communication and project details organized in one platform.</p>
-            </div>
+            {[
+              { icon: Users, title: "Structured Profiles", body: "Review services, skills, portfolio work, rates, and work style before starting a conversation." },
+              { icon: Briefcase, title: "Public Job Pages", body: "Share live opportunities that search engines can discover while applicants see the full role context." },
+              { icon: ShieldCheck, title: "Private Areas Protected", body: "Admin, API, dashboard, message, webhook, and auth routes stay out of Google search results." },
+            ].map((item) => (
+              <div key={item.title} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <item.icon className="h-8 w-8 text-blue-600" />
+                <h3 className="mt-4 text-xl font-black text-slate-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="border-y border-slate-200 bg-white px-4 py-12 sm:px-6">
-        <div className="mx-auto w-full max-w-6xl">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Popular Hiring Guides</p>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <Link href="/hire-filipino-freelancers" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
-              <h2 className="text-lg font-black text-slate-900">Hire Filipino Freelancers</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Find remote Filipino talent for design, development, writing, admin, support, ecommerce, and business operations.</p>
-            </Link>
-            <Link href="/virtual-assistant-philippines" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
-              <h2 className="text-lg font-black text-slate-900">Virtual Assistant Philippines</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Hire virtual assistants for inbox management, scheduling, customer support, research, ecommerce, and daily admin work.</p>
-            </Link>
-            <Link href="/remote-jobs-philippines" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
-              <h2 className="text-lg font-black text-slate-900">Remote Jobs Philippines</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Help Filipino freelancers and online professionals discover remote jobs and build stronger public profiles.</p>
-            </Link>
-            <Link href="/hire-filipino-web-developer" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
-              <h2 className="text-lg font-black text-slate-900">Hire Filipino Web Developers</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Find web developers for websites, dashboards, ecommerce, React, Next.js, WordPress, APIs, and technical support.</p>
-            </Link>
-            <Link href="/hire-filipino-social-media-manager" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
-              <h2 className="text-lg font-black text-slate-900">Hire Social Media Managers</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Hire remote social media talent for captions, calendars, community replies, scheduling, and reporting.</p>
-            </Link>
-            <Link href="/virtual-assistant-rates-philippines" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-blue-200 hover:bg-blue-50">
-              <h2 className="text-lg font-black text-slate-900">VA Rates Philippines</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Learn what affects virtual assistant rates, task scope, experience, hours, and hiring expectations.</p>
-            </Link>
+      <section id="guides" className="border-y border-slate-200 bg-white px-4 py-16 sm:px-6">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[360px_1fr]">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Hiring Guides</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Focused pages for high-intent searches</h2>
+            <p className="mt-4 text-sm leading-7 text-slate-600">
+              These guides support search visibility while helping employers understand what to hire, how to scope the work, and what to expect from remote Filipino talent.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ["/hire-filipino-freelancers", "Hire Filipino Freelancers", "Design, development, writing, admin, support, ecommerce, and operations."],
+              ["/virtual-assistant-philippines", "Virtual Assistant Philippines", "Inbox management, scheduling, customer support, research, and admin work."],
+              ["/remote-jobs-philippines", "Remote Jobs Philippines", "Remote opportunities and public profiles for Filipino online professionals."],
+              ["/hire-filipino-web-developer", "Hire Filipino Web Developers", "Websites, dashboards, ecommerce, React, Next.js, WordPress, and APIs."],
+              ["/hire-filipino-social-media-manager", "Hire Social Media Managers", "Captions, calendars, publishing, community replies, and reporting."],
+              ["/virtual-assistant-rates-philippines", "VA Rates Philippines", "Pricing factors, task scope, experience, hours, and hiring expectations."],
+            ].map(([href, title, body]) => (
+              <Link key={href} href={href} className="group rounded-xl border border-slate-200 bg-slate-50 p-5 transition hover:border-blue-200 hover:bg-blue-50">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-black text-slate-950">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+                  </div>
+                  <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="border-y border-slate-200 bg-white px-4 py-16 sm:px-6">
-        <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+      <section className="px-4 py-16 sm:px-6">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Freelance Marketplace Philippines</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
@@ -256,7 +300,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="space-y-5 text-sm leading-7 text-slate-700">
+          <div className="columns-1 gap-8 space-y-5 text-sm leading-7 text-slate-700 lg:columns-2">
             <p>
               Employers can post remote jobs, review freelancer profiles, compare skills, check portfolios, and start hiring conversations without wasting time on scattered messages. Each public profile can show practical details such as services offered, hourly rate, portfolio projects, work background, client feedback, contact preferences, and role category. This helps companies evaluate talent based on real work context instead of short, incomplete profiles.
             </p>
@@ -282,14 +326,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="contact" className="px-4 py-16 sm:px-6">
-        <div className="mx-auto w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-black text-slate-900 sm:text-4xl">Contact Us</h2>
-            <p className="mt-2 text-slate-600">Send us a message and we will respond as soon as possible.</p>
+      <section id="contact" className="border-t border-slate-200 bg-white px-4 py-16 sm:px-6">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Contact</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Talk to TaraWork</h2>
+            <p className="mt-4 text-base leading-8 text-slate-600">
+              Send a message about hiring, partnerships, freelancer onboarding, or product feedback. Keep your note specific so we can route it properly.
+            </p>
           </div>
 
-          <form className="mt-8 space-y-4" onSubmit={handleContactSubmit}>
+          <form className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-6" onSubmit={handleContactSubmit}>
             <div>
               <label htmlFor="contact-name" className="mb-2 block text-xs font-black uppercase tracking-[0.2em] text-slate-500">
                 Full Name
@@ -340,7 +387,7 @@ export default function LandingPage() {
             <button
               type="submit"
               disabled={isSendingContact}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 font-bold text-white transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-lg bg-slate-950 px-6 py-3 font-bold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Mail className="mr-2 h-4 w-4" />
               {isSendingContact ? "Sending..." : "Send Message"}
