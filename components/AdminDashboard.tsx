@@ -35,7 +35,7 @@ import {
   Mail
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "disputes" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 interface AdminDashboardProps {
@@ -54,6 +54,10 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [jobCategories, setJobCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [categoryLoading, setCategoryLoading] = useState(false);
+  const [marketingSubject, setMarketingSubject] = useState("");
+  const [marketingMessage, setMarketingMessage] = useState("");
+  const [marketingLoading, setMarketingLoading] = useState(false);
+  const [marketingPreview, setMarketingPreview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
   const [healthStatus, setHealthStatus] = useState({
@@ -307,11 +311,52 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     fetchData();
   };
 
+  const submitMarketingEmail = async (dryRun: boolean) => {
+    const subject = marketingSubject.trim();
+    const message = marketingMessage.trim();
+
+    if (!subject || !message) {
+      notify("Add a subject and message first.");
+      return;
+    }
+
+    if (!dryRun && !confirm("Send this announcement to all freelancers with email addresses?")) return;
+
+    setMarketingLoading(true);
+    try {
+      const response = await fetch("/api/admin/email-freelancers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ subject, message, dryRun }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Unable to process marketing email.");
+      }
+
+      if (dryRun) {
+        setMarketingPreview(result);
+        notify(`Preview ready: ${result.recipientCount || 0} freelancers found.`);
+      } else {
+        notify(`Announcement sent to ${result.recipientCount || 0} freelancers.`);
+        setMarketingPreview(result);
+      }
+    } catch (err: any) {
+      notify("Email error: " + (err?.message || "Unknown error"));
+    } finally {
+      setMarketingLoading(false);
+    }
+  };
+
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "users", label: "Verification Queue", icon: ShieldCheck },
     { id: "jobs", label: "Marketplace", icon: Briefcase },
     { id: "disputes", label: "Disputes", icon: Scale },
+    { id: "marketing", label: "Marketing Email", icon: Mail },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
   ];
@@ -828,6 +873,117 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                 </table>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === "marketing" && (
+          <motion.div
+            key="marketing"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_360px]"
+          >
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="border-b border-slate-100 p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Freelancer Announcement</h3>
+                    <p className="text-sm font-medium text-slate-500">Email all freelancers about website updates, launches, and notices.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6 p-8">
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Subject</label>
+                  <input
+                    type="text"
+                    value={marketingSubject}
+                    onChange={(event) => setMarketingSubject(event.target.value)}
+                    maxLength={140}
+                    placeholder="Example: New TaraWork profile features are live"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Message</label>
+                  <textarea
+                    value={marketingMessage}
+                    onChange={(event) => setMarketingMessage(event.target.value)}
+                    rows={12}
+                    maxLength={8000}
+                    placeholder={"Hi freelancers,\n\nWe have an update about TaraWork..."}
+                    className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-relaxed text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  />
+                  <p className="mt-2 text-xs font-semibold text-slate-400">{marketingMessage.length.toLocaleString()} / 8,000 characters</p>
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => submitMarketingEmail(true)}
+                    disabled={marketingLoading || !marketingSubject.trim() || !marketingMessage.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-50"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview Recipients
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => submitMarketingEmail(false)}
+                    disabled={marketingLoading || !marketingSubject.trim() || !marketingMessage.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {marketingLoading ? "Working..." : "Send Announcement"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <aside className="space-y-6">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Audience</h4>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Freelancers</p>
+                    <p className="mt-1 text-2xl font-black text-slate-900">{counts.freelancers.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-xl bg-indigo-50 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Recipients</p>
+                    <p className="mt-1 text-2xl font-black text-indigo-700">{marketingPreview?.recipientCount?.toLocaleString?.() || "..."}</p>
+                  </div>
+                </div>
+                {marketingPreview && (
+                  <p className="mt-4 text-xs font-semibold leading-relaxed text-slate-500">
+                    {marketingPreview.missingEmailCount || 0} freelancer profiles were skipped because no valid email address was found.
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Sample Recipients</h4>
+                <div className="mt-4 space-y-3">
+                  {marketingPreview?.sampleRecipients?.length ? (
+                    marketingPreview.sampleRecipients.map((recipient: any) => (
+                      <div key={recipient.email} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                        <p className="text-sm font-black text-slate-900">{recipient.name}</p>
+                        <p className="break-words text-xs font-semibold text-slate-500">{recipient.email}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="rounded-xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">
+                      Run a preview to verify the reachable freelancer list before sending.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </aside>
           </motion.div>
         )}
 
