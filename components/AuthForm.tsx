@@ -40,6 +40,11 @@ export default function AuthForm() {
       const action = params.get('action');
       const next = params.get('next');
       const requestedRole = params.get('role');
+      const authError = params.get('error');
+
+      if (authError === 'auth_code_error') {
+        setError("Password reset link is invalid or expired. Please request a new reset link and open the latest email.");
+      }
       
       if (refId) setReferringId(refId);
       if (next) setNextPath(next);
@@ -141,8 +146,9 @@ export default function AuthForm() {
 
     try {
       if (mode === "forgot_password") {
+        const resetTarget = "/auth?mode=update_password";
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth?mode=update_password`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(resetTarget)}`,
         });
         if (error) throw error;
         setSuccess("Password reset link sent! Please check your email.");
