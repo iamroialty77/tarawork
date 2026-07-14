@@ -160,13 +160,13 @@ export async function POST(req: NextRequest) {
 
     const smtpHost = process.env.SMTP_HOST || "smtp.hostinger.com";
     const smtpPort = Number(process.env.SMTP_PORT || "465");
-    const smtpUser = process.env.SMTP_USER || "hello@tarawork.online";
+    const smtpUser = process.env.SMTP_USER || "";
     const smtpPass = process.env.SMTP_PASS || "";
     const fromName = process.env.MARKETING_EMAIL_FROM_NAME || "TaraWork";
 
-    if (!smtpPass) {
+    if (!smtpUser || !smtpPass) {
       return NextResponse.json(
-        { error: "SMTP is not configured. Please set SMTP_PASS in environment variables." },
+        { error: "SMTP is not configured. Please set SMTP_USER and SMTP_PASS in environment variables." },
         { status: 500 },
       );
     }
@@ -184,24 +184,39 @@ export async function POST(req: NextRequest) {
     const safeMessage = escapeHtml(message).replace(/\n/g, "<br />");
     const mailBatches = chunk(recipients, BATCH_SIZE);
 
-    for (const batch of mailBatches) {
-      await transporter.sendMail({
-        from: `"${fromName}" <${smtpUser}>`,
-        to: smtpUser,
-        bcc: batch.map((recipient) => recipient.email),
-        subject,
-        text: message,
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
-            <div style="max-width: 640px; margin: 0 auto;">
-              <h1 style="font-size: 22px; margin-bottom: 16px;">${escapeHtml(subject)}</h1>
-              <p style="white-space: pre-line;">${safeMessage}</p>
-              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-              <p style="font-size: 12px; color: #64748b;">You are receiving this because you have a freelancer account on TaraWork.</p>
+    try {
+      await transporter.verify();
+
+      for (const batch of mailBatches) {
+        await transporter.sendMail({
+          from: `"${fromName}" <${smtpUser}>`,
+          to: smtpUser,
+          bcc: batch.map((recipient) => recipient.email),
+          subject,
+          text: message,
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+              <div style="max-width: 640px; margin: 0 auto;">
+                <h1 style="font-size: 22px; margin-bottom: 16px;">${escapeHtml(subject)}</h1>
+                <p style="white-space: pre-line;">${safeMessage}</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+                <p style="font-size: 12px; color: #64748b;">You are receiving this because you have a freelancer account on TaraWork.</p>
+              </div>
             </div>
-          </div>
-        `,
-      });
+          `,
+        });
+      }
+    } catch (smtpError) {
+      const smtpMessage = smtpError instanceof Error ? smtpError.message : "SMTP send failed.";
+      const isAuthError = smtpMessage.includes("535") || smtpMessage.toLowerCase().includes("authentication failed");
+      return NextResponse.json(
+        {
+          error: isAuthError
+            ? `SMTP login failed for ${smtpUser}. Check that SMTP_USER is the full mailbox address and SMTP_PASS is the mailbox password from Hostinger.`
+            : smtpMessage,
+        },
+        { status: 502 },
+      );
     }
 
     await supabaseAdmin.from("admin_audit_logs").insert([
