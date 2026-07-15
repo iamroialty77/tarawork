@@ -1,28 +1,42 @@
 import type { Metadata } from "next";
 import SeoLandingPage from "@/components/SeoLandingPage";
-import { absoluteUrl, siteName } from "@/lib/seo";
+import { absoluteUrl, freelanceJobKeywordsPhilippines, siteName } from "@/lib/seo";
 
-const title = "Remote Jobs Philippines for Freelancers and Virtual Assistants";
+const title = "Remote Jobs for Filipinos";
 const description =
-  "Find remote jobs in the Philippines for freelancers, virtual assistants, customer support, developers, designers, writers, and online professionals.";
+  "Find remote jobs for Filipinos, including freelance work, virtual assistant jobs, customer support, web development, design, writing, ecommerce, and online work from home.";
+const path = "/remote-jobs-philippines";
+const keywords = [
+  "remote jobs for Filipinos",
+  "remote jobs Philippines",
+  "online jobs for Filipinos",
+  "work from home jobs Philippines",
+  "freelance jobs Philippines",
+  "remote freelance jobs Philippines",
+  "Filipino remote workers",
+  "Pinoy freelancers",
+  ...freelanceJobKeywordsPhilippines,
+];
 
 export const metadata: Metadata = {
   title,
   description,
-  alternates: { canonical: absoluteUrl("/remote-jobs-philippines") },
+  keywords,
+  alternates: { canonical: absoluteUrl(path) },
   openGraph: {
     type: "website",
-    url: absoluteUrl("/remote-jobs-philippines"),
+    url: absoluteUrl(path),
     siteName,
     title,
     description,
-    images: ["/tarawork-removebg-preview.png"],
+    locale: "en_PH",
+    images: ["/landing/filipino-remote-work.png"],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/tarawork-removebg-preview.png"],
+    images: ["/landing/filipino-remote-work.png"],
   },
 };
 
@@ -30,10 +44,10 @@ export default function RemoteJobsPhilippinesPage() {
   return (
     <SeoLandingPage
       eyebrow="Remote Jobs Philippines"
-      title="Remote jobs in the Philippines for freelancers and virtual assistants"
+      title="Remote jobs for Filipinos"
       subtitle="TaraWork helps Filipino professionals build public profiles, discover remote opportunities, and apply to roles from employers looking for skilled online talent."
-      primaryKeyword="remote jobs Philippines"
-      path="/remote-jobs-philippines"
+      primaryKeyword="remote jobs for Filipinos"
+      path={path}
       sections={[
         {
           heading: "Remote work categories on TaraWork",

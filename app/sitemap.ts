@@ -57,6 +57,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.86,
     },
+    {
+      url: absoluteUrl("/top-remote-jobs-for-filipinos-2026"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.86,
+    },
+    {
+      url: absoluteUrl("/how-to-hire-online-filipino-talent-safely"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.86,
+    },
+    {
+      url: absoluteUrl("/flexible-remote-jobs-for-filipino-students"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.84,
+    },
+    {
+      url: absoluteUrl("/best-freelance-niche-philippines"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.84,
+    },
   ];
 
   const [{ data: jobs }, { data: profiles }] = await Promise.all([

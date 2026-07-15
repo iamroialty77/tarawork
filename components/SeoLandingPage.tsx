@@ -202,6 +202,18 @@ export default function SeoLandingPage({
             <Link href="/virtual-assistant-rates-philippines" className="border border-zinc-200 bg-white px-4 py-2 text-zinc-700 hover:bg-zinc-100">
               VA Rates Philippines
             </Link>
+            <Link href="/top-remote-jobs-for-filipinos-2026" className="border border-zinc-200 bg-white px-4 py-2 text-zinc-700 hover:bg-zinc-100">
+              Top Remote Jobs
+            </Link>
+            <Link href="/how-to-hire-online-filipino-talent-safely" className="border border-zinc-200 bg-white px-4 py-2 text-zinc-700 hover:bg-zinc-100">
+              Safe Hiring Guide
+            </Link>
+            <Link href="/flexible-remote-jobs-for-filipino-students" className="border border-zinc-200 bg-white px-4 py-2 text-zinc-700 hover:bg-zinc-100">
+              Student Remote Jobs
+            </Link>
+            <Link href="/best-freelance-niche-philippines" className="border border-zinc-200 bg-white px-4 py-2 text-zinc-700 hover:bg-zinc-100">
+              Freelance Niches
+            </Link>
           </div>
         </div>
       </section>

@@ -22,6 +22,7 @@ const structuredData = {
       "@type": "Organization",
       "@id": absoluteUrl("/#organization"),
       name: siteName,
+      alternateName: ["TaraWork.online", "Tara Work", "Tara Work online", "tare work", "tarabjo"],
       url: absoluteUrl("/"),
       logo: absoluteUrl("/tarawork-removebg-preview.png"),
       sameAs: [],
@@ -30,6 +31,7 @@ const structuredData = {
       "@type": "WebSite",
       "@id": absoluteUrl("/#website"),
       name: "TaraWork.online",
+      alternateName: ["TaraWork", "Tara Work", "Tara Work online", "tare work", "tarabjo"],
       url: absoluteUrl("/"),
       publisher: {
         "@id": absoluteUrl("/#organization"),
@@ -83,7 +85,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: siteName,
   title: {
-    default: "Explore Filipino Freelance Services and Virtual Assistants",
+    default: "Tara Work | Remote Jobs and Freelancing Platform in the Philippines",
     template: `%s | ${siteName}`,
   },
   description: defaultSeoDescription,
@@ -99,7 +101,7 @@ export const metadata: Metadata = {
     locale: "en_PH",
     url: absoluteUrl("/"),
     siteName,
-    title: "Explore Filipino Freelance Services and Virtual Assistants",
+    title: "Tara Work | Remote Jobs and Freelancing Platform in the Philippines",
     description: defaultSeoDescription,
     images: [
       {
@@ -112,7 +114,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Explore Filipino Freelance Services and Virtual Assistants",
+    title: "Tara Work | Remote Jobs and Freelancing Platform in the Philippines",
     description: defaultSeoDescription,
     images: ["/tarawork-removebg-preview.png"],
   },
