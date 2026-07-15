@@ -415,7 +415,7 @@ export default function LandingPage() {
 
       <footer className="w-full border-t border-zinc-200 bg-white px-4 py-8 sm:px-6 lg:px-10">
         <div className="flex w-full flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
-          <p className="text-sm font-bold text-zinc-500">Â(c) 2026 TaraWork.online. All rights reserved.</p>
+          <p className="text-sm font-bold text-zinc-500">(c) 2026 TaraWork.online. All rights reserved.</p>
           <div className="flex items-center gap-5 text-sm font-bold text-zinc-500">
             <a href="#" className="hover:text-zinc-950">Privacy</a>
             <a href="#" className="hover:text-zinc-950">Terms</a>
