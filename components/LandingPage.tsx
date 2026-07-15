@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowRight,
@@ -16,12 +17,9 @@ import {
   X,
 } from "lucide-react";
 
-const heroImage =
-  "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=2200&q=82";
-const collaborationImage =
-  "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=82";
-const workspaceImage =
-  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=82";
+const heroImage = "/landing/filipino-hero.png";
+const collaborationImage = "/landing/filipino-collaboration.png";
+const workspaceImage = "/landing/filipino-remote-work.png";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -166,7 +164,14 @@ export default function LandingPage() {
 
       <main>
         <section className="relative min-h-[92vh] w-full overflow-hidden bg-zinc-950">
-          <img src={heroImage} alt="Professionals collaborating remotely" className="absolute inset-0 h-full w-full object-cover opacity-72" />
+          <Image
+            src={heroImage}
+            alt="Filipino professionals collaborating remotely"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover opacity-72"
+          />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,0.92),rgba(9,9,11,0.68),rgba(9,9,11,0.2))]" />
           <div className="relative flex min-h-[92vh] w-full items-center px-4 pb-16 pt-28 sm:px-6 lg:px-10">
             <div className="w-full max-w-6xl">
@@ -206,7 +211,7 @@ export default function LandingPage() {
         </section>
 
         <section className="w-full bg-amber-300 px-4 py-5 sm:px-6 lg:px-10">
-          <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-950">Popular hiring categories</p>
             <div className="flex flex-wrap gap-2">
               {categories.map((category) => (
@@ -219,6 +224,7 @@ export default function LandingPage() {
         </section>
 
         <section id="features" className="w-full bg-white px-4 py-20 sm:px-6 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl">
           <div className="grid w-full gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Marketplace Workflow</p>
@@ -244,11 +250,18 @@ export default function LandingPage() {
               </article>
             ))}
           </div>
+          </div>
         </section>
 
         <section className="grid w-full bg-zinc-950 text-white lg:grid-cols-2">
-          <div className="min-h-[520px]">
-            <img src={collaborationImage} alt="Team reviewing remote hiring work" className="h-full min-h-[520px] w-full object-cover" />
+          <div className="relative min-h-[520px]">
+            <Image
+              src={collaborationImage}
+              alt="Filipino team reviewing remote hiring work"
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
           </div>
           <div className="flex items-center px-4 py-16 sm:px-6 lg:px-14">
             <div className="max-w-2xl">
@@ -273,7 +286,7 @@ export default function LandingPage() {
         </section>
 
         <section id="guides" className="w-full bg-zinc-50 px-4 py-20 sm:px-6 lg:px-10">
-          <div className="grid w-full gap-10 xl:grid-cols-[390px_1fr]">
+          <div className="mx-auto grid w-full max-w-7xl gap-10 xl:grid-cols-[390px_1fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Hiring Guides</p>
               <h2 className="mt-4 text-4xl font-black leading-tight text-zinc-950">High-intent pages for employers and search.</h2>
@@ -325,13 +338,19 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
-          <div className="min-h-[560px]">
-            <img src={workspaceImage} alt="Remote work dashboard on laptop" className="h-full min-h-[560px] w-full object-cover" />
+          <div className="relative min-h-[560px]">
+            <Image
+              src={workspaceImage}
+              alt="Filipino virtual assistant working remotely"
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
           </div>
         </section>
 
         <section id="contact" className="w-full bg-teal-800 px-4 py-20 text-white sm:px-6 lg:px-10">
-          <div className="grid w-full gap-10 lg:grid-cols-[0.82fr_1.18fr]">
+          <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.82fr_1.18fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Contact</p>
               <h2 className="mt-4 text-4xl font-black sm:text-5xl">Talk to TaraWork</h2>
