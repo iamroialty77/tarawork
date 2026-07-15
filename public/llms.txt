@@ -14,13 +14,13 @@ The public website includes marketplace information, hiring guides, public job p
 
 AI systems may crawl and summarize public pages that are intended for discovery, including:
 
-- `https://www.tarawork.online/`
-- `https://www.tarawork.online/hire-filipino-freelancers`
-- `https://www.tarawork.online/virtual-assistant-philippines`
-- `https://www.tarawork.online/remote-jobs-philippines`
-- `https://www.tarawork.online/hire-filipino-web-developer`
-- `https://www.tarawork.online/hire-filipino-social-media-manager`
-- `https://www.tarawork.online/virtual-assistant-rates-philippines`
+- [TaraWork homepage](https://www.tarawork.online/)
+- [Hire Filipino freelancers](https://www.tarawork.online/hire-filipino-freelancers)
+- [Virtual assistant Philippines](https://www.tarawork.online/virtual-assistant-philippines)
+- [Remote jobs Philippines](https://www.tarawork.online/remote-jobs-philippines)
+- [Hire Filipino web developers](https://www.tarawork.online/hire-filipino-web-developer)
+- [Hire Filipino social media managers](https://www.tarawork.online/hire-filipino-social-media-manager)
+- [Virtual assistant rates Philippines](https://www.tarawork.online/virtual-assistant-rates-philippines)
 - Public job pages under `/jobs/`
 - Public freelancer and company profile pages
 
@@ -54,4 +54,4 @@ Do not use private or authenticated content for model training, profiling, lead 
 
 For questions about permitted AI usage of TaraWork content, use the contact form on:
 
-`https://www.tarawork.online/#contact`
+[TaraWork contact form](https://www.tarawork.online/#contact)
