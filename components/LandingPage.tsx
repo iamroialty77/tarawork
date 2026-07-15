@@ -171,18 +171,18 @@ export default function LandingPage() {
             sizes="100vw"
             className="object-cover opacity-72"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,0.92),rgba(9,9,11,0.68),rgba(9,9,11,0.2))]" />
-          <div className="relative flex min-h-[92vh] w-full items-center px-4 pb-16 pt-28 sm:px-6 lg:px-10">
-            <div className="w-full max-w-6xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-amber-100 backdrop-blur">
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,0.94),rgba(9,9,11,0.7),rgba(9,9,11,0.18))]" />
+          <div className="relative flex min-h-[92vh] w-full items-center px-4 pb-12 pt-28 sm:px-6 lg:px-10">
+            <div className="mx-auto w-full max-w-7xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-amber-100 backdrop-blur">
                 <Sparkles className="h-4 w-4" />
                 Philippine remote talent marketplace
               </div>
-              <h1 className="mt-7 max-w-5xl text-5xl font-black leading-[0.96] text-white sm:text-6xl lg:text-8xl">
-                Hire Filipino freelancers with proof, context, and speed.
+              <h1 className="mt-7 max-w-5xl text-5xl font-black leading-[0.98] text-white sm:text-6xl lg:text-7xl">
+                Hire Filipino freelancers with clarity from the first conversation.
               </h1>
               <p className="mt-7 max-w-2xl text-lg font-medium leading-8 text-white/82 sm:text-xl">
-                TaraWork helps employers discover Filipino virtual assistants, developers, designers, writers, and support specialists through structured profiles, public job pages, and focused hiring workflows.
+                TaraWork helps employers find virtual assistants, developers, designers, writers, and support specialists through profiles that are easier to compare and easier to trust.
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Link href="/auth" className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-300 px-6 py-4 text-base font-black text-zinc-950 transition hover:bg-amber-200">
@@ -193,15 +193,15 @@ export default function LandingPage() {
                   Join as a Freelancer
                 </Link>
               </div>
-              <div className="mt-10 grid max-w-3xl grid-cols-3 border-y border-white/18 py-5">
+              <div className="mt-12 grid max-w-4xl overflow-hidden border border-white/16 bg-white/8 backdrop-blur md:grid-cols-3">
                 {[
-                  ["PH-first", "Talent focus"],
-                  ["Fast", "Shortlisting"],
-                  ["Clear", "Profiles"],
-                ].map(([value, label]) => (
-                  <div key={label} className="border-r border-white/18 px-4 first:pl-0 last:border-r-0">
-                    <p className="text-2xl font-black text-white sm:text-3xl">{value}</p>
-                    <p className="mt-1 text-xs font-bold uppercase tracking-wider text-white/60">{label}</p>
+                  ["PH-first talent", "Focused on Filipino remote professionals and practical service categories."],
+                  ["Cleaner shortlists", "Compare work style, services, portfolio details, and rates in one place."],
+                  ["Faster decisions", "Start conversations with clearer context before interviews or trials."],
+                ].map(([title, body]) => (
+                  <div key={title} className="border-b border-white/14 p-5 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+                    <p className="text-sm font-black uppercase tracking-[0.16em] text-amber-200">{title}</p>
+                    <p className="mt-3 text-sm font-semibold leading-6 text-white/72">{body}</p>
                   </div>
                 ))}
               </div>
@@ -209,12 +209,15 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="w-full bg-amber-300 px-4 py-5 sm:px-6 lg:px-10">
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-950">Popular hiring categories</p>
-            <div className="flex flex-wrap gap-2">
+        <section className="w-full border-b border-zinc-200 bg-white px-4 py-12 sm:px-6 lg:px-10">
+          <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[280px_1fr] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-700">Popular categories</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-zinc-500">Browse common services requested by remote-first teams.</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
               {categories.map((category) => (
-                <span key={category} className="rounded-full border border-zinc-950/15 bg-white/55 px-4 py-2 text-sm font-black text-zinc-950">
+                <span key={category} className="border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-black text-zinc-800 shadow-sm">
                   {category}
                 </span>
               ))}
@@ -234,15 +237,17 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            <div className="mt-14 grid gap-6 lg:grid-cols-3">
               {[
                 { icon: Users, title: "Find the right fit", body: "Compare skills, services, rates, and portfolio work before starting a conversation." },
                 { icon: Briefcase, title: "Post clear work", body: "Describe the role, budget, schedule, and requirements so applicants know what matters." },
                 { icon: ShieldCheck, title: "Hire with confidence", body: "Keep your shortlist organized and review each freelancer with practical details in one place." },
               ].map((item) => (
-                <article key={item.title} className="border border-zinc-200 bg-white p-7 shadow-sm">
-                  <item.icon className="h-9 w-9 text-teal-700" />
-                  <h3 className="mt-6 text-2xl font-black text-zinc-950">{item.title}</h3>
+                <article key={item.title} className="border border-zinc-200 bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                  <div className="flex h-12 w-12 items-center justify-center bg-teal-50 text-teal-800">
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="mt-8 text-2xl font-black text-zinc-950">{item.title}</h3>
                   <p className="mt-3 text-base leading-7 text-zinc-600">{item.body}</p>
                 </article>
               ))}
@@ -282,8 +287,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="w-full bg-zinc-50 px-4 py-20 sm:px-6 lg:px-10">
-          <div className="mx-auto grid w-full max-w-7xl gap-10 xl:grid-cols-[390px_1fr]">
+        <section id="how-it-works" className="w-full bg-zinc-50 px-4 py-24 sm:px-6 lg:px-10">
+          <div className="mx-auto grid w-full max-w-7xl gap-12 xl:grid-cols-[420px_1fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">How It Works</p>
               <h2 className="mt-4 text-4xl font-black leading-tight text-zinc-950">From job post to shortlist without the clutter.</h2>
@@ -291,20 +296,16 @@ export default function LandingPage() {
                 Start with a clear role, review freelancer profiles, then move promising matches into conversations.
               </p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-3">
               {[
                 ["1", "Post the role", "Add the work scope, skills, budget, schedule, and expectations."],
                 ["2", "Review profiles", "Compare services, portfolio work, rates, and professional background."],
                 ["3", "Start the conversation", "Message the best matches and move forward with clearer context."],
               ].map(([step, title, body]) => (
-                <div key={step} className="bg-white p-6 shadow-sm ring-1 ring-zinc-200">
-                  <div className="flex items-start justify-between gap-5">
-                    <div>
-                      <p className="mb-5 flex h-10 w-10 items-center justify-center bg-teal-700 text-sm font-black text-white">{step}</p>
-                      <h3 className="text-xl font-black text-zinc-950">{title}</h3>
-                      <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">{body}</p>
-                    </div>
-                  </div>
+                <div key={step} className="border border-zinc-200 bg-white p-7 shadow-sm">
+                  <p className="mb-8 flex h-11 w-11 items-center justify-center bg-zinc-950 text-sm font-black text-white">{step}</p>
+                  <h3 className="text-xl font-black text-zinc-950">{title}</h3>
+                  <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">{body}</p>
                 </div>
               ))}
             </div>
@@ -312,21 +313,23 @@ export default function LandingPage() {
         </section>
 
         <section className="grid w-full bg-white lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="px-4 py-20 sm:px-6 lg:px-10">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Freelance Marketplace Philippines</p>
-            <h2 className="mt-4 max-w-4xl text-4xl font-black leading-tight text-zinc-950 sm:text-5xl">
-              Built for business owners, agencies, and Filipino remote professionals.
-            </h2>
-            <div className="mt-8 max-w-4xl space-y-5 text-base font-medium leading-8 text-zinc-600">
-              <p>
-                TaraWork.online is built for business owners, founders, agencies, and remote teams that need dependable online talent from the Philippines. Whether you need a virtual assistant, web developer, designer, writer, customer support specialist, marketing specialist, data entry professional, bookkeeper, project coordinator, or automation expert, TaraWork gives you a focused place to find people who understand remote work and professional client service.
-              </p>
-              <p>
-                Employers can post remote jobs, review freelancer profiles, compare skills, check portfolios, and start hiring conversations without wasting time on scattered messages. Each public profile can show practical details such as services offered, hourly rate, portfolio projects, work background, client feedback, contact preferences, and role category.
-              </p>
-              <p>
-                For freelancers and virtual assistants in the Philippines, TaraWork helps create a professional online presence that can be shared with clients. A freelancer profile is more than a basic resume. It can present skills, project examples, service packages, work style, achievements, and availability in a format designed for hiring decisions.
-              </p>
+          <div className="flex items-center px-4 py-24 sm:px-6 lg:px-10">
+            <div className="max-w-4xl">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Freelance Marketplace Philippines</p>
+              <h2 className="mt-4 max-w-4xl text-4xl font-black leading-tight text-zinc-950 sm:text-5xl">
+                Built for business owners, agencies, and Filipino remote professionals.
+              </h2>
+              <div className="mt-8 max-w-4xl space-y-5 text-base font-medium leading-8 text-zinc-600">
+                <p>
+                  TaraWork.online is built for business owners, founders, agencies, and remote teams that need dependable online talent from the Philippines. Whether you need a virtual assistant, web developer, designer, writer, customer support specialist, marketing specialist, data entry professional, bookkeeper, project coordinator, or automation expert, TaraWork gives you a focused place to find people who understand remote work and professional client service.
+                </p>
+                <p>
+                  Employers can post remote jobs, review freelancer profiles, compare skills, check portfolios, and start hiring conversations without wasting time on scattered messages. Each public profile can show practical details such as services offered, hourly rate, portfolio projects, work background, client feedback, contact preferences, and role category.
+                </p>
+                <p>
+                  For freelancers and virtual assistants in the Philippines, TaraWork helps create a professional online presence that can be shared with clients. A freelancer profile is more than a basic resume. It can present skills, project examples, service packages, work style, achievements, and availability in a format designed for hiring decisions.
+                </p>
+              </div>
             </div>
           </div>
           <div className="relative min-h-[560px]">
