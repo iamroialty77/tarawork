@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { absoluteUrl, defaultSeoDescription, seoKeywords, siteName, siteUrl } from "@/lib/seo";
+import { absoluteUrl, defaultOgImage, defaultSeoDescription, seoKeywords, siteName, siteUrl } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -103,20 +103,13 @@ export const metadata: Metadata = {
     siteName,
     title: "Tara Work | Remote Jobs and Freelancing Platform in the Philippines",
     description: defaultSeoDescription,
-    images: [
-      {
-        url: "/tarawork-removebg-preview.png",
-        width: 1200,
-        height: 630,
-        alt: "TaraWork",
-      },
-    ],
+    images: [defaultOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tara Work | Remote Jobs and Freelancing Platform in the Philippines",
     description: defaultSeoDescription,
-    images: ["/tarawork-removebg-preview.png"],
+    images: [defaultOgImage.url],
   },
   robots: {
     index: true,

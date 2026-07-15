@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import SeoLandingPage from "@/components/SeoLandingPage";
-import { absoluteUrl, siteName } from "@/lib/seo";
+import { absoluteUrl, defaultOgImage, siteName } from "@/lib/seo";
 
 const title = "Hire a Filipino Web Developer";
 const description =
@@ -16,13 +16,13 @@ export const metadata: Metadata = {
     siteName,
     title,
     description,
-    images: ["/tarawork-removebg-preview.png"],
+    images: [defaultOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/tarawork-removebg-preview.png"],
+    images: [defaultOgImage.url],
   },
 };
 

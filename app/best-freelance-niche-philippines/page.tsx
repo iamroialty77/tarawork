@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import SeoLandingPage from "@/components/SeoLandingPage";
-import { absoluteUrl, freelanceJobKeywordsPhilippines, siteName } from "@/lib/seo";
+import { absoluteUrl, freelanceJobKeywordsPhilippines, remoteWorkOgImage, siteName } from "@/lib/seo";
 
 const title = "Best Freelance Niche in the Philippines";
 const description =
@@ -46,20 +46,13 @@ export const metadata: Metadata = {
     title,
     description,
     locale: "en_PH",
-    images: [
-      {
-        url: "/landing/filipino-remote-work.png",
-        width: 1200,
-        height: 630,
-        alt: "Filipino freelancer working remotely in the Philippines",
-      },
-    ],
+    images: [remoteWorkOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/landing/filipino-remote-work.png"],
+    images: [remoteWorkOgImage.url],
   },
   other: {
     "geo.region": "PH",

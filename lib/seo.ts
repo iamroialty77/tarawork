@@ -6,6 +6,27 @@ export const siteUrl = (
 
 export const siteName = "TaraWork";
 
+export const defaultOgImage = {
+  url: "/landing/filipino-hero.png",
+  width: 1200,
+  height: 630,
+  alt: "TaraWork Filipino remote jobs and freelancing platform",
+};
+
+export const collaborationOgImage = {
+  url: "/landing/filipino-collaboration.png",
+  width: 1200,
+  height: 630,
+  alt: "Filipino professionals collaborating remotely through TaraWork",
+};
+
+export const remoteWorkOgImage = {
+  url: "/landing/filipino-remote-work.png",
+  width: 1200,
+  height: 630,
+  alt: "Filipino freelancer working remotely in the Philippines",
+};
+
 export const defaultSeoDescription =
   "Hire Filipino freelancers and virtual assistants for remote work. Post jobs, compare skilled Pinoy talent, review portfolios, and start hiring with confidence.";
 

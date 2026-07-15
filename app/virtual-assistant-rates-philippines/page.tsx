@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import SeoLandingPage from "@/components/SeoLandingPage";
-import { absoluteUrl, siteName } from "@/lib/seo";
+import { absoluteUrl, remoteWorkOgImage, siteName } from "@/lib/seo";
 
 const title = "Virtual Assistant Rates Philippines";
 const description =
@@ -16,13 +16,13 @@ export const metadata: Metadata = {
     siteName,
     title,
     description,
-    images: ["/tarawork-removebg-preview.png"],
+    images: [remoteWorkOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/tarawork-removebg-preview.png"],
+    images: [remoteWorkOgImage.url],
   },
 };
 

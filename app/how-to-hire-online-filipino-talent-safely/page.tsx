@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import SeoLandingPage from "@/components/SeoLandingPage";
-import { absoluteUrl, freelanceJobKeywordsPhilippines, siteName } from "@/lib/seo";
+import { absoluteUrl, collaborationOgImage, freelanceJobKeywordsPhilippines, siteName } from "@/lib/seo";
 
 const title = "How to Hire Online Filipino Talent";
 const description =
@@ -30,13 +30,13 @@ export const metadata: Metadata = {
     title,
     description,
     locale: "en_PH",
-    images: ["/landing/filipino-collaboration.png"],
+    images: [collaborationOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/landing/filipino-collaboration.png"],
+    images: [collaborationOgImage.url],
   },
 };
 
