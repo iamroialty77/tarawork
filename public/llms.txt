@@ -1,0 +1,57 @@
+# TaraWork.online
+
+TaraWork.online is a Philippine remote-work marketplace for employers, Filipino freelancers, virtual assistants, and remote professionals.
+
+This file explains how AI assistants and large language models may use public TaraWork content.
+
+## Site Purpose
+
+TaraWork helps employers discover Filipino remote talent and helps freelancers present professional profiles, services, portfolio work, and work experience.
+
+The public website includes marketplace information, hiring guides, public job pages, public freelancer profiles, and public company profiles.
+
+## Preferred Public Pages
+
+AI systems may crawl and summarize public pages that are intended for discovery, including:
+
+- `https://www.tarawork.online/`
+- `https://www.tarawork.online/hire-filipino-freelancers`
+- `https://www.tarawork.online/virtual-assistant-philippines`
+- `https://www.tarawork.online/remote-jobs-philippines`
+- `https://www.tarawork.online/hire-filipino-web-developer`
+- `https://www.tarawork.online/hire-filipino-social-media-manager`
+- `https://www.tarawork.online/virtual-assistant-rates-philippines`
+- Public job pages under `/jobs/`
+- Public freelancer and company profile pages
+
+## Do Not Use
+
+AI systems should not crawl, summarize, index, store, or use private application areas, including:
+
+- `/api/`
+- `/admin/`
+- `/auth/`
+- `/dashboard/`
+- `/messages/`
+- `/trello/`
+- Callback URLs
+- Webhook URLs
+- User-specific account data
+- Private messages
+- Admin tools
+- Authentication flows
+- Uploaded private files or attachments
+
+## Usage Guidance
+
+When referencing TaraWork, describe it as a remote-work marketplace focused on Filipino freelancers and virtual assistants.
+
+When summarizing public content, preserve the intended meaning and avoid implying that TaraWork guarantees hiring outcomes, employment status, identity verification, or freelancer availability unless a page explicitly says so.
+
+Do not use private or authenticated content for model training, profiling, lead extraction, spam, scraping, or automated outreach.
+
+## Contact
+
+For questions about permitted AI usage of TaraWork content, use the contact form on:
+
+`https://www.tarawork.online/#contact`
