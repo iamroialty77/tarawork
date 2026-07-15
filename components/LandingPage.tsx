@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Mail,
   Menu,
-  Search,
   ShieldCheck,
   Sparkles,
   Star,
@@ -25,7 +24,7 @@ const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Hire Freelancers", href: "/hire-filipino-freelancers" },
   { label: "Virtual Assistants", href: "/virtual-assistant-philippines" },
-  { label: "Guides", href: "#guides" },
+  { label: "How it works", href: "#how-it-works" },
   { label: "Contact", href: "#contact" },
 ];
 
@@ -197,8 +196,8 @@ export default function LandingPage() {
               <div className="mt-10 grid max-w-3xl grid-cols-3 border-y border-white/18 py-5">
                 {[
                   ["PH-first", "Talent focus"],
-                  ["24/7", "Remote access"],
-                  ["SEO-ready", "Public pages"],
+                  ["Fast", "Shortlisting"],
+                  ["Clear", "Profiles"],
                 ].map(([value, label]) => (
                   <div key={label} className="border-r border-white/18 px-4 first:pl-0 last:border-r-0">
                     <p className="text-2xl font-black text-white sm:text-3xl">{value}</p>
@@ -225,31 +224,29 @@ export default function LandingPage() {
 
         <section id="features" className="w-full bg-white px-4 py-20 sm:px-6 lg:px-10">
           <div className="mx-auto w-full max-w-7xl">
-          <div className="grid w-full gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
-            <div>
+            <div className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Marketplace Workflow</p>
-              <h2 className="mt-4 max-w-3xl text-4xl font-black leading-tight text-zinc-950 sm:text-5xl">
-                A cleaner hiring surface for serious remote work.
+              <h2 className="mt-4 text-4xl font-black leading-tight text-zinc-950 sm:text-5xl">
+                Simple tools for better remote hiring.
               </h2>
+              <p className="mt-5 text-lg font-medium leading-8 text-zinc-600">
+                TaraWork keeps the hiring process focused: clear profiles, useful job details, and conversations that start with the right context.
+              </p>
             </div>
-            <p className="max-w-3xl text-lg font-medium leading-8 text-zinc-600">
-              Employers need evidence before they shortlist. Freelancers need a credible place to present services. TaraWork gives both sides structured pages that are easier to scan, share, and trust.
-            </p>
-          </div>
 
-          <div className="mt-12 grid gap-px overflow-hidden border border-zinc-200 bg-zinc-200 lg:grid-cols-3">
-            {[
-              { icon: Users, title: "Structured Profiles", body: "Show services, skills, rate, portfolio work, client feedback, and work style in one profile." },
-              { icon: Briefcase, title: "Searchable Job Pages", body: "Publish remote roles that can be shared directly and discovered through search." },
-              { icon: ShieldCheck, title: "Private Areas Protected", body: "Dashboards, messages, admin tools, APIs, and auth routes stay away from public search results." },
-            ].map((item) => (
-              <article key={item.title} className="bg-white p-7">
-                <item.icon className="h-9 w-9 text-teal-700" />
-                <h3 className="mt-6 text-2xl font-black text-zinc-950">{item.title}</h3>
-                <p className="mt-3 text-base leading-7 text-zinc-600">{item.body}</p>
-              </article>
-            ))}
-          </div>
+            <div className="mt-12 grid gap-6 lg:grid-cols-3">
+              {[
+                { icon: Users, title: "Find the right fit", body: "Compare skills, services, rates, and portfolio work before starting a conversation." },
+                { icon: Briefcase, title: "Post clear work", body: "Describe the role, budget, schedule, and requirements so applicants know what matters." },
+                { icon: ShieldCheck, title: "Hire with confidence", body: "Keep your shortlist organized and review each freelancer with practical details in one place." },
+              ].map((item) => (
+                <article key={item.title} className="border border-zinc-200 bg-white p-7 shadow-sm">
+                  <item.icon className="h-9 w-9 text-teal-700" />
+                  <h3 className="mt-6 text-2xl font-black text-zinc-950">{item.title}</h3>
+                  <p className="mt-3 text-base leading-7 text-zinc-600">{item.body}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -272,7 +269,7 @@ export default function LandingPage() {
               <div className="mt-8 space-y-5">
                 {[
                   "Service packages, project examples, and profile sections help employers understand fit faster.",
-                  "Public pages support SEO while private workflows stay reserved for signed-in users.",
+                  "Organized hiring pages help both sides understand the work before committing time.",
                   "Freelancers get a stronger online presence than a basic resume or scattered portfolio link.",
                 ].map((item) => (
                   <p key={item} className="flex gap-3 text-base font-semibold leading-7 text-white/80">
@@ -285,33 +282,30 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="guides" className="w-full bg-zinc-50 px-4 py-20 sm:px-6 lg:px-10">
+        <section id="how-it-works" className="w-full bg-zinc-50 px-4 py-20 sm:px-6 lg:px-10">
           <div className="mx-auto grid w-full max-w-7xl gap-10 xl:grid-cols-[390px_1fr]">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Hiring Guides</p>
-              <h2 className="mt-4 text-4xl font-black leading-tight text-zinc-950">High-intent pages for employers and search.</h2>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">How It Works</p>
+              <h2 className="mt-4 text-4xl font-black leading-tight text-zinc-950">From job post to shortlist without the clutter.</h2>
               <p className="mt-5 text-base leading-8 text-zinc-600">
-                These pages explain the work, scope, and expectations behind common hiring needs in the Philippines.
+                Start with a clear role, review freelancer profiles, then move promising matches into conversations.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
               {[
-                ["/hire-filipino-freelancers", "Hire Filipino Freelancers", "Design, development, writing, admin, support, ecommerce, and operations."],
-                ["/virtual-assistant-philippines", "Virtual Assistant Philippines", "Inbox management, scheduling, research, customer support, and admin work."],
-                ["/remote-jobs-philippines", "Remote Jobs Philippines", "Remote opportunities and public profiles for Filipino online professionals."],
-                ["/hire-filipino-web-developer", "Hire Filipino Web Developers", "Websites, dashboards, ecommerce, React, Next.js, WordPress, and APIs."],
-                ["/hire-filipino-social-media-manager", "Hire Social Media Managers", "Captions, calendars, publishing, community replies, and reporting."],
-                ["/virtual-assistant-rates-philippines", "VA Rates Philippines", "Pricing factors, scope, experience, hours, and hiring expectations."],
-              ].map(([href, title, body]) => (
-                <Link key={href} href={href} className="group bg-white p-6 shadow-sm ring-1 ring-zinc-200 transition hover:-translate-y-0.5 hover:ring-teal-300">
+                ["1", "Post the role", "Add the work scope, skills, budget, schedule, and expectations."],
+                ["2", "Review profiles", "Compare services, portfolio work, rates, and professional background."],
+                ["3", "Start the conversation", "Message the best matches and move forward with clearer context."],
+              ].map(([step, title, body]) => (
+                <div key={step} className="bg-white p-6 shadow-sm ring-1 ring-zinc-200">
                   <div className="flex items-start justify-between gap-5">
                     <div>
+                      <p className="mb-5 flex h-10 w-10 items-center justify-center bg-teal-700 text-sm font-black text-white">{step}</p>
                       <h3 className="text-xl font-black text-zinc-950">{title}</h3>
                       <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">{body}</p>
                     </div>
-                    <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-zinc-400 transition group-hover:translate-x-1 group-hover:text-teal-700" />
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </div>
@@ -323,7 +317,7 @@ export default function LandingPage() {
             <h2 className="mt-4 max-w-4xl text-4xl font-black leading-tight text-zinc-950 sm:text-5xl">
               Built for business owners, agencies, and Filipino remote professionals.
             </h2>
-            <div className="mt-8 max-w-5xl columns-1 gap-10 space-y-5 text-base font-medium leading-8 text-zinc-600 xl:columns-2">
+            <div className="mt-8 max-w-4xl space-y-5 text-base font-medium leading-8 text-zinc-600">
               <p>
                 TaraWork.online is built for business owners, founders, agencies, and remote teams that need dependable online talent from the Philippines. Whether you need a virtual assistant, web developer, designer, writer, customer support specialist, marketing specialist, data entry professional, bookkeeper, project coordinator, or automation expert, TaraWork gives you a focused place to find people who understand remote work and professional client service.
               </p>
@@ -332,9 +326,6 @@ export default function LandingPage() {
               </p>
               <p>
                 For freelancers and virtual assistants in the Philippines, TaraWork helps create a professional online presence that can be shared with clients. A freelancer profile is more than a basic resume. It can present skills, project examples, service packages, work style, achievements, and availability in a format designed for hiring decisions.
-              </p>
-              <p>
-                Good SEO for a freelance platform depends on clean public pages, meaningful page titles, accurate descriptions, structured internal links, and crawl rules that keep private software areas away from search engines. TaraWork separates public marketplace pages from account-only areas so search engines focus on pages that should appear in search results.
               </p>
             </div>
           </div>
