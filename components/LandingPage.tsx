@@ -101,10 +101,10 @@ export default function LandingPage() {
       >
         <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
           <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white">
-              <img src="/tarawork-removebg-preview.png" alt="TaraWork" className="h-8 w-8 object-contain" />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white sm:h-10 sm:w-10">
+              <img src="/tarawork-removebg-preview.png" alt="TaraWork" className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
             </span>
-            <span className="text-lg font-black text-white">TaraWork.online</span>
+            <span className="text-base font-black text-white sm:text-lg">TaraWork.online</span>
           </Link>
 
           <nav className="hidden items-center gap-7 lg:flex">
@@ -140,7 +140,7 @@ export default function LandingPage() {
         </div>
 
         {isMenuOpen && (
-          <div className="border-t border-white/15 bg-zinc-950 px-4 py-4 md:hidden">
+          <div className="border-t border-white/15 bg-zinc-950 px-4 py-4 shadow-2xl md:hidden">
             <div className="flex flex-col gap-2">
               {navLinks.map((link) =>
                 link.href.startsWith("#") ? (
@@ -153,7 +153,7 @@ export default function LandingPage() {
                   </Link>
                 ),
               )}
-              <Link href="/auth" className="mt-2 rounded-lg bg-white px-3 py-2 text-center text-sm font-black text-zinc-950">
+              <Link href="/auth" onClick={() => setIsMenuOpen(false)} className="mt-2 rounded-lg bg-white px-3 py-3 text-center text-sm font-black text-zinc-950">
                 Join Now
               </Link>
             </div>
@@ -162,7 +162,7 @@ export default function LandingPage() {
       </header>
 
       <main>
-        <section className="relative min-h-[92vh] w-full overflow-hidden bg-zinc-950">
+        <section className="relative min-h-[760px] w-full overflow-hidden bg-zinc-950 sm:min-h-[92vh]">
           <Image
             src={heroImage}
             alt="Filipino professionals collaborating remotely"
@@ -171,20 +171,20 @@ export default function LandingPage() {
             sizes="100vw"
             className="object-cover opacity-72"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,0.94),rgba(9,9,11,0.7),rgba(9,9,11,0.18))]" />
-          <div className="relative flex min-h-[92vh] w-full items-center px-4 pb-12 pt-28 sm:px-6 lg:px-10">
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,9,11,0.92),rgba(9,9,11,0.72),rgba(9,9,11,0.38))] sm:bg-[linear-gradient(90deg,rgba(9,9,11,0.94),rgba(9,9,11,0.7),rgba(9,9,11,0.18))]" />
+          <div className="relative flex min-h-[760px] w-full items-center px-4 pb-10 pt-24 sm:min-h-[92vh] sm:px-6 sm:pb-12 sm:pt-28 lg:px-10">
             <div className="mx-auto w-full max-w-7xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-amber-100 backdrop-blur">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100 backdrop-blur sm:px-4 sm:text-xs sm:tracking-[0.18em]">
                 <Sparkles className="h-4 w-4" />
-                Philippine remote talent marketplace
+                <span className="leading-4">Philippine remote talent marketplace</span>
               </div>
-              <h1 className="mt-7 max-w-5xl text-5xl font-black leading-[0.98] text-white sm:text-6xl lg:text-7xl">
+              <h1 className="mt-6 max-w-5xl text-4xl font-black leading-[1.04] text-white sm:mt-7 sm:text-6xl sm:leading-[0.98] lg:text-7xl">
                 Hire Filipino freelancers with clarity from the first conversation.
               </h1>
-              <p className="mt-7 max-w-2xl text-lg font-medium leading-8 text-white/82 sm:text-xl">
+              <p className="mt-5 max-w-2xl text-base font-medium leading-7 text-white/82 sm:mt-7 sm:text-xl sm:leading-8">
                 TaraWork helps employers find virtual assistants, developers, designers, writers, and support specialists through profiles that are easier to compare and easier to trust.
               </p>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row">
                 <Link href="/auth" className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-300 px-6 py-4 text-base font-black text-zinc-950 transition hover:bg-amber-200">
                   Post a Job
                   <ArrowRight className="h-5 w-5" />
@@ -193,14 +193,14 @@ export default function LandingPage() {
                   Join as a Freelancer
                 </Link>
               </div>
-              <div className="mt-12 grid max-w-4xl overflow-hidden border border-white/16 bg-white/8 backdrop-blur md:grid-cols-3">
+              <div className="mt-8 grid max-w-4xl overflow-hidden border border-white/16 bg-white/8 backdrop-blur sm:mt-12 md:grid-cols-3">
                 {[
                   ["PH-first talent", "Focused on Filipino remote professionals and practical service categories."],
                   ["Cleaner shortlists", "Compare work style, services, portfolio details, and rates in one place."],
                   ["Faster decisions", "Start conversations with clearer context before interviews or trials."],
                 ].map(([title, body]) => (
-                  <div key={title} className="border-b border-white/14 p-5 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
-                    <p className="text-sm font-black uppercase tracking-[0.16em] text-amber-200">{title}</p>
+                  <div key={title} className="border-b border-white/14 p-4 last:border-b-0 sm:p-5 md:border-b-0 md:border-r md:last:border-r-0">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-200 sm:text-sm sm:tracking-[0.16em]">{title}</p>
                     <p className="mt-3 text-sm font-semibold leading-6 text-white/72">{body}</p>
                   </div>
                 ))}
@@ -209,15 +209,15 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="w-full border-b border-zinc-200 bg-white px-4 py-12 sm:px-6 lg:px-10">
+        <section className="w-full border-b border-zinc-200 bg-white px-4 py-10 sm:px-6 sm:py-12 lg:px-10">
           <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[280px_1fr] lg:items-center">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-700">Popular categories</p>
               <p className="mt-2 text-sm font-semibold leading-6 text-zinc-500">Browse common services requested by remote-first teams.</p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               {categories.map((category) => (
-                <span key={category} className="border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-black text-zinc-800 shadow-sm">
+                <span key={category} className="flex min-h-12 items-center border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-black leading-5 text-zinc-800 shadow-sm sm:px-4">
                   {category}
                 </span>
               ))}
@@ -225,11 +225,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="features" className="w-full bg-white px-4 py-20 sm:px-6 lg:px-10">
+        <section id="features" className="scroll-mt-24 w-full bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
           <div className="mx-auto w-full max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Marketplace Workflow</p>
-              <h2 className="mt-4 text-4xl font-black leading-tight text-zinc-950 sm:text-5xl">
+              <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">
                 Simple tools for better remote hiring.
               </h2>
               <p className="mt-5 text-lg font-medium leading-8 text-zinc-600">
@@ -237,17 +237,17 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="mt-14 grid gap-6 lg:grid-cols-3">
+            <div className="mt-10 grid gap-5 sm:mt-14 lg:grid-cols-3">
               {[
                 { icon: Users, title: "Find the right fit", body: "Compare skills, services, rates, and portfolio work before starting a conversation." },
                 { icon: Briefcase, title: "Post clear work", body: "Describe the role, budget, schedule, and requirements so applicants know what matters." },
                 { icon: ShieldCheck, title: "Hire with confidence", body: "Keep your shortlist organized and review each freelancer with practical details in one place." },
               ].map((item) => (
-                <article key={item.title} className="border border-zinc-200 bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                <article key={item.title} className="border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl sm:p-8">
                   <div className="flex h-12 w-12 items-center justify-center bg-teal-50 text-teal-800">
                     <item.icon className="h-6 w-6" />
                   </div>
-                  <h3 className="mt-8 text-2xl font-black text-zinc-950">{item.title}</h3>
+                  <h3 className="mt-6 text-2xl font-black text-zinc-950 sm:mt-8">{item.title}</h3>
                   <p className="mt-3 text-base leading-7 text-zinc-600">{item.body}</p>
                 </article>
               ))}
@@ -256,7 +256,7 @@ export default function LandingPage() {
         </section>
 
         <section className="grid w-full bg-zinc-950 text-white lg:grid-cols-2">
-          <div className="relative min-h-[520px]">
+          <div className="relative min-h-[320px] sm:min-h-[420px] lg:min-h-[520px]">
             <Image
               src={collaborationImage}
               alt="Filipino team reviewing remote hiring work"
@@ -265,10 +265,10 @@ export default function LandingPage() {
               className="object-cover"
             />
           </div>
-          <div className="flex items-center px-4 py-16 sm:px-6 lg:px-14">
+          <div className="flex items-center px-4 py-14 sm:px-6 sm:py-16 lg:px-14">
             <div className="max-w-2xl">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">Why it feels professional</p>
-              <h2 className="mt-4 text-4xl font-black leading-tight sm:text-5xl">
+              <h2 className="mt-4 text-3xl font-black leading-tight sm:text-5xl">
                 Profiles and jobs are built for comparison, not clutter.
               </h2>
               <div className="mt-8 space-y-5">
@@ -287,11 +287,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="w-full bg-zinc-50 px-4 py-24 sm:px-6 lg:px-10">
+        <section id="how-it-works" className="scroll-mt-24 w-full bg-zinc-50 px-4 py-16 sm:px-6 sm:py-24 lg:px-10">
           <div className="mx-auto grid w-full max-w-7xl gap-12 xl:grid-cols-[420px_1fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">How It Works</p>
-              <h2 className="mt-4 text-4xl font-black leading-tight text-zinc-950">From job post to shortlist without the clutter.</h2>
+              <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-4xl">From job post to shortlist without the clutter.</h2>
               <p className="mt-5 text-base leading-8 text-zinc-600">
                 Start with a clear role, review freelancer profiles, then move promising matches into conversations.
               </p>
@@ -302,8 +302,8 @@ export default function LandingPage() {
                 ["2", "Review profiles", "Compare services, portfolio work, rates, and professional background."],
                 ["3", "Start the conversation", "Message the best matches and move forward with clearer context."],
               ].map(([step, title, body]) => (
-                <div key={step} className="border border-zinc-200 bg-white p-7 shadow-sm">
-                  <p className="mb-8 flex h-11 w-11 items-center justify-center bg-zinc-950 text-sm font-black text-white">{step}</p>
+                <div key={step} className="border border-zinc-200 bg-white p-6 shadow-sm sm:p-7">
+                  <p className="mb-6 flex h-11 w-11 items-center justify-center bg-zinc-950 text-sm font-black text-white sm:mb-8">{step}</p>
                   <h3 className="text-xl font-black text-zinc-950">{title}</h3>
                   <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">{body}</p>
                 </div>
@@ -313,10 +313,10 @@ export default function LandingPage() {
         </section>
 
         <section className="grid w-full bg-white lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="flex items-center px-4 py-24 sm:px-6 lg:px-10">
+          <div className="flex items-center px-4 py-16 sm:px-6 sm:py-24 lg:px-10">
             <div className="max-w-4xl">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Freelance Marketplace Philippines</p>
-              <h2 className="mt-4 max-w-4xl text-4xl font-black leading-tight text-zinc-950 sm:text-5xl">
+              <h2 className="mt-4 max-w-4xl text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">
                 Built for business owners, agencies, and Filipino remote professionals.
               </h2>
               <div className="mt-8 max-w-4xl space-y-5 text-base font-medium leading-8 text-zinc-600">
@@ -332,7 +332,7 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          <div className="relative min-h-[560px]">
+          <div className="relative min-h-[320px] sm:min-h-[420px] lg:min-h-[560px]">
             <Image
               src={workspaceImage}
               alt="Filipino virtual assistant working remotely"
@@ -343,11 +343,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="contact" className="w-full bg-teal-800 px-4 py-20 text-white sm:px-6 lg:px-10">
+        <section id="contact" className="scroll-mt-24 w-full bg-teal-800 px-4 py-16 text-white sm:px-6 sm:py-20 lg:px-10">
           <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.82fr_1.18fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Contact</p>
-              <h2 className="mt-4 text-4xl font-black sm:text-5xl">Talk to TaraWork</h2>
+              <h2 className="mt-4 text-3xl font-black sm:text-5xl">Talk to TaraWork</h2>
               <p className="mt-5 max-w-xl text-lg font-medium leading-8 text-white/78">
                 Send a message about hiring, partnerships, freelancer onboarding, or product feedback. Keep your note specific so we can route it properly.
               </p>
