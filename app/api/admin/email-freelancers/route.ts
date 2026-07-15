@@ -10,6 +10,14 @@ type EmailFreelancersBody = {
   subject?: string;
   message?: string;
   dryRun?: boolean;
+  attachment?: EmailAttachment | null;
+};
+
+type EmailAttachment = {
+  filename?: string;
+  contentType?: string;
+  contentBase64?: string;
+  size?: number;
 };
 
 type Recipient = {
@@ -20,6 +28,14 @@ type Recipient = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BATCH_SIZE = 25;
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 const sanitizeText = (value: string) => value.replace(/\s+/g, " ").trim();
 
@@ -45,6 +61,38 @@ const chunk = <T,>(items: T[], size: number) => {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
+};
+
+const normalizeAttachment = (attachment: EmailAttachment | null | undefined) => {
+  if (!attachment) return null;
+
+  const filename = sanitizeText(attachment.filename || "");
+  const contentType = sanitizeText(attachment.contentType || "");
+  const contentBase64 = typeof attachment.contentBase64 === "string" ? attachment.contentBase64.trim() : "";
+  const size = Number(attachment.size || 0);
+
+  if (!filename || !contentType || !contentBase64) {
+    throw new Error("Attachment is incomplete. Please select the file again.");
+  }
+
+  if (!ALLOWED_ATTACHMENT_TYPES.has(contentType)) {
+    throw new Error("Only PDF, JPG, PNG, WEBP, and GIF attachments are allowed.");
+  }
+
+  if (!Number.isFinite(size) || size <= 0 || size > MAX_ATTACHMENT_BYTES) {
+    throw new Error("Attachment must be 5MB or smaller.");
+  }
+
+  if (!/^[A-Za-z0-9+/=]+$/.test(contentBase64)) {
+    throw new Error("Attachment data is invalid. Please select the file again.");
+  }
+
+  return {
+    filename,
+    contentType,
+    content: Buffer.from(contentBase64, "base64"),
+    size,
+  };
 };
 
 async function getFreelancerRecipients() {
@@ -122,6 +170,7 @@ export async function POST(req: NextRequest) {
     const subject = sanitizeText(body.subject || "");
     const message = (body.message || "").trim();
     const dryRun = body.dryRun !== false;
+    const attachment = normalizeAttachment(body.attachment);
 
     const limited = rateLimit({
       key: `admin:email-freelancers:${dryRun ? "preview" : "send"}:${admin.user?.id || getClientIp(req)}`,
@@ -147,6 +196,13 @@ export async function POST(req: NextRequest) {
         recipientCount: recipients.length,
         totalFreelancers,
         missingEmailCount,
+        attachment: attachment
+          ? {
+              filename: attachment.filename,
+              contentType: attachment.contentType,
+              size: attachment.size,
+            }
+          : null,
         sampleRecipients: recipients.slice(0, 10).map((recipient) => ({
           name: recipient.name,
           email: recipient.email,
@@ -194,6 +250,15 @@ export async function POST(req: NextRequest) {
           bcc: batch.map((recipient) => recipient.email),
           subject,
           text: message,
+          attachments: attachment
+            ? [
+                {
+                  filename: attachment.filename,
+                  content: attachment.content,
+                  contentType: attachment.contentType,
+                },
+              ]
+            : undefined,
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
               <div style="max-width: 640px; margin: 0 auto;">
@@ -229,6 +294,13 @@ export async function POST(req: NextRequest) {
           subject,
           recipientCount: recipients.length,
           batchCount: mailBatches.length,
+          attachment: attachment
+            ? {
+                filename: attachment.filename,
+                contentType: attachment.contentType,
+                size: attachment.size,
+              }
+            : null,
         },
       },
     ]);
