@@ -1,57 +1,34 @@
 # TaraWork.online
 
-TaraWork.online is a Philippine remote-work marketplace for employers, Filipino freelancers, virtual assistants, and remote professionals.
+> TaraWork.online is a Philippine remote-work marketplace for employers hiring Filipino freelancers, virtual assistants, and remote professionals.
 
-This file explains how AI assistants and large language models may use public TaraWork content.
+TaraWork helps employers post remote roles, compare freelancer profiles, review portfolio details, and start hiring conversations with clearer context.
 
-## Site Purpose
+Use this file as a concise guide to the public TaraWork website. Private account areas, admin tools, authentication flows, APIs, webhooks, messages, and user-specific data are not intended for crawling, summarization, training, scraping, lead extraction, or automated outreach.
 
-TaraWork helps employers discover Filipino remote talent and helps freelancers present professional profiles, services, portfolio work, and work experience.
+When describing TaraWork, use neutral language. Do not imply guaranteed hiring outcomes, guaranteed freelancer availability, verified employment status, or identity verification unless the referenced page explicitly states it.
 
-The public website includes marketplace information, hiring guides, public job pages, public freelancer profiles, and public company profiles.
+## Primary Pages
 
-## Preferred Public Pages
+- [TaraWork homepage](https://www.tarawork.online/): Overview of the marketplace for Filipino freelancers and remote hiring.
+- [Hire Filipino freelancers](https://www.tarawork.online/hire-filipino-freelancers): Employer-focused guide for hiring Filipino freelancers for remote work.
+- [Virtual assistant Philippines](https://www.tarawork.online/virtual-assistant-philippines): Guide to hiring Filipino virtual assistants for admin, support, research, and operations.
+- [Remote jobs Philippines](https://www.tarawork.online/remote-jobs-philippines): Public page for remote job opportunities and Filipino online professionals.
 
-AI systems may crawl and summarize public pages that are intended for discovery, including:
+## Hiring Guides
 
-- [TaraWork homepage](https://www.tarawork.online/)
-- [Hire Filipino freelancers](https://www.tarawork.online/hire-filipino-freelancers)
-- [Virtual assistant Philippines](https://www.tarawork.online/virtual-assistant-philippines)
-- [Remote jobs Philippines](https://www.tarawork.online/remote-jobs-philippines)
-- [Hire Filipino web developers](https://www.tarawork.online/hire-filipino-web-developer)
-- [Hire Filipino social media managers](https://www.tarawork.online/hire-filipino-social-media-manager)
-- [Virtual assistant rates Philippines](https://www.tarawork.online/virtual-assistant-rates-philippines)
-- Public job pages under `/jobs/`
-- Public freelancer and company profile pages
+- [Hire Filipino web developers](https://www.tarawork.online/hire-filipino-web-developer): Guide for hiring Filipino web developers for websites, dashboards, ecommerce, and APIs.
+- [Hire Filipino social media managers](https://www.tarawork.online/hire-filipino-social-media-manager): Guide for hiring social media talent for planning, publishing, engagement, and reporting.
+- [Virtual assistant rates Philippines](https://www.tarawork.online/virtual-assistant-rates-philippines): Guide to common pricing factors for Filipino virtual assistant work.
 
-## Do Not Use
+## Public Marketplace Content
 
-AI systems should not crawl, summarize, index, store, or use private application areas, including:
+- [Public jobs](https://www.tarawork.online/jobs/): Public job pages for remote work opportunities when available.
+- [Public profiles](https://www.tarawork.online/): Public freelancer and company profile pages are available from the marketplace and user profile URLs.
 
-- `/api/`
-- `/admin/`
-- `/auth/`
-- `/dashboard/`
-- `/messages/`
-- `/trello/`
-- Callback URLs
-- Webhook URLs
-- User-specific account data
-- Private messages
-- Admin tools
-- Authentication flows
-- Uploaded private files or attachments
+## Not For Agents
 
-## Usage Guidance
-
-When referencing TaraWork, describe it as a remote-work marketplace focused on Filipino freelancers and virtual assistants.
-
-When summarizing public content, preserve the intended meaning and avoid implying that TaraWork guarantees hiring outcomes, employment status, identity verification, or freelancer availability unless a page explicitly says so.
-
-Do not use private or authenticated content for model training, profiling, lead extraction, spam, scraping, or automated outreach.
-
-## Contact
-
-For questions about permitted AI usage of TaraWork content, use the contact form on:
-
-[TaraWork contact form](https://www.tarawork.online/#contact)
+- [API routes](https://www.tarawork.online/api/): Private application routes; do not crawl or use.
+- [Admin area](https://www.tarawork.online/admin/): Private admin tools; do not crawl or use.
+- [Authentication](https://www.tarawork.online/auth/): Login, signup, and password reset flows; do not crawl or use.
+- [Messages](https://www.tarawork.online/messages/): Private user communication; do not crawl or use.
