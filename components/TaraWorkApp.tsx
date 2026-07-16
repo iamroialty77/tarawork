@@ -254,6 +254,7 @@ export default function TaraWorkApp() {
   const [serviceTypeFilter, setServiceTypeFilter] = useState<string>("all");
   const [talentsSort, setTalentsSort] = useState<"recommended" | "rate_low" | "rate_high">("recommended");
   const [talentRatingFilter, setTalentRatingFilter] = useState<"all" | "4" | "4.5" | "5">("all");
+  const [talentStartingRateFilter, setTalentStartingRateFilter] = useState<"all" | "5" | "8" | "12" | "20" | "20_plus">("all");
   const [visibleTalentsCount, setVisibleTalentsCount] = useState(12);
   const [selectedFreelancer, setSelectedFreelancer] = useState<UserProfile | null>(null);
   const [activeFreelancerProfileTab, setActiveFreelancerProfileTab] = useState<"overview" | "portfolio" | "feedback">("overview");
@@ -2290,8 +2291,14 @@ export default function TaraWorkApp() {
         const matchesRating =
           talentRatingFilter === "all" ||
           (rating.count > 0 && rating.average >= Number(talentRatingFilter));
+        const hourlyRate = parseHourlyRate(freelancer.hourlyRate);
+        const matchesStartingRate =
+          talentStartingRateFilter === "all" ||
+          (talentStartingRateFilter === "20_plus"
+            ? hourlyRate >= 20
+            : hourlyRate > 0 && hourlyRate <= Number(talentStartingRateFilter));
 
-        return matchesServiceType && matchesSavedFilter && matchesRating;
+        return matchesServiceType && matchesSavedFilter && matchesRating && matchesStartingRate;
       })
       .sort((a, b) => {
         if (talentsSort === "rate_low") {
@@ -2323,7 +2330,7 @@ export default function TaraWorkApp() {
 
         return bScore - aScore;
       });
-  }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter, savedTalentIds, talentRatingFilter]);
+  }, [searchedFreelancers, talentsFilter, talentsSort, serviceTypeFilter, savedTalentIds, talentRatingFilter, talentStartingRateFilter]);
 
   const visibleFreelancers = useMemo(
     () => filteredFreelancers.slice(0, visibleTalentsCount),
@@ -2334,7 +2341,7 @@ export default function TaraWorkApp() {
 
   useEffect(() => {
     setVisibleTalentsCount(12);
-  }, [debouncedFreelancerSearchTerm, serviceTypeFilter, talentsSort, talentsFilter, talentRatingFilter]);
+  }, [debouncedFreelancerSearchTerm, serviceTypeFilter, talentsSort, talentsFilter, talentRatingFilter, talentStartingRateFilter]);
 
   useEffect(() => {
     async function checkUser() {
@@ -4163,6 +4170,28 @@ export default function TaraWorkApp() {
                         </div>
                         <div>
                           <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Starting Rate
+                          </label>
+                          <select
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={talentStartingRateFilter}
+                            onChange={(e) =>
+                              setTalentStartingRateFilter(e.target.value as "all" | "5" | "8" | "12" | "20" | "20_plus")
+                            }
+                          >
+                            <option value="all">Any Rate</option>
+                            <option value="5">Up to $5/hr</option>
+                            <option value="8">Up to $8/hr</option>
+                            <option value="12">Up to $12/hr</option>
+                            <option value="20">Up to $20/hr</option>
+                            <option value="20_plus">$20+/hr</option>
+                          </select>
+                          <p className="mt-2 text-[11px] font-medium leading-5 text-slate-400">
+                            Filters by the freelancer's listed starting hourly rate.
+                          </p>
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
                             Sort
                           </label>
                     <select
@@ -4183,6 +4212,7 @@ export default function TaraWorkApp() {
                             setTalentsSort("recommended");
                             setTalentsFilter("all");
                             setTalentRatingFilter("all");
+                            setTalentStartingRateFilter("all");
                           }}
                           className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50"
                         >

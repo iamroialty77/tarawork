@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import LandingPage from "@/components/LandingPage";
 
 const TaraWorkApp = dynamic(() => import("@/components/TaraWorkApp"), {
@@ -27,20 +26,26 @@ export default function HomeEntry() {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setAuthState(data.session ? "authenticated" : "guest");
-    });
+    let subscription: { unsubscribe: () => void } | null = null;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthState(session ? "authenticated" : "guest");
+    import("@/lib/supabase").then(({ supabase }) => {
+      if (!mounted) return;
+
+      supabase.auth.getSession().then(({ data }) => {
+        if (!mounted) return;
+        setAuthState(data.session ? "authenticated" : "guest");
+      });
+
+      const authState = supabase.auth.onAuthStateChange((_event, session) => {
+        setAuthState(session ? "authenticated" : "guest");
+      });
+
+      subscription = authState.data.subscription;
     });
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 

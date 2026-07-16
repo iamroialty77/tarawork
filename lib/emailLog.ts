@@ -28,7 +28,7 @@ export async function logEmailMessage(input: EmailLogInput) {
         reply_to: input.replyTo || null,
         subject: input.subject,
         text_body: input.textBody,
-        html_body: input.htmlBody || null,
+        html_body: null,
         status: input.status || "sent",
         related_table: input.relatedTable || null,
         related_id: input.relatedId || null,

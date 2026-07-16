@@ -153,9 +153,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
       const { data: emailData } = await supabase
         .from('email_messages')
-        .select('*')
+        .select('id,type,direction,from_email,from_name,to_email,reply_to,subject,text_body,status,related_table,related_id,metadata,created_at')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(50);
       if (emailData) setEmailMessages(emailData);
 
       // Fetch Audit Logs

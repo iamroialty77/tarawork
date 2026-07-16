@@ -49,3 +49,6 @@ CREATE INDEX IF NOT EXISTS email_messages_type_created_at_idx
 
 CREATE INDEX IF NOT EXISTS email_messages_from_email_idx
   ON public.email_messages (from_email);
+
+-- Optional cleanup for existing rows if the inbox becomes heavy:
+-- UPDATE public.email_messages SET html_body = NULL WHERE html_body IS NOT NULL;
