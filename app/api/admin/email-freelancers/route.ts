@@ -1,4 +1,5 @@
 import { requireAdminUser } from "@/lib/authz";
+import { logEmailMessage } from "@/lib/emailLog";
 import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { NextRequest, NextResponse } from "next/server";
@@ -304,6 +305,30 @@ export async function POST(req: NextRequest) {
         },
       },
     ]);
+
+    await logEmailMessage({
+      type: "freelancer_announcement",
+      direction: "outbound",
+      fromEmail: smtpUser,
+      fromName,
+      toEmail: `bcc:${recipients.length} freelancers`,
+      subject,
+      textBody: message,
+      status: "sent",
+      relatedTable: "admin_audit_logs",
+      relatedId: admin.user?.id || null,
+      metadata: {
+        recipientCount: recipients.length,
+        batchCount: mailBatches.length,
+        attachment: attachment
+          ? {
+              filename: attachment.filename,
+              contentType: attachment.contentType,
+              size: attachment.size,
+            }
+          : null,
+      },
+    });
 
     return NextResponse.json({
       success: true,

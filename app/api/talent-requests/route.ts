@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
+import { logEmailMessage } from "@/lib/emailLog";
 
 export const runtime = "nodejs";
 
@@ -136,13 +137,9 @@ export async function POST(req: NextRequest) {
       ["Saved Request ID", savedId || "Not saved yet"],
     ];
 
-    await transporter.sendMail({
-      from: `"TaraWork Talent Requests" <${smtpUser}>`,
-      to: contactInbox,
-      replyTo: email,
-      subject: `New Talent Shortlist Request: ${roleNeeded}`,
-      text: `${rows.map(([label, value]) => `${label}: ${value}`).join("\n")}\n\nNotes:\n${notes}`,
-      html: `
+    const adminSubject = `New Talent Shortlist Request: ${roleNeeded}`;
+    const adminTextBody = `${rows.map(([label, value]) => `${label}: ${value}`).join("\n")}\n\nNotes:\n${notes}`;
+    const adminHtmlBody = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
           <h2 style="margin: 0 0 16px;">New Talent Shortlist Request</h2>
           <table style="border-collapse: collapse; width: 100%; max-width: 680px;">
@@ -160,22 +157,63 @@ export async function POST(req: NextRequest) {
           <p style="margin: 18px 0 8px; font-weight: 700;">Hiring Notes</p>
           <div style="white-space: pre-line; border: 1px solid #e2e8f0; padding: 14px; background: #f8fafc;">${escapeHtml(notes)}</div>
         </div>
-      `,
-    });
+      `;
 
     await transporter.sendMail({
-      from: `"TaraWork" <${smtpUser}>`,
-      to: email,
-      subject: "We received your TaraWork talent shortlist request",
-      text: `Hi ${name},\n\nWe received your request for ${roleNeeded}. We will review the role, budget, schedule, and notes you shared, then reply with next steps.\n\nTaraWork.online`,
-      html: `
+      from: `"TaraWork Talent Requests" <${smtpUser}>`,
+      to: contactInbox,
+      replyTo: email,
+      subject: adminSubject,
+      text: adminTextBody,
+      html: adminHtmlBody,
+    });
+
+    await logEmailMessage({
+      type: "talent_request",
+      direction: "inbound",
+      fromEmail: email,
+      fromName: name,
+      toEmail: contactInbox,
+      replyTo: email,
+      subject: adminSubject,
+      textBody: adminTextBody,
+      htmlBody: adminHtmlBody,
+      relatedTable: "talent_requests",
+      relatedId: savedId,
+      metadata: { roleNeeded, budget, hoursPerWeek, startDate, company },
+    });
+
+    const confirmationSubject = "We received your TaraWork talent shortlist request";
+    const confirmationTextBody = `Hi ${name},\n\nWe received your request for ${roleNeeded}. We will review the role, budget, schedule, and notes you shared, then reply with next steps.\n\nTaraWork.online`;
+    const confirmationHtmlBody = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
           <h2 style="margin: 0 0 12px;">We received your request</h2>
           <p>Hi ${escapeHtml(name)},</p>
           <p>We received your request for <strong>${escapeHtml(roleNeeded)}</strong>. We will review the role, budget, schedule, and notes you shared, then reply with next steps.</p>
           <p style="margin-top: 20px;">TaraWork.online</p>
         </div>
-      `,
+      `;
+
+    await transporter.sendMail({
+      from: `"TaraWork" <${smtpUser}>`,
+      to: email,
+      subject: confirmationSubject,
+      text: confirmationTextBody,
+      html: confirmationHtmlBody,
+    });
+
+    await logEmailMessage({
+      type: "talent_request_confirmation",
+      direction: "outbound",
+      fromEmail: smtpUser,
+      fromName: "TaraWork",
+      toEmail: email,
+      subject: confirmationSubject,
+      textBody: confirmationTextBody,
+      htmlBody: confirmationHtmlBody,
+      relatedTable: "talent_requests",
+      relatedId: savedId,
+      metadata: { roleNeeded },
     });
 
     return NextResponse.json({ success: true, id: savedId });

@@ -37,7 +37,7 @@ import {
   X
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "marketing" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 type MarketingAttachment = {
@@ -60,6 +60,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [jobs, setJobs] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [talentRequests, setTalentRequests] = useState<any[]>([]);
+  const [emailMessages, setEmailMessages] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
@@ -78,11 +79,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     conversations: { exists: false, loading: true },
     disputes: { exists: false, loading: true },
     admin_audit_logs: { exists: false, loading: true },
-    talent_requests: { exists: false, loading: true }
+    talent_requests: { exists: false, loading: true },
+    email_messages: { exists: false, loading: true }
   });
 
   const checkTableHealth = async () => {
-    const tables = ['profiles', 'jobs', 'messages', 'conversations', 'disputes', 'admin_audit_logs', 'talent_requests'];
+    const tables = ['profiles', 'jobs', 'messages', 'conversations', 'disputes', 'admin_audit_logs', 'talent_requests', 'email_messages'];
     const newStatus = { ...healthStatus };
 
     for (const table of tables) {
@@ -148,6 +150,13 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         .order('created_at', { ascending: false })
         .limit(100);
       if (requestData) setTalentRequests(requestData);
+
+      const { data: emailData } = await supabase
+        .from('email_messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (emailData) setEmailMessages(emailData);
 
       // Fetch Audit Logs
       const { data: logData } = await supabase
@@ -415,6 +424,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "jobs", label: "Marketplace", icon: Briefcase },
     { id: "disputes", label: "Disputes", icon: Scale },
     { id: "talent_requests", label: "Talent Requests", icon: Users },
+    { id: "email_messages", label: "Email Inbox", icon: Mail },
     { id: "marketing", label: "Marketing Email", icon: Mail },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
@@ -1008,6 +1018,89 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "email_messages" && (
+          <motion.div
+            key="email_messages"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]"
+          >
+            <aside className="space-y-4">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Email Activity</p>
+                <p className="mt-2 text-4xl font-black text-slate-900">{emailMessages.length}</p>
+                <p className="mt-2 text-sm font-semibold text-slate-500">Latest SMTP messages saved in the app.</p>
+              </div>
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-6">
+                <h4 className="text-sm font-black text-indigo-950">Tracked message types</h4>
+                <div className="mt-4 space-y-2 text-sm font-semibold text-indigo-800">
+                  <p>Contact form inquiries</p>
+                  <p>Talent shortlist requests</p>
+                  <p>Employer confirmations</p>
+                  <p>Freelancer announcements</p>
+                </div>
+              </div>
+            </aside>
+
+            <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+              <div className="border-b border-slate-100 p-6">
+                <h3 className="text-xl font-bold text-slate-900">Email Inbox</h3>
+                <p className="text-sm font-medium text-slate-500">Messages sent through SMTP are logged here for admin follow-up.</p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {emailMessages.length ? (
+                  emailMessages.map((message) => (
+                    <article key={message.id} className="p-6 transition hover:bg-slate-50/70">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest ${
+                              message.direction === "outbound"
+                                ? "bg-indigo-50 text-indigo-700"
+                                : "bg-teal-50 text-teal-700"
+                            }`}>
+                              {message.direction || "inbound"}
+                            </span>
+                            <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              {String(message.type || "email").replace(/_/g, " ")}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-400">
+                              {message.created_at ? new Date(message.created_at).toLocaleString() : ""}
+                            </span>
+                          </div>
+                          <h4 className="mt-3 text-lg font-black text-slate-900">{message.subject}</h4>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                            From: {message.from_name ? `${message.from_name} ` : ""}{message.from_email || "unknown"} · To: {message.to_email || "unknown"}
+                          </p>
+                        </div>
+                        {message.reply_to || message.from_email ? (
+                          <a
+                            href={`mailto:${message.reply_to || message.from_email}`}
+                            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-slate-800"
+                          >
+                            Reply
+                          </a>
+                        ) : null}
+                      </div>
+                      <p className="mt-4 whitespace-pre-line rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm font-medium leading-7 text-slate-700">
+                        {message.text_body}
+                      </p>
+                    </article>
+                  ))
+                ) : (
+                  <div className="p-12 text-center">
+                    <Mail className="mx-auto h-10 w-10 text-slate-300" />
+                    <p className="mt-4 text-sm font-semibold text-slate-400">
+                      No email messages found yet. Run the email_messages SQL setup if this table is not created.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

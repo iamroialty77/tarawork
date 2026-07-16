@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { logEmailMessage } from "@/lib/emailLog";
 
 export const runtime = "nodejs";
 
@@ -71,13 +72,9 @@ export async function POST(req: Request) {
     const safeEmail = escapeHtml(email);
     const safeMessage = escapeHtml(message).replace(/\n/g, "<br />");
 
-    await transporter.sendMail({
-      from: `"TaraWork Contact Form" <${smtpUser}>`,
-      to: contactInbox,
-      replyTo: email,
-      subject: `New Contact Us message from ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
-      html: `
+    const subject = `New Contact Us message from ${name}`;
+    const textBody = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
+    const htmlBody = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
           <h2 style="margin-bottom: 16px;">New Contact Us Message</h2>
           <p><strong>Name:</strong> ${safeName}</p>
@@ -85,7 +82,28 @@ export async function POST(req: Request) {
           <p style="margin-top: 16px;"><strong>Message:</strong></p>
           <p>${safeMessage}</p>
         </div>
-      `,
+      `;
+
+    await transporter.sendMail({
+      from: `"TaraWork Contact Form" <${smtpUser}>`,
+      to: contactInbox,
+      replyTo: email,
+      subject,
+      text: textBody,
+      html: htmlBody,
+    });
+
+    await logEmailMessage({
+      type: "contact_form",
+      direction: "inbound",
+      fromEmail: email,
+      fromName: name,
+      toEmail: contactInbox,
+      replyTo: email,
+      subject,
+      textBody,
+      htmlBody,
+      metadata: { source: "landing_contact_form" },
     });
 
     return NextResponse.json({ success: true });
