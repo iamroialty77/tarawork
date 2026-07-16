@@ -37,7 +37,7 @@ import {
   X
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "disputes" | "marketing" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 type MarketingAttachment = {
@@ -59,6 +59,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [users, setUsers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
+  const [talentRequests, setTalentRequests] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
@@ -76,11 +77,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     messages: { exists: false, loading: true },
     conversations: { exists: false, loading: true },
     disputes: { exists: false, loading: true },
-    admin_audit_logs: { exists: false, loading: true }
+    admin_audit_logs: { exists: false, loading: true },
+    talent_requests: { exists: false, loading: true }
   });
 
   const checkTableHealth = async () => {
-    const tables = ['profiles', 'jobs', 'messages', 'conversations', 'disputes', 'admin_audit_logs'];
+    const tables = ['profiles', 'jobs', 'messages', 'conversations', 'disputes', 'admin_audit_logs', 'talent_requests'];
     const newStatus = { ...healthStatus };
 
     for (const table of tables) {
@@ -139,6 +141,13 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         .select('*, escrows(amount, job_id, jobs(title))')
         .order('created_at', { ascending: false });
       if (disputeData) setDisputes(disputeData);
+
+      const { data: requestData } = await supabase
+        .from('talent_requests')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (requestData) setTalentRequests(requestData);
 
       // Fetch Audit Logs
       const { data: logData } = await supabase
@@ -405,6 +414,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "users", label: "Verification Queue", icon: ShieldCheck },
     { id: "jobs", label: "Marketplace", icon: Briefcase },
     { id: "disputes", label: "Disputes", icon: Scale },
+    { id: "talent_requests", label: "Talent Requests", icon: Users },
     { id: "marketing", label: "Marketing Email", icon: Mail },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
@@ -915,6 +925,84 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                       <tr>
                         <td colSpan={4} className="px-8 py-12 text-center text-slate-400 italic">
                           No active disputes.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "talent_requests" && (
+          <motion.div
+            key="talent_requests"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-6"
+          >
+            <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Employer Talent Requests</h3>
+                  <p className="text-sm font-medium text-slate-500">Concierge hiring leads from the free shortlist form.</p>
+                </div>
+                <div className="rounded-xl bg-teal-50 px-4 py-3 text-sm font-black text-teal-800">
+                  {talentRequests.length} requests loaded
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50/70">
+                      <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Employer</th>
+                      <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Need</th>
+                      <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Budget</th>
+                      <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Notes</th>
+                      <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {talentRequests.length ? (
+                      talentRequests.map((request) => (
+                        <tr key={request.id} className="align-top hover:bg-slate-50/50">
+                          <td className="px-6 py-5">
+                            <p className="font-black text-slate-900">{request.name || "Unknown"}</p>
+                            <a href={`mailto:${request.email}`} className="break-all text-xs font-semibold text-indigo-600 hover:underline">
+                              {request.email}
+                            </a>
+                            {request.company ? <p className="mt-1 text-xs font-semibold text-slate-500">{request.company}</p> : null}
+                          </td>
+                          <td className="px-6 py-5">
+                            <p className="font-bold text-slate-900">{request.role_needed}</p>
+                            <p className="mt-1 text-xs font-semibold text-slate-500">{request.start_date || "No start date"}</p>
+                          </td>
+                          <td className="px-6 py-5">
+                            <p className="text-sm font-bold text-slate-800">{request.budget || "Not sure"}</p>
+                            <p className="mt-1 text-xs font-semibold text-slate-500">{request.hours_per_week || "Hours not set"}</p>
+                          </td>
+                          <td className="max-w-md px-6 py-5">
+                            <p className="line-clamp-4 text-sm leading-6 text-slate-600">{request.notes}</p>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-black uppercase text-amber-700">
+                              {request.status || "new"}
+                            </span>
+                            <p className="mt-2 text-xs font-semibold text-slate-400">
+                              {request.created_at ? new Date(request.created_at).toLocaleString() : ""}
+                            </p>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center text-sm font-semibold text-slate-400">
+                          No talent requests found yet. If the table is missing, run docs/talent_requests.sql in Supabase.
                         </td>
                       </tr>
                     )}

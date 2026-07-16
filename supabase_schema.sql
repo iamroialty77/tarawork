@@ -895,3 +895,48 @@ ALTER TABLE public.trello_webhook_events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view their own Trello webhook events." ON public.trello_webhook_events;
 CREATE POLICY "Users can view their own Trello webhook events." ON public.trello_webhook_events
     FOR SELECT USING (auth.uid() = user_id);
+
+-- Employer lead capture for "Get Free Talent Shortlist"
+CREATE TABLE IF NOT EXISTS public.talent_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    company TEXT,
+    role_needed TEXT NOT NULL,
+    budget TEXT,
+    hours_per_week TEXT,
+    start_date TEXT,
+    notes TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    source TEXT NOT NULL DEFAULT 'hire_request_page',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS talent_requests_status_created_at_idx
+    ON public.talent_requests (status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS talent_requests_email_idx
+    ON public.talent_requests (email);
+
+ALTER TABLE public.talent_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage talent requests." ON public.talent_requests;
+CREATE POLICY "Admins can manage talent requests." ON public.talent_requests
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM public.profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );

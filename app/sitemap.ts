@@ -28,6 +28,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.95,
     },
     {
+      url: absoluteUrl("/hire/request"),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.96,
+    },
+    {
       url: absoluteUrl("/virtual-assistant-philippines"),
       lastModified: new Date(),
       changeFrequency: "weekly",

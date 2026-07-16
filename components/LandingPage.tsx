@@ -22,6 +22,7 @@ const workspaceImage = "/landing/filipino-remote-work.png";
 
 const navLinks = [
   { label: "Features", href: "#features" },
+  { label: "Get Shortlist", href: "/hire/request" },
   { label: "Hire Freelancers", href: "/hire-filipino-freelancers" },
   { label: "Virtual Assistants", href: "/virtual-assistant-philippines" },
   { label: "How it works", href: "#how-it-works" },
@@ -185,12 +186,12 @@ export default function LandingPage() {
                 TaraWork helps employers find virtual assistants, developers, designers, writers, and support specialists through profiles that are easier to compare and easier to trust.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row">
-                <Link href="/auth" className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-300 px-6 py-4 text-base font-black text-zinc-950 transition hover:bg-amber-200">
-                  Post a Job
+                <Link href="/hire/request" className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-300 px-6 py-4 text-base font-black text-zinc-950 transition hover:bg-amber-200">
+                  Get Free Talent Shortlist
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link href="/auth" className="inline-flex items-center justify-center rounded-lg border border-white/25 bg-white/10 px-6 py-4 text-base font-black text-white backdrop-blur transition hover:bg-white/16">
-                  Join as a Freelancer
+                  Post a Job
                 </Link>
               </div>
               <div className="mt-8 grid max-w-4xl overflow-hidden border border-white/16 bg-white/8 backdrop-blur sm:mt-12 md:grid-cols-3">
@@ -221,6 +222,26 @@ export default function LandingPage() {
                   {category}
                 </span>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="w-full bg-teal-800 px-4 py-16 text-white sm:px-6 lg:px-10">
+          <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Concierge hiring</p>
+              <h2 className="mt-4 text-3xl font-black leading-tight sm:text-5xl">
+                Not ready to post a job? Get a shortlist first.
+              </h2>
+            </div>
+            <div className="border border-white/16 bg-white/8 p-6">
+              <p className="text-base font-semibold leading-8 text-white/82">
+                Tell us the role, budget, hours, and skills you need. TaraWork can help turn that into a cleaner hiring brief and point you toward matching Filipino freelancers.
+              </p>
+              <Link href="/hire/request" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-5 py-4 text-sm font-black text-teal-900 transition hover:bg-amber-100 sm:w-auto">
+                Request a Free Shortlist
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </section>
