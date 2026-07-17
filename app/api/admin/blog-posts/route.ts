@@ -52,7 +52,9 @@ const contentToSections = (content: string) => {
 
 export async function GET(req: NextRequest) {
   const admin = await requireAdminUser();
-  if ("error" in admin) return admin.error;
+  if (admin.error) {
+    return NextResponse.json({ error: admin.error }, { status: admin.status });
+  }
 
   const limited = rateLimit({
     key: `admin:blog-posts:list:${admin.user?.id || getClientIp(req)}`,
@@ -77,7 +79,9 @@ export async function POST(req: NextRequest) {
   if (originError) return originError;
 
   const admin = await requireAdminUser();
-  if ("error" in admin) return admin.error;
+  if (admin.error) {
+    return NextResponse.json({ error: admin.error }, { status: admin.status });
+  }
 
   const limited = rateLimit({
     key: `admin:blog-posts:create:${admin.user?.id || getClientIp(req)}`,
