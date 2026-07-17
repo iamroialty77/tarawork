@@ -53,7 +53,6 @@ export async function getPublishedBlogPosts() {
       .from("blog_posts")
       .select("title,excerpt,slug,category,read_time,keyword,image_url,image_alt,content,published_at")
       .eq("status", "published")
-      .lte("published_at", new Date().toISOString())
       .order("published_at", { ascending: false });
 
     if (error || !data?.length) return blogPosts;
@@ -73,7 +72,6 @@ export async function getPublishedBlogPostBySlug(slug: string) {
       .select("title,excerpt,slug,category,read_time,keyword,image_url,image_alt,content,published_at")
       .eq("slug", slug)
       .eq("status", "published")
-      .lte("published_at", new Date().toISOString())
       .maybeSingle();
 
     if (!error && data) return mapDbPost(data as DbBlogPost);

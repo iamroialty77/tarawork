@@ -75,6 +75,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     status: "published",
     content: "",
   });
+  const [editingBlogPostId, setEditingBlogPostId] = useState<string | null>(null);
   const [blogLoading, setBlogLoading] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
@@ -449,15 +450,15 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     setBlogLoading(true);
     try {
       const response = await fetch("/api/admin/blog-posts", {
-        method: "POST",
+        method: editingBlogPostId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(blogDraft),
+        body: JSON.stringify({ ...blogDraft, id: editingBlogPostId }),
       });
       const payload = await response.json();
 
       if (!response.ok) throw new Error(payload?.error || "Unable to publish blog post.");
 
-      notify("Blog post saved.");
+      notify(editingBlogPostId ? "Blog post updated." : "Blog post saved.");
       setBlogDraft({
         title: "",
         excerpt: "",
@@ -470,9 +471,49 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         status: "published",
         content: "",
       });
+      setEditingBlogPostId(null);
       fetchData();
     } catch (error: any) {
       notify(error?.message || "Unable to publish blog post.");
+    } finally {
+      setBlogLoading(false);
+    }
+  };
+
+  const editBlogPost = (post: any) => {
+    setEditingBlogPostId(post.id);
+    setBlogDraft({
+      title: post.title || "",
+      excerpt: post.excerpt || "",
+      category: post.category || "Employer Hiring Guides",
+      imageUrl: post.image_url || "/landing/filipino-hero.png",
+      imageAlt: post.image_alt || "",
+      keyword: post.keyword || "",
+      readTime: post.read_time || "5 min read",
+      publishedAt: post.published_at ? new Date(post.published_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+      status: post.status || "published",
+      content: post.content_text || "",
+    });
+    notify("Blog post loaded for editing.");
+  };
+
+  const deleteBlogPost = async (postId: string) => {
+    if (!confirm("Delete this blog post permanently?")) return;
+
+    setBlogLoading(true);
+    try {
+      const response = await fetch(`/api/admin/blog-posts?id=${encodeURIComponent(postId)}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json();
+
+      if (!response.ok) throw new Error(payload?.error || "Unable to delete blog post.");
+
+      notify("Blog post deleted.");
+      if (editingBlogPostId === postId) setEditingBlogPostId(null);
+      fetchData();
+    } catch (error: any) {
+      notify(error?.message || "Unable to delete blog post.");
     } finally {
       setBlogLoading(false);
     }
@@ -1183,7 +1224,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-slate-900">Blog Studio</h3>
-                    <p className="text-sm font-medium text-slate-500">Create publishable articles for the public blog section.</p>
+                    <p className="text-sm font-medium text-slate-500">
+                      {editingBlogPostId ? "Edit the selected public article." : "Create publishable articles for the public blog section."}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1295,8 +1338,31 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   disabled={blogLoading}
                   className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-slate-800 disabled:opacity-50"
                 >
-                  {blogLoading ? "Saving..." : "Save Blog Post"}
+                  {blogLoading ? "Saving..." : editingBlogPostId ? "Update Blog Post" : "Save Blog Post"}
                 </button>
+                {editingBlogPostId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingBlogPostId(null);
+                      setBlogDraft({
+                        title: "",
+                        excerpt: "",
+                        category: "Employer Hiring Guides",
+                        imageUrl: "/landing/filipino-hero.png",
+                        imageAlt: "",
+                        keyword: "",
+                        readTime: "5 min read",
+                        publishedAt: new Date().toISOString().slice(0, 10),
+                        status: "published",
+                        content: "",
+                      });
+                    }}
+                    className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1320,6 +1386,22 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                             Open public post
                           </a>
                         ) : null}
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => editBlogPost(post)}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteBlogPost(post.id)}
+                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-700 hover:bg-rose-100"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ))
                   ) : (
