@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { absoluteUrl, defaultOgImage, defaultSeoDescription, seoKeywords, siteName, siteUrl } from "@/lib/seo";
 import "./globals.css";
 
@@ -148,6 +149,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         {children}
+        <GoogleAnalytics />
         <Analytics />
         <SpeedInsights />
       </body>
