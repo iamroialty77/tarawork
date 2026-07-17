@@ -67,7 +67,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     title: "",
     excerpt: "",
     category: "Employer Hiring Guides",
-    imageUrl: "/landing/filipino-hero.png",
+    imageUrl: "",
     imageAlt: "",
     keyword: "",
     readTime: "5 min read",
@@ -463,7 +463,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         title: "",
         excerpt: "",
         category: "Employer Hiring Guides",
-        imageUrl: "/landing/filipino-hero.png",
+        imageUrl: "",
         imageAlt: "",
         keyword: "",
         readTime: "5 min read",
@@ -486,7 +486,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       title: post.title || "",
       excerpt: post.excerpt || "",
       category: post.category || "Employer Hiring Guides",
-      imageUrl: post.image_url || "/landing/filipino-hero.png",
+      imageUrl: post.image_url || "",
       imageAlt: post.image_alt || "",
       keyword: post.keyword || "",
       readTime: post.read_time || "5 min read",
@@ -1269,13 +1269,14 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Image URL</label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Canva Image Link</label>
                     <input
                       value={blogDraft.imageUrl}
                       onChange={(event) => setBlogDraft((draft) => ({ ...draft, imageUrl: event.target.value }))}
                       className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                      placeholder="/landing/filipino-hero.png"
+                      placeholder="https://...canva.com/..."
                     />
+                    <p className="mt-2 text-xs font-semibold text-slate-400">Paste the direct Canva image URL used for this blog card and article hero.</p>
                   </div>
                   <div>
                     <label className="text-xs font-black uppercase tracking-widest text-slate-500">Image Description</label>
@@ -1349,7 +1350,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                         title: "",
                         excerpt: "",
                         category: "Employer Hiring Guides",
-                        imageUrl: "/landing/filipino-hero.png",
+                        imageUrl: "",
                         imageAlt: "",
                         keyword: "",
                         readTime: "5 min read",

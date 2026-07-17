@@ -124,8 +124,12 @@ export async function POST(req: NextRequest) {
     const content = String(body.content || "").trim().slice(0, 12000);
     const publishedAt = body.publishedAt ? new Date(body.publishedAt) : new Date();
 
-    if (!title || !excerpt || !content) {
-      return NextResponse.json({ error: "Title, excerpt, and content are required." }, { status: 400 });
+    if (!title || !excerpt || !imageUrl || !content) {
+      return NextResponse.json({ error: "Title, excerpt, Canva image link, and content are required." }, { status: 400 });
+    }
+
+    if (!/^https:\/\/.+/i.test(imageUrl)) {
+      return NextResponse.json({ error: "Use a valid https Canva image link." }, { status: 400 });
     }
 
     if (!blogCategories.includes(category)) {
@@ -148,7 +152,7 @@ export async function POST(req: NextRequest) {
           slug,
           excerpt,
           category,
-          image_url: imageUrl || "/landing/filipino-hero.png",
+          image_url: imageUrl,
           image_alt: imageAlt,
           keyword,
           read_time: readTime,
@@ -198,8 +202,12 @@ export async function PUT(req: NextRequest) {
     const content = String(body.content || "").trim().slice(0, 12000);
     const publishedAt = body.publishedAt ? new Date(body.publishedAt) : new Date();
 
-    if (!id || !title || !excerpt || !content) {
-      return NextResponse.json({ error: "Post id, title, excerpt, and content are required." }, { status: 400 });
+    if (!id || !title || !excerpt || !imageUrl || !content) {
+      return NextResponse.json({ error: "Post id, title, excerpt, Canva image link, and content are required." }, { status: 400 });
+    }
+
+    if (!/^https:\/\/.+/i.test(imageUrl)) {
+      return NextResponse.json({ error: "Use a valid https Canva image link." }, { status: 400 });
     }
 
     if (!blogCategories.includes(category)) {
@@ -216,7 +224,7 @@ export async function PUT(req: NextRequest) {
         title,
         excerpt,
         category,
-        image_url: imageUrl || "/landing/filipino-hero.png",
+        image_url: imageUrl,
         image_alt: imageAlt,
         keyword,
         read_time: readTime,

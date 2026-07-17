@@ -30,7 +30,7 @@ const mapDbPost = (post: DbBlogPost): BlogPost => {
     slug: post.slug,
     href: `/blog/${post.slug}`,
     sourceHref: `/blog/${post.slug}`,
-    image: post.image_url || "/landing/filipino-hero.png",
+    image: post.image_url || "",
     imageAlt: post.image_alt || post.title,
     category: post.category,
     readTime: post.read_time || "5 min read",
