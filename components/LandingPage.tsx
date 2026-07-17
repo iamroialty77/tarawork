@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowRight,
+  BookOpen,
   Briefcase,
   CheckCircle2,
   Mail,
@@ -15,6 +16,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { featuredBlogPosts } from "@/lib/blog";
 
 const heroImage = "/landing/filipino-hero.png";
 const collaborationImage = "/landing/filipino-collaboration.png";
@@ -25,6 +27,7 @@ const navLinks = [
   { label: "Get Shortlist", href: "/hire/request" },
   { label: "Hire Freelancers", href: "/hire-filipino-freelancers" },
   { label: "Virtual Assistants", href: "/virtual-assistant-philippines" },
+  { label: "Blog", href: "/blog" },
   { label: "How it works", href: "#how-it-works" },
   { label: "Contact", href: "#contact" },
 ];
@@ -361,6 +364,46 @@ export default function LandingPage() {
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
             />
+          </div>
+        </section>
+
+        <section className="w-full border-y border-zinc-200 bg-zinc-50 px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">TaraWork Blog</p>
+                <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">
+                  Professional guides for hiring and remote work SEO.
+                </h2>
+                <p className="mt-5 text-base font-medium leading-8 text-zinc-600">
+                  Organized articles for employers hiring Filipino freelancers and for Filipino professionals building stronger remote work profiles.
+                </p>
+              </div>
+              <Link href="/blog" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-5 py-4 text-sm font-black text-white transition hover:bg-zinc-800 sm:w-auto">
+                View All Guides
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="mt-10 grid gap-5 lg:grid-cols-3">
+              {featuredBlogPosts.map((post) => (
+                <article key={post.href} className="border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                  <div className="flex h-11 w-11 items-center justify-center bg-teal-50 text-teal-800">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <p className="mt-6 text-[10px] font-black uppercase tracking-[0.2em] text-teal-700">{post.category}</p>
+                  <h3 className="mt-3 text-2xl font-black leading-tight text-zinc-950">{post.title}</h3>
+                  <p className="mt-3 text-sm font-medium leading-7 text-zinc-600">{post.excerpt}</p>
+                  <div className="mt-6 flex items-center justify-between gap-4">
+                    <span className="text-xs font-bold text-zinc-400">{post.readTime}</span>
+                    <Link href={post.href} className="inline-flex items-center gap-2 text-sm font-black text-teal-800 hover:text-teal-950">
+                      Read
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
