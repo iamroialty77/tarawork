@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Briefcase, Search, Users } from "lucide-react";
 import { absoluteUrl, defaultOgImage, siteName } from "@/lib/seo";
-import { blogCategories, blogPosts } from "@/lib/blog";
+import { blogCategories } from "@/lib/blog";
+import { getPublishedBlogPosts } from "@/lib/blogData";
 
 const title = "TaraWork Blog";
 const description =
@@ -45,7 +46,9 @@ const categoryIcons = {
   "Freelancer Career Tips": BookOpen,
 };
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const blogPosts = await getPublishedBlogPosts();
+
   return (
     <main className="min-h-screen bg-white text-zinc-950">
       <header className="border-b border-zinc-200 bg-white">

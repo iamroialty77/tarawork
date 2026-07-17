@@ -34,10 +34,11 @@ import {
   Scale,
   Mail,
   Paperclip,
-  X
+  X,
+  BookOpen
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "marketing" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "blog" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 type MarketingAttachment = {
@@ -61,6 +62,20 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [disputes, setDisputes] = useState<any[]>([]);
   const [talentRequests, setTalentRequests] = useState<any[]>([]);
   const [emailMessages, setEmailMessages] = useState<any[]>([]);
+  const [blogPostsAdmin, setBlogPostsAdmin] = useState<any[]>([]);
+  const [blogDraft, setBlogDraft] = useState({
+    title: "",
+    excerpt: "",
+    category: "Employer Hiring Guides",
+    imageUrl: "/landing/filipino-hero.png",
+    imageAlt: "",
+    keyword: "",
+    readTime: "5 min read",
+    publishedAt: new Date().toISOString().slice(0, 10),
+    status: "published",
+    content: "",
+  });
+  const [blogLoading, setBlogLoading] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
@@ -80,11 +95,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     disputes: { exists: false, loading: true },
     admin_audit_logs: { exists: false, loading: true },
     talent_requests: { exists: false, loading: true },
-    email_messages: { exists: false, loading: true }
+    email_messages: { exists: false, loading: true },
+    blog_posts: { exists: false, loading: true }
   });
 
   const checkTableHealth = async () => {
-    const tables = ['profiles', 'jobs', 'messages', 'conversations', 'disputes', 'admin_audit_logs', 'talent_requests', 'email_messages'];
+    const tables = ['profiles', 'jobs', 'messages', 'conversations', 'disputes', 'admin_audit_logs', 'talent_requests', 'email_messages', 'blog_posts'];
     const newStatus = { ...healthStatus };
 
     for (const table of tables) {
@@ -157,6 +173,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         .order('created_at', { ascending: false })
         .limit(50);
       if (emailData) setEmailMessages(emailData);
+
+      const blogResponse = await fetch("/api/admin/blog-posts", { cache: "no-store" });
+      if (blogResponse.ok) {
+        const payload = await blogResponse.json();
+        setBlogPostsAdmin(Array.isArray(payload.posts) ? payload.posts : []);
+      }
 
       // Fetch Audit Logs
       const { data: logData } = await supabase
@@ -418,6 +440,44 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     notify("Attachment added.");
   };
 
+  const submitBlogPost = async () => {
+    if (!blogDraft.title.trim() || !blogDraft.excerpt.trim() || !blogDraft.content.trim()) {
+      notify("Title, excerpt, and content are required.");
+      return;
+    }
+
+    setBlogLoading(true);
+    try {
+      const response = await fetch("/api/admin/blog-posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(blogDraft),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) throw new Error(payload?.error || "Unable to publish blog post.");
+
+      notify("Blog post saved.");
+      setBlogDraft({
+        title: "",
+        excerpt: "",
+        category: "Employer Hiring Guides",
+        imageUrl: "/landing/filipino-hero.png",
+        imageAlt: "",
+        keyword: "",
+        readTime: "5 min read",
+        publishedAt: new Date().toISOString().slice(0, 10),
+        status: "published",
+        content: "",
+      });
+      fetchData();
+    } catch (error: any) {
+      notify(error?.message || "Unable to publish blog post.");
+    } finally {
+      setBlogLoading(false);
+    }
+  };
+
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "users", label: "Verification Queue", icon: ShieldCheck },
@@ -425,6 +485,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "disputes", label: "Disputes", icon: Scale },
     { id: "talent_requests", label: "Talent Requests", icon: Users },
     { id: "email_messages", label: "Email Inbox", icon: Mail },
+    { id: "blog", label: "Blog Studio", icon: BookOpen },
     { id: "marketing", label: "Marketing Email", icon: Mail },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
@@ -1103,6 +1164,172 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                 )}
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === "blog" && (
+          <motion.div
+            key="blog"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]"
+          >
+            <div className="rounded-2xl border border-slate-100 bg-white shadow-sm">
+              <div className="border-b border-slate-100 p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Blog Studio</h3>
+                    <p className="text-sm font-medium text-slate-500">Create publishable articles for the public blog section.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-5 p-8">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Title</label>
+                    <input
+                      value={blogDraft.title}
+                      onChange={(event) => setBlogDraft((draft) => ({ ...draft, title: event.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                      placeholder="Example: How to Hire a Filipino Virtual Assistant"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Category</label>
+                    <select
+                      value={blogDraft.category}
+                      onChange={(event) => setBlogDraft((draft) => ({ ...draft, category: event.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                    >
+                      {["Employer Hiring Guides", "Remote Jobs for Filipinos", "Virtual Assistant Guides", "Freelancer Career Tips"].map((category) => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Excerpt</label>
+                  <textarea
+                    value={blogDraft.excerpt}
+                    onChange={(event) => setBlogDraft((draft) => ({ ...draft, excerpt: event.target.value }))}
+                    rows={3}
+                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold leading-relaxed outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                    placeholder="Short summary that appears on the blog card and social preview."
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Image URL</label>
+                    <input
+                      value={blogDraft.imageUrl}
+                      onChange={(event) => setBlogDraft((draft) => ({ ...draft, imageUrl: event.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                      placeholder="/landing/filipino-hero.png"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Image Description</label>
+                    <input
+                      value={blogDraft.imageAlt}
+                      onChange={(event) => setBlogDraft((draft) => ({ ...draft, imageAlt: event.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                      placeholder="Describe the blog image"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Topic Keyword</label>
+                    <input
+                      value={blogDraft.keyword}
+                      onChange={(event) => setBlogDraft((draft) => ({ ...draft, keyword: event.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                      placeholder="remote jobs for Filipinos"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Publish Date</label>
+                    <input
+                      type="date"
+                      value={blogDraft.publishedAt}
+                      onChange={(event) => setBlogDraft((draft) => ({ ...draft, publishedAt: event.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Status</label>
+                    <select
+                      value={blogDraft.status}
+                      onChange={(event) => setBlogDraft((draft) => ({ ...draft, status: event.target.value }))}
+                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                    >
+                      <option value="published">Published</option>
+                      <option value="draft">Draft</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Article Content</label>
+                  <textarea
+                    value={blogDraft.content}
+                    onChange={(event) => setBlogDraft((draft) => ({ ...draft, content: event.target.value }))}
+                    rows={14}
+                    className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold leading-relaxed outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                    placeholder={"Heading one\nWrite the first section here.\n\nHeading two\nWrite the second section here."}
+                  />
+                  <p className="mt-2 text-xs font-semibold text-slate-400">Separate sections with a blank line. First line becomes the section heading.</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={submitBlogPost}
+                  disabled={blogLoading}
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {blogLoading ? "Saving..." : "Save Blog Post"}
+                </button>
+              </div>
+            </div>
+
+            <aside className="space-y-5">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Published Flow</h4>
+                <p className="mt-3 text-sm font-semibold leading-7 text-slate-600">
+                  Published posts appear on the Blog page, landing page blog cards, and share previews.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Recent Posts</h4>
+                <div className="mt-4 space-y-3">
+                  {blogPostsAdmin.length ? (
+                    blogPostsAdmin.slice(0, 8).map((post) => (
+                      <div key={post.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                        <p className="text-sm font-black text-slate-900">{post.title}</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500">{post.status} · {post.published_at ? new Date(post.published_at).toLocaleDateString() : ""}</p>
+                        {post.status === "published" ? (
+                          <a href={`/blog/${post.slug}`} target="_blank" className="mt-3 inline-flex text-xs font-black text-teal-700 hover:underline">
+                            Open public post
+                          </a>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="rounded-xl bg-slate-50 p-4 text-xs font-semibold text-slate-500">
+                      No database posts yet. Run docs/blog_posts.sql if the table is missing.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </aside>
           </motion.div>
         )}
 

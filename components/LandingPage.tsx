@@ -373,7 +373,7 @@ export default function LandingPage() {
               <div className="max-w-3xl">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">TaraWork Blog</p>
                 <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">
-                  Professional guides for hiring and remote work SEO.
+                  Professional guides for hiring and remote work.
                 </h2>
                 <p className="mt-5 text-base font-medium leading-8 text-zinc-600">
                   Organized articles for employers hiring Filipino freelancers and for Filipino professionals building stronger remote work profiles.

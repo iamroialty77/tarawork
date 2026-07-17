@@ -5,12 +5,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { absoluteUrl, siteName } from "@/lib/seo";
 import { blogPosts } from "@/lib/blog";
+import { getPublishedBlogPostBySlug, getPublishedBlogPosts } from "@/lib/blogData";
 
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
 };
-
-const getPost = (slug: string) => blogPosts.find((post) => post.slug === slug);
 
 export function generateStaticParams() {
   return blogPosts.map((post) => ({ slug: post.slug }));
@@ -18,7 +17,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPublishedBlogPostBySlug(slug);
 
   if (!post) {
     return {
@@ -52,11 +51,12 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPublishedBlogPostBySlug(slug);
 
   if (!post) notFound();
 
-  const relatedPosts = blogPosts
+  const allPosts = await getPublishedBlogPosts();
+  const relatedPosts = allPosts
     .filter((item) => item.category === post.category && item.slug !== post.slug)
     .slice(0, 2);
 
@@ -123,7 +123,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link href={post.sourceHref} className="inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-100">
-                    View SEO Guide
+                    View related guide
                   </Link>
                 </div>
               </div>

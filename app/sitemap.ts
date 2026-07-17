@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { createJobShareToken } from "@/lib/jobShare";
 import { absoluteUrl } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase_admin";
-import { blogPosts } from "@/lib/blog";
+import { getPublishedBlogPosts } from "@/lib/blogData";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +108,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const blogRoutes: SitemapEntry[] = blogPosts.map((post) => ({
+  const publishedBlogPosts = await getPublishedBlogPosts();
+  const blogRoutes: SitemapEntry[] = publishedBlogPosts.map((post) => ({
     url: absoluteUrl(post.href),
     lastModified: new Date(),
     changeFrequency: "monthly",
