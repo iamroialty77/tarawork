@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { createJobShareToken } from "@/lib/jobShare";
 import { absoluteUrl } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase_admin";
+import { blogPosts } from "@/lib/blog";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
+  const blogRoutes: SitemapEntry[] = blogPosts.map((post) => ({
+    url: absoluteUrl(post.href),
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.78,
+  }));
+
   const [{ data: jobs }, { data: profiles }] = await Promise.all([
     supabaseAdmin
       .from("jobs")
@@ -146,5 +154,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-  return [...staticRoutes, ...jobRoutes, ...profileRoutes];
+  return [...staticRoutes, ...blogRoutes, ...jobRoutes, ...profileRoutes];
 }

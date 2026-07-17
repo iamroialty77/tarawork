@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Briefcase, Search, Users } from "lucide-react";
 import { absoluteUrl, defaultOgImage, siteName } from "@/lib/seo";
@@ -99,16 +100,21 @@ export default function BlogPage() {
                   {blogPosts
                     .filter((post) => post.category === category)
                     .map((post) => (
-                      <article key={post.href} className="border border-zinc-200 bg-white p-6 shadow-sm">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-700">{post.keyword}</p>
-                        <h3 className="mt-3 text-2xl font-black leading-tight text-zinc-950">{post.title}</h3>
-                        <p className="mt-3 text-sm font-medium leading-7 text-zinc-600">{post.excerpt}</p>
-                        <div className="mt-6 flex items-center justify-between gap-4">
-                          <span className="text-xs font-bold text-zinc-400">{post.readTime}</span>
-                          <Link href={post.href} className="inline-flex items-center gap-2 text-sm font-black text-teal-800 hover:text-teal-950">
-                            Read guide
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
+                      <article key={post.href} className="overflow-hidden border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                        <div className="relative min-h-[220px]">
+                          <Image src={post.image} alt={post.imageAlt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+                        </div>
+                        <div className="p-6">
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-700">{post.keyword}</p>
+                          <h3 className="mt-3 text-2xl font-black leading-tight text-zinc-950">{post.title}</h3>
+                          <p className="mt-3 text-sm font-medium leading-7 text-zinc-600">{post.excerpt}</p>
+                          <div className="mt-6 flex items-center justify-between gap-4">
+                            <span className="text-xs font-bold text-zinc-400">{post.readTime}</span>
+                            <Link href={post.href} className="inline-flex items-center gap-2 text-sm font-black text-teal-800 hover:text-teal-950">
+                              Read More
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          </div>
                         </div>
                       </article>
                     ))}
