@@ -1,5 +1,6 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase_admin";
-import { blogPosts, type BlogCategory, type BlogPost } from "@/lib/blog";
+import type { BlogCategory, BlogPost } from "@/lib/blog";
 
 type DbBlogPost = {
   title: string;
@@ -48,6 +49,8 @@ const mapDbPost = (post: DbBlogPost): BlogPost => {
 };
 
 export async function getPublishedBlogPosts() {
+  noStore();
+
   try {
     const { data, error } = await supabaseAdmin
       .from("blog_posts")
@@ -55,17 +58,17 @@ export async function getPublishedBlogPosts() {
       .eq("status", "published")
       .order("published_at", { ascending: false });
 
-    if (error || !data?.length) return blogPosts;
+    if (error || !data?.length) return [];
 
-    const dynamicPosts = (data as DbBlogPost[]).map(mapDbPost);
-    const fallbackPosts = blogPosts.filter((fallback) => !dynamicPosts.some((post) => post.slug === fallback.slug));
-    return [...dynamicPosts, ...fallbackPosts];
+    return (data as DbBlogPost[]).map(mapDbPost);
   } catch {
-    return blogPosts;
+    return [];
   }
 }
 
 export async function getPublishedBlogPostBySlug(slug: string) {
+  noStore();
+
   try {
     const { data, error } = await supabaseAdmin
       .from("blog_posts")
@@ -76,8 +79,8 @@ export async function getPublishedBlogPostBySlug(slug: string) {
 
     if (!error && data) return mapDbPost(data as DbBlogPost);
   } catch {
-    // Fall back to bundled posts below.
+    // Return null so public blog pages only use database posts.
   }
 
-  return blogPosts.find((post) => post.slug === slug) || null;
+  return null;
 }

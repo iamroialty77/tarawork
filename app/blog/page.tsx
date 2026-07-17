@@ -10,6 +10,9 @@ const title = "TaraWork Blog";
 const description =
   "Professional guides about remote jobs for Filipinos, hiring Filipino freelancers, virtual assistants in the Philippines, and freelance career growth.";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "TaraWork Blog | Remote Jobs, Filipino Freelancers, and Hiring Guides",
   description,

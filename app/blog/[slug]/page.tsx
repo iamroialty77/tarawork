@@ -1,19 +1,83 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Clock, Facebook, Link2 } from "lucide-react";
 import { absoluteUrl, siteName } from "@/lib/seo";
-import { blogPosts } from "@/lib/blog";
 import { getPublishedBlogPostBySlug, getPublishedBlogPosts } from "@/lib/blogData";
 
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export function generateStaticParams() {
-  return blogPosts.map((post) => ({ slug: post.slug }));
+  return [];
 }
+
+const renderInlineContent = (text: string) => {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > cursor) nodes.push(text.slice(cursor, match.index));
+
+    const token = match[0];
+    if (token.startsWith("**") && token.endsWith("**")) {
+      nodes.push(<strong key={`${token}-${match.index}`} className="font-black text-zinc-900">{token.slice(2, -2)}</strong>);
+    } else if (token.startsWith("*") && token.endsWith("*")) {
+      nodes.push(<em key={`${token}-${match.index}`} className="text-zinc-800">{token.slice(1, -1)}</em>);
+    } else {
+      const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (linkMatch) {
+        nodes.push(
+          <a
+            key={`${token}-${match.index}`}
+            href={linkMatch[2]}
+            target={linkMatch[2].startsWith("http") ? "_blank" : undefined}
+            rel={linkMatch[2].startsWith("http") ? "noreferrer" : undefined}
+            className="font-black text-teal-800 underline decoration-teal-200 underline-offset-4 hover:text-teal-950"
+          >
+            {linkMatch[1]}
+          </a>,
+        );
+      } else {
+        nodes.push(token);
+      }
+    }
+
+    cursor = match.index + token.length;
+  }
+
+  if (cursor < text.length) nodes.push(text.slice(cursor));
+  return nodes;
+};
+
+const renderBodyBlocks = (body: string) =>
+  body
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      if (line.startsWith("### ")) {
+        return (
+          <h3 key={`${line}-${index}`} className="mt-8 text-2xl font-black leading-tight text-zinc-950">
+            {line.slice(4)}
+          </h3>
+        );
+      }
+
+      return (
+        <p key={`${line}-${index}`} className="mt-5 text-lg font-medium leading-9 text-zinc-600">
+          {renderInlineContent(line)}
+        </p>
+      );
+    });
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -129,7 +193,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 {post.content.map((section) => (
                   <section key={section.heading} className="border-b border-zinc-200 pb-12 last:border-b-0">
                     <h2 className="text-3xl font-black leading-tight text-zinc-950 sm:text-4xl">{section.heading}</h2>
-                    <p className="mt-5 text-lg font-medium leading-9 text-zinc-600">{section.body}</p>
+                    {renderBodyBlocks(section.body)}
                   </section>
                 ))}
               </div>
