@@ -631,57 +631,67 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] py-8 px-4 sm:px-6 lg:px-10">
-      {/* Top Header */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Admin Console</h1>
-          <p className="text-slate-500 font-medium mt-1">Review, moderate, and manage Tara platform operations.</p>
+    <div className="min-h-screen bg-[#f4f6fa] lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="hidden min-h-screen border-r border-slate-800 bg-[#111827] px-4 py-6 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
+        <div className="flex items-center gap-3 px-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500 shadow-lg shadow-indigo-950/40"><Shield className="h-5 w-5" /></div>
+          <div><p className="text-base font-black tracking-tight">TaraWork</p><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Administration</p></div>
         </div>
+        <div className="my-6 h-px bg-slate-800" />
+        <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Workspace</p>
+        <nav className="space-y-1">
+          {navItems.map((item) => <button key={item.id} onClick={() => setActiveTab(item.id as TabType)} className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition ${activeTab === item.id ? "bg-indigo-500 text-white shadow-lg shadow-indigo-950/30" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}><item.icon className="h-[18px] w-[18px]" /><span className="flex-1">{item.label}</span>{activeTab === item.id && <ChevronRight className="h-4 w-4 opacity-70" />}</button>)}
+        </nav>
+        <div className="mt-auto rounded-2xl border border-slate-700/70 bg-slate-800/60 p-4"><div className="flex items-center gap-2"><span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" /></span><p className="text-xs font-bold text-slate-200">Systems operational</p></div><p className="mt-2 text-[11px] leading-5 text-slate-500">Admin access is protected and activity is logged.</p></div>
+      </aside>
 
-        <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
+      <main className="min-w-0">
+      <header className="border-b border-slate-200 bg-white/90 px-4 py-5 backdrop-blur sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div><div className="flex items-center gap-2 text-xs font-bold text-slate-400"><span>Admin</span><ChevronRight className="h-3.5 w-3.5" /><span className="text-indigo-600">{navItems.find((item) => item.id === activeTab)?.label}</span></div><h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{navItems.find((item) => item.id === activeTab)?.label}</h1><p className="mt-1 text-sm font-medium text-slate-500">Manage TaraWork operations from one secure workspace.</p></div>
+          <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
           {onViewAsChange && (
-            <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-2 xl:w-auto">
-              <span className="px-2 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700">View As</span>
+            <div className="flex w-full flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 xl:w-auto">
+              <span className="px-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Preview as</span>
               <button
                 type="button"
                 onClick={() => onViewAsChange("freelancer")}
-                className={`rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] transition-all ${
-                  viewAs === "freelancer" ? "bg-indigo-600 text-white" : "bg-white text-indigo-700 border border-indigo-100"
+                className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                  viewAs === "freelancer" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                Freelancer Mode
+                Freelancer
               </button>
               <button
                 type="button"
                 onClick={() => onViewAsChange("client")}
-                className={`rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] transition-all ${
-                  viewAs === "client" ? "bg-indigo-600 text-white" : "bg-white text-indigo-700 border border-indigo-100"
+                className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                  viewAs === "client" ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                Hirer Mode
+                Hirer
               </button>
               <button
                 type="button"
                 onClick={() => onViewAsChange("admin")}
-                className={`rounded-xl px-3 py-1.5 text-xs font-black uppercase tracking-[0.15em] transition-all ${
-                  viewAs === "admin" ? "bg-slate-900 text-white" : "bg-white text-slate-700 border border-slate-200"
+                className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                  viewAs === "admin" ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                Admin Mode
+                Admin
               </button>
             </div>
           )}
 
-          <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm xl:w-auto">
+          <div className="flex w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1 lg:hidden">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as TabType)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold transition ${
                   activeTab === item.id 
-                    ? "bg-slate-900 text-white shadow-lg" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-white text-indigo-700 shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 <item.icon className="w-4 h-4" />
@@ -690,7 +700,10 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
 
       <AnimatePresence mode="wait">
         {activeTab === "overview" && (
@@ -702,23 +715,24 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             className="space-y-8"
           >
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
               {[
-                { label: "Total Platform Users", value: counts.users, icon: Users, color: "indigo" },
-                { label: "Job Posts", value: counts.jobs, icon: Briefcase, color: "emerald" },
-                { label: "Employers", value: counts.employers, icon: UserCheck, color: "amber" },
-                { label: "Freelancers", value: counts.freelancers, icon: ShieldCheck, color: "purple" },
-                { label: "Active Disputes", value: counts.disputes, icon: AlertTriangle, color: "red" },
+                { label: "Platform Users", value: counts.users, icon: Users, style: "bg-indigo-50 text-indigo-600" },
+                { label: "Job Posts", value: counts.jobs, icon: Briefcase, style: "bg-emerald-50 text-emerald-600" },
+                { label: "Employers", value: counts.employers, icon: UserCheck, style: "bg-amber-50 text-amber-600" },
+                { label: "Freelancers", value: counts.freelancers, icon: ShieldCheck, style: "bg-violet-50 text-violet-600" },
+                { label: "Active Disputes", value: counts.disputes, icon: AlertTriangle, style: "bg-rose-50 text-rose-600" },
               ].map((stat, i) => (
-                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <div className={`p-3 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600`}>
-                      <stat.icon className="w-6 h-6" />
+                <div key={i} className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-start justify-between">
+                    <div className={`rounded-xl p-2.5 ${stat.style}`}>
+                      <stat.icon className="h-5 w-5" />
                     </div>
+                    <ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-indigo-500" />
                   </div>
-                  <div className="mt-4">
-                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
-                    <h3 className="text-3xl font-black text-slate-900 mt-1">{stat.value.toLocaleString()}</h3>
+                  <div className="mt-5">
+                    <h3 className="text-3xl font-black tracking-tight text-slate-950">{stat.value.toLocaleString()}</h3>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">{stat.label}</p>
                   </div>
                 </div>
               ))}
@@ -2024,6 +2038,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       {/* Toast Notification */}
       <AnimatePresence>
@@ -2039,6 +2054,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
           </motion.div>
         )}
       </AnimatePresence>
+      </main>
     </div>
   );
 }
