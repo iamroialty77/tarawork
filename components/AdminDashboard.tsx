@@ -82,6 +82,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [jobCategories, setJobCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [categoryLoading, setCategoryLoading] = useState(false);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [jobEditLoading, setJobEditLoading] = useState(false);
+  const [jobEditDraft, setJobEditDraft] = useState({
+    title: "", description: "", category: "General", company: "", skills: "", jobType: "Contract",
+    duration: "1-3 months", paymentMethod: "Flat-Rate", budget: "0", currencyCode: "PHP", deadline: "", status: "live",
+  });
   const [marketingSubject, setMarketingSubject] = useState("");
   const [marketingMessage, setMarketingMessage] = useState("");
   const [marketingLoading, setMarketingLoading] = useState(false);
@@ -341,6 +347,53 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       notify("Error deleting job: " + (err?.message || "Unknown error"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEditingJob = (job: any) => {
+    setEditingJobId(job.id);
+    setJobEditDraft({
+      title: job.title || "",
+      description: job.description || "",
+      category: job.category || "General",
+      company: job.company || "",
+      skills: Array.isArray(job.skills) ? job.skills.join(", ") : "",
+      jobType: job.jobType || "Contract",
+      duration: job.duration || "1-3 months",
+      paymentMethod: job.paymentMethod || "Flat-Rate",
+      budget: String(job.budget || 0),
+      currencyCode: job.currency_code || job.currencyCode || "PHP",
+      deadline: job.deadline || "",
+      status: job.status || "live",
+    });
+  };
+
+  const saveJobEdit = async () => {
+    if (!editingJobId || !jobEditDraft.title.trim() || !jobEditDraft.description.trim()) {
+      notify("Job title and description are required.");
+      return;
+    }
+    setJobEditLoading(true);
+    try {
+      const response = await fetch("/api/admin/update-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: editingJobId,
+          ...jobEditDraft,
+          budget: Number(jobEditDraft.budget),
+          skills: jobEditDraft.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to update job post.");
+      notify("Job post updated successfully.");
+      setEditingJobId(null);
+      await fetchData();
+    } catch (err: any) {
+      notify("Job update error: " + (err?.message || "Unknown error"));
+    } finally {
+      setJobEditLoading(false);
     }
   };
 
@@ -953,6 +1006,52 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   </div>
                 </div>
               </div>
+              {editingJobId && (
+                <div className="border-b border-indigo-100 bg-indigo-50/40 p-6 sm:p-8">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Admin Job Editor</p>
+                      <h4 className="mt-1 text-xl font-black text-slate-900">Edit marketplace job post</h4>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">Changes are published to the marketplace and recorded in the admin audit log.</p>
+                    </div>
+                    <button type="button" onClick={() => setEditingJobId(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50">Cancel</button>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500 md:col-span-2">
+                      Job title
+                      <input value={jobEditDraft.title} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, title: event.target.value }))} maxLength={140} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+                    </label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500 md:col-span-2">
+                      Description
+                      <textarea value={jobEditDraft.description} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, description: event.target.value }))} rows={8} maxLength={12000} className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium normal-case tracking-normal leading-7 text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+                    </label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">
+                      Category
+                      <select value={jobEditDraft.category} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, category: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800">
+                        {[...new Set([jobEditDraft.category, ...jobCategories])].map((category) => <option key={category} value={category}>{category}</option>)}
+                      </select>
+                    </label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">
+                      Company
+                      <input value={jobEditDraft.company} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, company: event.target.value }))} maxLength={140} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" />
+                    </label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500 md:col-span-2">
+                      Skills <span className="font-semibold normal-case tracking-normal text-slate-400">(comma-separated)</span>
+                      <input value={jobEditDraft.skills} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, skills: event.target.value }))} placeholder="Virtual Assistance, SEO, Canva" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" />
+                    </label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Job type<input value={jobEditDraft.jobType} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, jobType: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Duration<input value={jobEditDraft.duration} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, duration: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Payment method<select value={jobEditDraft.paymentMethod} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, paymentMethod: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800"><option>Flat-Rate</option><option>Hourly</option><option>Milestone</option></select></label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Status<select value={jobEditDraft.status} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, status: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800"><option value="live">Live</option><option value="draft">Draft</option><option value="flagged">Flagged</option><option value="closed">Closed</option></select></label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Budget<div className="mt-2 flex"><select value={jobEditDraft.currencyCode} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, currencyCode: event.target.value }))} className="rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-600">{["PHP", "USD", "EUR", "GBP", "AUD", "CAD", "SGD"].map((currency) => <option key={currency}>{currency}</option>)}</select><input type="number" min="0" value={jobEditDraft.budget} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, budget: event.target.value }))} className="w-full rounded-r-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></div></label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Deadline<input type="date" value={jobEditDraft.deadline ? jobEditDraft.deadline.slice(0, 10) : ""} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, deadline: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                  </div>
+                  <div className="mt-6 flex justify-end">
+                    <button type="button" onClick={() => void saveJobEdit()} disabled={jobEditLoading || !jobEditDraft.title.trim() || !jobEditDraft.description.trim()} className="rounded-xl bg-indigo-600 px-6 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-indigo-700 disabled:opacity-50">{jobEditLoading ? "Saving..." : "Save Job Changes"}</button>
+                  </div>
+                </div>
+              )}
               {jobs.length === 0 ? (
                 <div className="p-10 text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
@@ -991,6 +1090,14 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                         </td>
                         <td className="px-8 py-6 text-right">
                           <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEditingJob(job)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-indigo-700 hover:bg-indigo-100"
+                            >
+                              <FileText className="h-4 w-4" />
+                              Edit
+                            </button>
                             {job.status !== 'live' && (
                               <button 
                                 onClick={() => updateJobStatus(job.id, 'live')}
