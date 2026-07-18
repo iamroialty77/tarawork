@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Fragment, useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import RichTextEditor from "./RichTextEditor";
+import AdminEmailInbox from "./AdminEmailInbox";
 import { 
   Users, 
   Briefcase, 
@@ -474,8 +475,8 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     }
   };
 
-  const submitEmailReply = async (messageId: string) => {
-    const message = emailReplyBody.trim();
+  const submitEmailReply = async (messageId: string, replyText?: string) => {
+    const message = (replyText ?? emailReplyBody).trim();
     if (!message) {
       notify("Write a reply first.");
       return;
@@ -1311,7 +1312,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
           </motion.div>
         )}
 
-        {activeTab === "email_messages" && (
+        {activeTab === "email_messages" && <AdminEmailInbox key={emailMessages.map((message) => message.id + (message.metadata?.trashedAt || "")).join(":")} messages={emailMessages} refresh={() => void fetchData()} reply={(id, body) => submitEmailReply(id, body)} />}
+
+        {false && (
           <motion.div
             key="email_messages"
             initial={{ opacity: 0, y: 20 }}
