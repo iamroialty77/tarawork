@@ -624,9 +624,8 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "jobs", label: "Marketplace", icon: Briefcase },
     { id: "disputes", label: "Disputes", icon: Scale },
     { id: "talent_requests", label: "Talent Requests", icon: Users },
-    { id: "email_messages", label: "Email Inbox", icon: Mail },
+    { id: "email_messages", label: "Email", icon: Mail },
     { id: "blog", label: "Blog Studio", icon: BookOpen },
-    { id: "marketing", label: "Marketing Email", icon: Mail },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
   ];
