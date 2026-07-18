@@ -37,6 +37,21 @@ const cleanLine = (value: unknown, maxLength = 220) =>
     .trim()
     .slice(0, maxLength);
 
+const normalizeGoogleDriveImageUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.hostname !== "drive.google.com") return null;
+
+    const pathMatch = url.pathname.match(/\/file\/d\/([^/]+)/i);
+    const fileId = pathMatch?.[1] || url.searchParams.get("id");
+    if (!fileId || !/^[a-zA-Z0-9_-]+$/.test(fileId)) return null;
+
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
+  } catch {
+    return null;
+  }
+};
+
 const contentToSections = (content: string) => {
   const blocks = content
     .split(/\n\s*\n/g)
@@ -116,7 +131,8 @@ export async function POST(req: NextRequest) {
     const title = cleanLine(body.title, 140);
     const excerpt = cleanLine(body.excerpt, 280);
     const category = cleanLine(body.category, 80) as BlogCategory;
-    const imageUrl = cleanLine(body.imageUrl, 500);
+    const submittedImageUrl = cleanLine(body.imageUrl, 500);
+    const imageUrl = normalizeGoogleDriveImageUrl(submittedImageUrl);
     const imageAlt = cleanLine(body.imageAlt, 180) || title;
     const keyword = cleanLine(body.keyword, 120) || title;
     const readTime = cleanLine(body.readTime, 30) || "5 min read";
@@ -124,12 +140,12 @@ export async function POST(req: NextRequest) {
     const content = String(body.content || "").trim().slice(0, 12000);
     const publishedAt = body.publishedAt ? new Date(body.publishedAt) : new Date();
 
-    if (!title || !excerpt || !imageUrl || !content) {
-      return NextResponse.json({ error: "Title, excerpt, Canva image link, and content are required." }, { status: 400 });
+    if (!title || !excerpt || !submittedImageUrl || !content) {
+      return NextResponse.json({ error: "Title, excerpt, Google Drive image link, and content are required." }, { status: 400 });
     }
 
-    if (!/^https:\/\/.+/i.test(imageUrl)) {
-      return NextResponse.json({ error: "Use a valid https Canva image link." }, { status: 400 });
+    if (!imageUrl) {
+      return NextResponse.json({ error: "Use a valid Google Drive file sharing link." }, { status: 400 });
     }
 
     if (!blogCategories.includes(category)) {
@@ -194,7 +210,8 @@ export async function PUT(req: NextRequest) {
     const title = cleanLine(body.title, 140);
     const excerpt = cleanLine(body.excerpt, 280);
     const category = cleanLine(body.category, 80) as BlogCategory;
-    const imageUrl = cleanLine(body.imageUrl, 500);
+    const submittedImageUrl = cleanLine(body.imageUrl, 500);
+    const imageUrl = normalizeGoogleDriveImageUrl(submittedImageUrl);
     const imageAlt = cleanLine(body.imageAlt, 180) || title;
     const keyword = cleanLine(body.keyword, 120) || title;
     const readTime = cleanLine(body.readTime, 30) || "5 min read";
@@ -202,12 +219,12 @@ export async function PUT(req: NextRequest) {
     const content = String(body.content || "").trim().slice(0, 12000);
     const publishedAt = body.publishedAt ? new Date(body.publishedAt) : new Date();
 
-    if (!id || !title || !excerpt || !imageUrl || !content) {
-      return NextResponse.json({ error: "Post id, title, excerpt, Canva image link, and content are required." }, { status: 400 });
+    if (!id || !title || !excerpt || !submittedImageUrl || !content) {
+      return NextResponse.json({ error: "Post id, title, excerpt, Google Drive image link, and content are required." }, { status: 400 });
     }
 
-    if (!/^https:\/\/.+/i.test(imageUrl)) {
-      return NextResponse.json({ error: "Use a valid https Canva image link." }, { status: 400 });
+    if (!imageUrl) {
+      return NextResponse.json({ error: "Use a valid Google Drive file sharing link." }, { status: 400 });
     }
 
     if (!blogCategories.includes(category)) {

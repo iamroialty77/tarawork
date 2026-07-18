@@ -1269,14 +1269,14 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Canva Image Link</label>
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Google Drive Image Link</label>
                     <input
                       value={blogDraft.imageUrl}
                       onChange={(event) => setBlogDraft((draft) => ({ ...draft, imageUrl: event.target.value }))}
                       className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                      placeholder="https://...canva.com/..."
+                      placeholder="https://drive.google.com/file/d/.../view"
                     />
-                    <p className="mt-2 text-xs font-semibold text-slate-400">Paste the direct Canva image URL used for this blog card and article hero.</p>
+                    <p className="mt-2 text-xs font-semibold text-slate-400">Paste a Google Drive sharing link. Set the file access to “Anyone with the link” so the image can appear publicly.</p>
                   </div>
                   <div>
                     <label className="text-xs font-black uppercase tracking-widest text-slate-500">Image Description</label>

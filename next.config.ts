@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.canva.com",
       },
+      {
+        protocol: "https",
+        hostname: "drive.google.com",
+        pathname: "/uc",
+      },
     ],
   },
 };
