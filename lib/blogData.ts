@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import type { BlogCategory, BlogPost } from "@/lib/blog";
+import { htmlToPlainText, legacySectionsToHtml } from "@/lib/articleHtml";
 
 type DbBlogPost = {
   title: string;
@@ -22,11 +23,18 @@ const isContentSection = (value: unknown): value is { heading: string; body: str
 };
 
 const mapDbPost = (post: DbBlogPost): BlogPost => {
-  const content = Array.isArray(post.content) ? post.content.filter(isContentSection) : [];
+  const storedContent = Array.isArray(post.content) ? post.content.filter(isContentSection) : [];
+  const hasLegacyHtml = storedContent.some(
+    (section) => section.format !== "html" && /<\/?(?:p|h[1-3]|ul|ol|li|table|blockquote|strong|em)\b/i.test(`${section.heading}${section.body}`),
+  );
+  const content = hasLegacyHtml
+    ? [{ heading: "", body: legacySectionsToHtml(storedContent), format: "html" as const }]
+    : storedContent;
+  const plainExcerpt = htmlToPlainText(post.excerpt);
 
   return {
     title: post.title,
-    excerpt: post.excerpt,
+    excerpt: plainExcerpt,
     slug: post.slug,
     href: `/blog/${post.slug}`,
     sourceHref: `/blog/${post.slug}`,

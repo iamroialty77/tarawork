@@ -3,6 +3,7 @@ import { requireAdminUser } from "@/lib/authz";
 import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { blogCategories, type BlogCategory } from "@/lib/blog";
+import { sanitizeArticleHtml } from "@/lib/articleHtml";
 
 export const runtime = "nodejs";
 
@@ -50,45 +51,6 @@ const normalizeGoogleDriveImageUrl = (value: string) => {
   } catch {
     return null;
   }
-};
-
-const sanitizeArticleHtml = (content: string) => {
-  const allowedTags = new Set([
-    "p", "br", "h1", "h2", "h3", "strong", "b", "em", "i", "u", "s", "blockquote",
-    "ul", "ol", "li", "a", "table", "thead", "tbody", "tr", "th", "td", "hr", "div", "span",
-    "pre", "code", "sup", "sub",
-  ]);
-
-  return content.replace(/<!--[\s\S]*?-->|<\/?[^>]+>/g, (tag) => {
-    if (tag.startsWith("<!--")) return "";
-    const match = tag.match(/^<\s*(\/?)\s*([a-z0-9]+)([^>]*)>/i);
-    if (!match) return "";
-    const [, closing, rawName, rawAttributes] = match;
-    const name = rawName.toLowerCase();
-    if (!allowedTags.has(name)) return "";
-    if (closing) return `</${name}>`;
-
-    const attributes: string[] = [];
-    if (name === "a") {
-      const hrefMatch = rawAttributes.match(/href\s*=\s*["']([^"']+)["']/i);
-      const href = hrefMatch?.[1]?.trim() || "";
-      if (/^(https?:\/\/|mailto:|\/)/i.test(href)) {
-        const escapedHref = href.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-        attributes.push(`href="${escapedHref}"`, `rel="noopener noreferrer"`);
-        if (/^https?:\/\//i.test(href)) attributes.push(`target="_blank"`);
-      }
-    }
-    if (["th", "td"].includes(name)) {
-      for (const attribute of ["colspan", "rowspan"]) {
-        const size = rawAttributes.match(new RegExp(`${attribute}\\s*=\\s*["']?(\\d+)`, "i"))?.[1];
-        if (size) attributes.push(`${attribute}="${Math.min(20, Number(size))}"`);
-      }
-    }
-    const alignment = rawAttributes.match(/(?:text-align\s*:\s*|align\s*=\s*["']?)(left|center|right|justify)/i)?.[1];
-    if (alignment) attributes.push(`style="text-align:${alignment.toLowerCase()}"`);
-
-    return `<${name}${attributes.length ? ` ${attributes.join(" ")}` : ""}>`;
-  }).trim();
 };
 
 const contentToSections = (content: string) => [{
