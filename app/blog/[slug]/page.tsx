@@ -102,6 +102,9 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       title: post.title,
       description: post.excerpt,
       locale: "en_PH",
+      publishedTime: post.publishedAt,
+      modifiedTime: post.modifiedAt,
+      authors: [siteName],
       images: [{ url: post.image, width: 1200, height: 630, alt: post.imageAlt }],
     },
     twitter: {
@@ -128,11 +131,49 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       ? sameCategoryPosts
       : allPosts.filter((item) => item.slug !== post.slug).slice(0, 3);
   const articleUrl = absoluteUrl(post.href);
+  const imageUrl = post.image.startsWith("http") ? post.image : absoluteUrl(post.image);
   const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`;
   const publishedDate = post.publishedAt ? new Date(post.publishedAt) : null;
+  const articleStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt,
+    image: [imageUrl],
+    datePublished: post.publishedAt,
+    dateModified: post.modifiedAt || post.publishedAt,
+    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
+    author: { "@type": "Organization", name: siteName, url: absoluteUrl("/") },
+    publisher: {
+      "@type": "Organization",
+      name: siteName,
+      url: absoluteUrl("/"),
+      logo: { "@type": "ImageObject", url: absoluteUrl("/tarawork-removebg-preview.png") },
+    },
+    articleSection: post.category,
+    keywords: [post.keyword, post.category, "Filipino freelancers", "remote work Philippines"],
+    inLanguage: "en-PH",
+  };
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+      { "@type": "ListItem", position: 2, name: "Blog", item: absoluteUrl("/blog") },
+      { "@type": "ListItem", position: 3, name: post.title, item: articleUrl },
+    ],
+  };
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleStructuredData).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData).replace(/</g, "\\u003c") }}
+      />
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
           <Link href="/" className="text-lg font-black text-teal-800">

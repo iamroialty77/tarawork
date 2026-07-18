@@ -12,6 +12,8 @@ type EmailFreelancersBody = {
   message?: string;
   dryRun?: boolean;
   attachment?: EmailAttachment | null;
+  audience?: "all" | "specific";
+  recipientIds?: string[];
 };
 
 type EmailAttachment = {
@@ -171,6 +173,12 @@ export async function POST(req: NextRequest) {
     const subject = sanitizeText(body.subject || "");
     const message = (body.message || "").trim();
     const dryRun = body.dryRun !== false;
+    const audience = body.audience === "specific" ? "specific" : "all";
+    const recipientIds = new Set(
+      Array.isArray(body.recipientIds)
+        ? body.recipientIds.filter((id): id is string => typeof id === "string").slice(0, 5000)
+        : [],
+    );
     const attachment = normalizeAttachment(body.attachment);
 
     const limited = rateLimit({
@@ -188,7 +196,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Subject or message is too long." }, { status: 400 });
     }
 
-    const { recipients, totalFreelancers, missingEmailCount } = await getFreelancerRecipients();
+    const { recipients: availableRecipients, totalFreelancers, missingEmailCount } = await getFreelancerRecipients();
+    const recipients = audience === "specific"
+      ? availableRecipients.filter((recipient) => recipientIds.has(recipient.id))
+      : availableRecipients;
 
     if (dryRun) {
       return NextResponse.json({
@@ -197,6 +208,7 @@ export async function POST(req: NextRequest) {
         recipientCount: recipients.length,
         totalFreelancers,
         missingEmailCount,
+        audience,
         attachment: attachment
           ? {
               filename: attachment.filename,
@@ -204,7 +216,8 @@ export async function POST(req: NextRequest) {
               size: attachment.size,
             }
           : null,
-        sampleRecipients: recipients.slice(0, 10).map((recipient) => ({
+        availableRecipients: availableRecipients.map((recipient) => ({
+          id: recipient.id,
           name: recipient.name,
           email: recipient.email,
         })),
@@ -212,7 +225,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (recipients.length === 0) {
-      return NextResponse.json({ error: "No freelancer email addresses were found." }, { status: 400 });
+      return NextResponse.json({ error: audience === "specific" ? "Select at least one recipient." : "No freelancer email addresses were found." }, { status: 400 });
     }
 
     const smtpHost = process.env.SMTP_HOST || "smtp.hostinger.com";
@@ -294,6 +307,7 @@ export async function POST(req: NextRequest) {
         details: {
           subject,
           recipientCount: recipients.length,
+          audience,
           batchCount: mailBatches.length,
           attachment: attachment
             ? {
@@ -319,6 +333,7 @@ export async function POST(req: NextRequest) {
       relatedId: admin.user?.id || null,
       metadata: {
         recipientCount: recipients.length,
+        audience,
         batchCount: mailBatches.length,
         attachment: attachment
           ? {
@@ -333,6 +348,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       recipientCount: recipients.length,
+      audience,
       batchCount: mailBatches.length,
       missingEmailCount,
     });

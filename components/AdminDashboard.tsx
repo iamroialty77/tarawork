@@ -87,6 +87,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [marketingLoading, setMarketingLoading] = useState(false);
   const [marketingPreview, setMarketingPreview] = useState<any>(null);
   const [marketingAttachment, setMarketingAttachment] = useState<MarketingAttachment | null>(null);
+  const [marketingAudience, setMarketingAudience] = useState<"all" | "specific">("all");
+  const [marketingRecipientIds, setMarketingRecipientIds] = useState<string[]>([]);
+  const [marketingRecipientSearch, setMarketingRecipientSearch] = useState("");
+  const [replyingToMessageId, setReplyingToMessageId] = useState<string | null>(null);
+  const [emailReplyBody, setEmailReplyBody] = useState("");
+  const [emailReplyLoading, setEmailReplyLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   
   const [healthStatus, setHealthStatus] = useState({
@@ -372,7 +378,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       return;
     }
 
-    if (!dryRun && !confirm("Send this announcement to all freelancers with email addresses?")) return;
+    if (!dryRun && marketingAudience === "specific" && marketingRecipientIds.length === 0) {
+      notify("Select at least one recipient first.");
+      return;
+    }
+    const targetLabel = marketingAudience === "all" ? "all reachable freelancers" : `${marketingRecipientIds.length} selected recipient(s)`;
+    if (!dryRun && !confirm(`Send this announcement to ${targetLabel}? This action cannot be undone.`)) return;
 
     setMarketingLoading(true);
     try {
@@ -381,7 +392,14 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ subject, message, dryRun, attachment: marketingAttachment }),
+        body: JSON.stringify({
+          subject,
+          message,
+          dryRun,
+          attachment: marketingAttachment,
+          audience: marketingAudience,
+          recipientIds: marketingRecipientIds,
+        }),
       });
       const result = await response.json();
 
@@ -400,6 +418,32 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       notify("Email error: " + (err?.message || "Unknown error"));
     } finally {
       setMarketingLoading(false);
+    }
+  };
+
+  const submitEmailReply = async (messageId: string) => {
+    const message = emailReplyBody.trim();
+    if (!message) {
+      notify("Write a reply first.");
+      return;
+    }
+    setEmailReplyLoading(true);
+    try {
+      const response = await fetch("/api/admin/email-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, message }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to send reply.");
+      notify(`Reply sent to ${result.recipient}.`);
+      setReplyingToMessageId(null);
+      setEmailReplyBody("");
+      await fetchData();
+    } catch (err: any) {
+      notify("Reply error: " + (err?.message || "Unknown error"));
+    } finally {
+      setEmailReplyLoading(false);
     }
   };
 
@@ -1182,18 +1226,53 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                             From: {message.from_name ? `${message.from_name} ` : ""}{message.from_email || "unknown"} · To: {message.to_email || "unknown"}
                           </p>
                         </div>
-                        {message.reply_to || message.from_email ? (
-                          <a
-                            href={`mailto:${message.reply_to || message.from_email}`}
+                        {(message.reply_to || message.from_email) && message.direction !== "outbound" ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingToMessageId((current) => current === message.id ? null : message.id);
+                              setEmailReplyBody("");
+                            }}
                             className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-slate-800"
                           >
-                            Reply
-                          </a>
+                            {replyingToMessageId === message.id ? "Close Reply" : "Reply in App"}
+                          </button>
                         ) : null}
                       </div>
                       <p className="mt-4 whitespace-pre-line rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm font-medium leading-7 text-slate-700">
                         {message.text_body}
                       </p>
+                      {replyingToMessageId === message.id && (
+                        <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-5">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-widest text-indigo-700">Reply from TaraWork</p>
+                              <p className="mt-1 text-xs font-semibold text-slate-500">To: {message.reply_to || message.from_email}</p>
+                            </div>
+                            <span className="rounded-lg bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Re: {message.subject}</span>
+                          </div>
+                          <textarea
+                            value={emailReplyBody}
+                            onChange={(event) => setEmailReplyBody(event.target.value)}
+                            rows={7}
+                            maxLength={12000}
+                            placeholder="Write a professional response..."
+                            className="mt-4 w-full resize-y rounded-xl border border-indigo-100 bg-white px-4 py-3 text-sm font-medium leading-7 text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                          />
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-xs font-semibold text-slate-400">Sent securely using the configured TaraWork SMTP mailbox.</p>
+                            <button
+                              type="button"
+                              onClick={() => void submitEmailReply(message.id)}
+                              disabled={emailReplyLoading || !emailReplyBody.trim()}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                              <Mail className="h-4 w-4" />
+                              {emailReplyLoading ? "Sending..." : "Send Reply"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </article>
                   ))
                 ) : (
@@ -1461,6 +1540,27 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   <p className="mt-2 text-xs font-semibold text-slate-400">{marketingMessage.length.toLocaleString()} / 8,000 characters</p>
                 </div>
 
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Recipients</label>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                    <button type="button" onClick={() => setMarketingAudience("all")} className={`rounded-2xl border p-4 text-left transition ${marketingAudience === "all" ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-100" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                      <p className="text-sm font-black text-slate-900">Email everyone</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Send to every reachable freelancer account.</p>
+                    </button>
+                    <button type="button" onClick={() => setMarketingAudience("specific")} className={`rounded-2xl border p-4 text-left transition ${marketingAudience === "specific" ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-100" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                      <p className="text-sm font-black text-slate-900">Choose specific people</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Select individual recipients from the directory.</p>
+                    </button>
+                  </div>
+                  {marketingAudience === "specific" && (
+                    <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+                      {marketingPreview?.availableRecipients?.length
+                        ? `${marketingRecipientIds.length} recipient(s) selected. Use the directory on the right to update the list.`
+                        : "Click Preview Recipients below to load the recipient directory, then choose who should receive this email."}
+                    </p>
+                  )}
+                </div>
+
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -1518,7 +1618,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   <button
                     type="button"
                     onClick={() => submitMarketingEmail(false)}
-                    disabled={marketingLoading || !marketingSubject.trim() || !marketingMessage.trim()}
+                    disabled={marketingLoading || !marketingSubject.trim() || !marketingMessage.trim() || (marketingAudience === "specific" && marketingRecipientIds.length === 0)}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-slate-800 disabled:opacity-50"
                   >
                     <Mail className="h-4 w-4" />
@@ -1538,7 +1638,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   </div>
                   <div className="rounded-xl bg-indigo-50 p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Recipients</p>
-                    <p className="mt-1 text-2xl font-black text-indigo-700">{marketingPreview?.recipientCount?.toLocaleString?.() || "..."}</p>
+                    <p className="mt-1 text-2xl font-black text-indigo-700">
+                      {marketingAudience === "specific" ? marketingRecipientIds.length.toLocaleString() : marketingPreview?.recipientCount?.toLocaleString?.() || "..."}
+                    </p>
                   </div>
                 </div>
                 {marketingPreview && (
@@ -1550,21 +1652,51 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
               </div>
 
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-                <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Sample Recipients</h4>
-                <div className="mt-4 space-y-3">
-                  {marketingPreview?.sampleRecipients?.length ? (
-                    marketingPreview.sampleRecipients.map((recipient: any) => (
-                      <div key={recipient.email} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                        <p className="text-sm font-black text-slate-900">{recipient.name}</p>
-                        <p className="break-words text-xs font-semibold text-slate-500">{recipient.email}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="rounded-xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">
-                      Run a preview to verify the reachable freelancer list before sending.
-                    </p>
-                  )}
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Recipient Directory</h4>
+                  {marketingAudience === "specific" && marketingPreview?.availableRecipients?.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setMarketingRecipientIds(marketingRecipientIds.length === marketingPreview.availableRecipients.length ? [] : marketingPreview.availableRecipients.map((recipient: any) => recipient.id))}
+                      className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:underline"
+                    >
+                      {marketingRecipientIds.length === marketingPreview.availableRecipients.length ? "Clear all" : "Select all"}
+                    </button>
+                  ) : null}
                 </div>
+                {marketingPreview?.availableRecipients?.length ? (
+                  <>
+                    <input
+                      type="search"
+                      value={marketingRecipientSearch}
+                      onChange={(event) => setMarketingRecipientSearch(event.target.value)}
+                      placeholder="Search name or email..."
+                      className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                    <div className="mt-3 max-h-96 space-y-2 overflow-y-auto pr-1">
+                      {marketingPreview.availableRecipients
+                        .filter((recipient: any) => `${recipient.name} ${recipient.email}`.toLowerCase().includes(marketingRecipientSearch.toLowerCase()))
+                        .map((recipient: any) => (
+                          <label key={recipient.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 hover:border-indigo-200">
+                            {marketingAudience === "specific" && (
+                              <input
+                                type="checkbox"
+                                checked={marketingRecipientIds.includes(recipient.id)}
+                                onChange={() => setMarketingRecipientIds((current) => current.includes(recipient.id) ? current.filter((id) => id !== recipient.id) : [...current, recipient.id])}
+                                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600"
+                              />
+                            )}
+                            <span className="min-w-0">
+                              <span className="block text-sm font-black text-slate-900">{recipient.name}</span>
+                              <span className="block break-words text-xs font-semibold text-slate-500">{recipient.email}</span>
+                            </span>
+                          </label>
+                        ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-4 rounded-xl bg-slate-50 p-4 text-xs font-semibold leading-relaxed text-slate-500">Run a preview to load and verify the reachable recipient directory before sending.</p>
+                )}
               </div>
             </aside>
           </motion.div>

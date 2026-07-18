@@ -16,6 +16,7 @@ export type BlogPost = {
   readTime: string;
   keyword: string;
   publishedAt?: string;
+  modifiedAt?: string;
   content: {
     heading: string;
     body: string;

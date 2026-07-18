@@ -14,6 +14,7 @@ type DbBlogPost = {
   image_alt?: string | null;
   content?: unknown;
   published_at?: string | null;
+  updated_at?: string | null;
 };
 
 const isContentSection = (value: unknown): value is { heading: string; body: string; format?: "html" } => {
@@ -44,6 +45,7 @@ const mapDbPost = (post: DbBlogPost): BlogPost => {
     readTime: post.read_time || "5 min read",
     keyword: post.keyword || post.title,
     publishedAt: post.published_at || undefined,
+    modifiedAt: post.updated_at || post.published_at || undefined,
     content:
       content.length > 0
         ? content
@@ -62,7 +64,7 @@ export async function getPublishedBlogPosts() {
   try {
     const { data, error } = await supabaseAdmin
       .from("blog_posts")
-      .select("title,excerpt,slug,category,read_time,keyword,image_url,image_alt,content,published_at")
+      .select("title,excerpt,slug,category,read_time,keyword,image_url,image_alt,content,published_at,updated_at")
       .eq("status", "published")
       .order("published_at", { ascending: false });
 
@@ -80,7 +82,7 @@ export async function getPublishedBlogPostBySlug(slug: string) {
   try {
     const { data, error } = await supabaseAdmin
       .from("blog_posts")
-      .select("title,excerpt,slug,category,read_time,keyword,image_url,image_alt,content,published_at")
+      .select("title,excerpt,slug,category,read_time,keyword,image_url,image_alt,content,published_at,updated_at")
       .eq("slug", slug)
       .eq("status", "published")
       .maybeSingle();
