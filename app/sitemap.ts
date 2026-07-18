@@ -94,18 +94,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.84,
     },
-    {
-      url: absoluteUrl("/work-from-home-2026"),
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.83,
-    },
-    {
-      url: absoluteUrl("/project-base-work"),
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.82,
-    },
   ];
 
   const publishedBlogPosts = await getPublishedBlogPosts();
