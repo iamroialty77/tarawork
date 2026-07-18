@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import RichTextEditor from "./RichTextEditor";
 import { 
@@ -1007,7 +1007,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                 </div>
               </div>
               {editingJobId && (
-                <div className="border-b border-indigo-100 bg-indigo-50/40 p-6 sm:p-8">
+                <div className="hidden" aria-hidden="true">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Admin Job Editor</p>
@@ -1073,7 +1073,8 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {jobs.map((job) => (
-                      <tr key={job.id} className="hover:bg-slate-50/30 transition-colors">
+                      <Fragment key={job.id}>
+                      <tr className="hover:bg-slate-50/30 transition-colors">
                         <td className="px-8 py-6">
                           <div className="font-bold text-slate-900">{job.title}</div>
                           <div className="text-[10px] text-slate-400 font-mono">{job.id}</div>
@@ -1117,6 +1118,39 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                           </div>
                         </td>
                       </tr>
+                      {editingJobId === job.id && (
+                        <tr className="bg-indigo-50/40">
+                          <td colSpan={4} className="border-y border-indigo-100 p-0">
+                            <div className="p-6 sm:p-8">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Editing this job post</p>
+                                  <h4 className="mt-1 text-xl font-black text-slate-900">{job.title}</h4>
+                                  <p className="mt-1 text-xs font-semibold text-slate-500">Save changes below to update the marketplace listing.</p>
+                                </div>
+                                <button type="button" onClick={() => setEditingJobId(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50">Close editor</button>
+                              </div>
+                              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500 md:col-span-2">Job title<input value={jobEditDraft.title} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, title: event.target.value }))} maxLength={140} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" /></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500 md:col-span-2">Description<textarea value={jobEditDraft.description} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, description: event.target.value }))} rows={8} maxLength={12000} className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium normal-case tracking-normal leading-7 text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" /></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Category<select value={jobEditDraft.category} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, category: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800">{[...new Set([jobEditDraft.category, ...jobCategories])].map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Company<input value={jobEditDraft.company} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, company: event.target.value }))} maxLength={140} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500 md:col-span-2">Skills <span className="font-semibold normal-case tracking-normal text-slate-400">(comma-separated)</span><input value={jobEditDraft.skills} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, skills: event.target.value }))} placeholder="Virtual Assistance, SEO, Canva" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Job type<input value={jobEditDraft.jobType} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, jobType: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Duration<input value={jobEditDraft.duration} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, duration: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Payment method<select value={jobEditDraft.paymentMethod} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, paymentMethod: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800"><option>Flat-Rate</option><option>Hourly</option><option>Milestone</option></select></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Status<select value={jobEditDraft.status} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, status: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800"><option value="live">Live</option><option value="draft">Draft</option><option value="flagged">Flagged</option><option value="closed">Closed</option></select></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Budget<div className="mt-2 flex"><select value={jobEditDraft.currencyCode} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, currencyCode: event.target.value }))} className="rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-600">{["PHP", "USD", "EUR", "GBP", "AUD", "CAD", "SGD"].map((currency) => <option key={currency}>{currency}</option>)}</select><input type="number" min="0" value={jobEditDraft.budget} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, budget: event.target.value }))} className="w-full rounded-r-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></div></label>
+                                <label className="text-xs font-black uppercase tracking-widest text-slate-500">Deadline<input type="date" value={jobEditDraft.deadline ? jobEditDraft.deadline.slice(0, 10) : ""} onChange={(event) => setJobEditDraft((draft) => ({ ...draft, deadline: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold normal-case tracking-normal text-slate-800" /></label>
+                              </div>
+                              <div className="mt-6 flex justify-end">
+                                <button type="button" onClick={() => void saveJobEdit()} disabled={jobEditLoading || !jobEditDraft.title.trim() || !jobEditDraft.description.trim()} className="rounded-xl bg-indigo-600 px-6 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-indigo-700 disabled:opacity-50">{jobEditLoading ? "Saving..." : "Save Job Changes"}</button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
