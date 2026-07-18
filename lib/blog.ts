@@ -19,6 +19,7 @@ export type BlogPost = {
   content: {
     heading: string;
     body: string;
+    format?: "html";
   }[];
 };
 

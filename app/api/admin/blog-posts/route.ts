@@ -52,22 +52,50 @@ const normalizeGoogleDriveImageUrl = (value: string) => {
   }
 };
 
-const contentToSections = (content: string) => {
-  const blocks = content
-    .split(/\n\s*\n/g)
-    .map((block) => block.trim())
-    .filter(Boolean);
+const sanitizeArticleHtml = (content: string) => {
+  const allowedTags = new Set([
+    "p", "br", "h1", "h2", "h3", "strong", "b", "em", "i", "u", "s", "blockquote",
+    "ul", "ol", "li", "a", "table", "thead", "tbody", "tr", "th", "td", "hr", "div", "span",
+    "pre", "code", "sup", "sub",
+  ]);
 
-  return blocks.map((block, index) => {
-    const [firstLine, ...rest] = block.split("\n").map((line) => line.trim()).filter(Boolean);
-    const hasHeading = firstLine && rest.length > 0 && firstLine.length <= 90;
+  return content.replace(/<!--[\s\S]*?-->|<\/?[^>]+>/g, (tag) => {
+    if (tag.startsWith("<!--")) return "";
+    const match = tag.match(/^<\s*(\/?)\s*([a-z0-9]+)([^>]*)>/i);
+    if (!match) return "";
+    const [, closing, rawName, rawAttributes] = match;
+    const name = rawName.toLowerCase();
+    if (!allowedTags.has(name)) return "";
+    if (closing) return `</${name}>`;
 
-    return {
-      heading: hasHeading ? firstLine : `Guide section ${index + 1}`,
-      body: hasHeading ? rest.join(" ") : block.replace(/\s+/g, " "),
-    };
-  });
+    const attributes: string[] = [];
+    if (name === "a") {
+      const hrefMatch = rawAttributes.match(/href\s*=\s*["']([^"']+)["']/i);
+      const href = hrefMatch?.[1]?.trim() || "";
+      if (/^(https?:\/\/|mailto:|\/)/i.test(href)) {
+        const escapedHref = href.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+        attributes.push(`href="${escapedHref}"`, `rel="noopener noreferrer"`);
+        if (/^https?:\/\//i.test(href)) attributes.push(`target="_blank"`);
+      }
+    }
+    if (["th", "td"].includes(name)) {
+      for (const attribute of ["colspan", "rowspan"]) {
+        const size = rawAttributes.match(new RegExp(`${attribute}\\s*=\\s*["']?(\\d+)`, "i"))?.[1];
+        if (size) attributes.push(`${attribute}="${Math.min(20, Number(size))}"`);
+      }
+    }
+    const alignment = rawAttributes.match(/(?:text-align\s*:\s*|align\s*=\s*["']?)(left|center|right|justify)/i)?.[1];
+    if (alignment) attributes.push(`style="text-align:${alignment.toLowerCase()}"`);
+
+    return `<${name}${attributes.length ? ` ${attributes.join(" ")}` : ""}>`;
+  }).trim();
 };
+
+const contentToSections = (content: string) => [{
+  heading: "",
+  body: sanitizeArticleHtml(content),
+  format: "html",
+}];
 
 const sectionsToText = (value: unknown) => {
   if (!Array.isArray(value)) return "";
@@ -77,7 +105,10 @@ const sectionsToText = (value: unknown) => {
       const section = item as Record<string, unknown>;
       const heading = typeof section.heading === "string" ? section.heading.trim() : "";
       const body = typeof section.body === "string" ? section.body.trim() : "";
-      return [heading, body].filter(Boolean).join("\n");
+      if (section.format === "html") return body;
+      const escapedHeading = heading.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const escapedBody = body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return `${heading ? `<h2>${escapedHeading}</h2>` : ""}<p>${escapedBody.replace(/\n+/g, "</p><p>")}</p>`;
     })
     .filter(Boolean)
     .join("\n\n");
@@ -137,7 +168,7 @@ export async function POST(req: NextRequest) {
     const keyword = cleanLine(body.keyword, 120) || title;
     const readTime = cleanLine(body.readTime, 30) || "5 min read";
     const status = body.status === "draft" ? "draft" : "published";
-    const content = String(body.content || "").trim().slice(0, 12000);
+    const content = String(body.content || "").trim().slice(0, 50000);
     const publishedAt = body.publishedAt ? new Date(body.publishedAt) : new Date();
 
     if (!title || !excerpt || !submittedImageUrl || !content) {
@@ -216,7 +247,7 @@ export async function PUT(req: NextRequest) {
     const keyword = cleanLine(body.keyword, 120) || title;
     const readTime = cleanLine(body.readTime, 30) || "5 min read";
     const status = body.status === "draft" ? "draft" : "published";
-    const content = String(body.content || "").trim().slice(0, 12000);
+    const content = String(body.content || "").trim().slice(0, 50000);
     const publishedAt = body.publishedAt ? new Date(body.publishedAt) : new Date();
 
     if (!id || !title || !excerpt || !submittedImageUrl || !content) {

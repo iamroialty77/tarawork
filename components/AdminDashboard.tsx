@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import RichTextEditor from "./RichTextEditor";
 import { 
   Users, 
   Briefcase, 
@@ -1323,14 +1324,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
                 <div>
                   <label className="text-xs font-black uppercase tracking-widest text-slate-500">Article Content</label>
-                  <textarea
+                  <RichTextEditor
                     value={blogDraft.content}
-                    onChange={(event) => setBlogDraft((draft) => ({ ...draft, content: event.target.value }))}
-                    rows={14}
-                    className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold leading-relaxed outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                    placeholder={"Heading one\nWrite the first section here.\n\nHeading two\nWrite the second section here."}
+                    onChange={(content) => setBlogDraft((draft) => ({ ...draft, content }))}
                   />
-                  <p className="mt-2 text-xs font-semibold text-slate-400">Separate sections with a blank line. First line becomes the section heading.</p>
+                  <p className="mt-2 text-xs font-semibold text-slate-400">Format the article using headings, lists, links, tables, alignment, and other tools above.</p>
                 </div>
 
                 <button

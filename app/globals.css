@@ -24,3 +24,24 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Rich blog editor and published article formatting */
+.rich-text-editor:empty::before {
+  color: #94a3b8;
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.rich-text-editor h1, .article-rich-content h1 { font-size: 2.25rem; font-weight: 900; line-height: 1.15; margin: 1.5rem 0 0.75rem; }
+.rich-text-editor h2, .article-rich-content h2 { font-size: 1.875rem; font-weight: 900; line-height: 1.2; margin: 1.5rem 0 0.75rem; }
+.rich-text-editor h3, .article-rich-content h3 { font-size: 1.5rem; font-weight: 800; line-height: 1.25; margin: 1.25rem 0 0.5rem; }
+.rich-text-editor p, .article-rich-content p { margin-top: 1rem; }
+.article-rich-content { color: #52525b; font-size: 1.125rem; font-weight: 500; line-height: 2; }
+.rich-text-editor ul, .article-rich-content ul { list-style: disc; margin: 1rem 0; padding-left: 1.75rem; }
+.rich-text-editor ol, .article-rich-content ol { list-style: decimal; margin: 1rem 0; padding-left: 1.75rem; }
+.rich-text-editor a, .article-rich-content a { color: #115e59; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.rich-text-editor blockquote, .article-rich-content blockquote { border-left: 4px solid #0f766e; margin: 1.5rem 0; padding: 0.5rem 0 0.5rem 1rem; }
+.rich-text-editor table, .article-rich-content table { border-collapse: collapse; display: block; margin: 1.5rem 0; max-width: 100%; overflow-x: auto; width: 100%; }
+.rich-text-editor th, .rich-text-editor td, .article-rich-content th, .article-rich-content td { border: 1px solid #d4d4d8; min-width: 8rem; padding: 0.65rem 0.8rem; text-align: left; }
+.rich-text-editor th, .article-rich-content th { background: #f4f4f5; color: #18181b; font-weight: 900; }
+.rich-text-editor pre, .article-rich-content pre { background: #18181b; border-radius: 0.5rem; color: #d1fae5; margin: 1.5rem 0; overflow-x: auto; padding: 1rem; }
+.rich-text-editor code, .article-rich-content code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }

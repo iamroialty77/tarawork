@@ -15,10 +15,10 @@ type DbBlogPost = {
   published_at?: string | null;
 };
 
-const isContentSection = (value: unknown): value is { heading: string; body: string } => {
+const isContentSection = (value: unknown): value is { heading: string; body: string; format?: "html" } => {
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
-  return typeof item.heading === "string" && typeof item.body === "string";
+  return typeof item.heading === "string" && typeof item.body === "string" && (item.format === undefined || item.format === "html");
 };
 
 const mapDbPost = (post: DbBlogPost): BlogPost => {

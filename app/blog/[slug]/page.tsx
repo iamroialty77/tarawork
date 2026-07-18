@@ -191,9 +191,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
               <div className="space-y-12">
                 {post.content.map((section) => (
-                  <section key={section.heading} className="border-b border-zinc-200 pb-12 last:border-b-0">
-                    <h2 className="text-3xl font-black leading-tight text-zinc-950 sm:text-4xl">{section.heading}</h2>
-                    {renderBodyBlocks(section.body)}
+                  <section key={`${section.heading}-${section.body.slice(0, 30)}`} className="border-b border-zinc-200 pb-12 last:border-b-0">
+                    {section.heading && <h2 className="text-3xl font-black leading-tight text-zinc-950 sm:text-4xl">{section.heading}</h2>}
+                    {section.format === "html" ? (
+                      <div className="article-rich-content" dangerouslySetInnerHTML={{ __html: section.body }} />
+                    ) : renderBodyBlocks(section.body)}
                   </section>
                 ))}
               </div>
