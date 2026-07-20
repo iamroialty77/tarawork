@@ -7,6 +7,32 @@ export const runtime = "nodejs";
 
 const cleanId = (value: unknown) => String(value || "").trim().slice(0, 80);
 
+export async function GET() {
+  const admin = await requireAdminUser();
+  if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
+
+  const { data, error, count } = await supabaseAdmin
+    .from("email_messages")
+    .select("subject,text_body,from_email,to_email,metadata", { count: "exact" })
+    .limit(10000);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  let usedBytes = 0;
+  let trashBytes = 0;
+  for (const message of data || []) {
+    const textBytes = Buffer.byteLength(`${message.subject || ""}${message.text_body || ""}${message.from_email || ""}${message.to_email || ""}`, "utf8");
+    const attachmentBytes = Array.isArray(message.metadata?.attachments)
+      ? message.metadata.attachments.reduce((total: number, file: { size?: unknown }) => total + Math.max(0, Number(file?.size) || 0), 0)
+      : 0;
+    const messageBytes = textBytes + attachmentBytes + 1024;
+    usedBytes += messageBytes;
+    if (message.metadata?.trashedAt) trashBytes += messageBytes;
+  }
+  const configuredLimit = Number(process.env.ADMIN_EMAIL_STORAGE_LIMIT_BYTES || 5 * 1024 * 1024 * 1024);
+  const limitBytes = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : 5 * 1024 * 1024 * 1024;
+  return NextResponse.json({ usedBytes, availableBytes: Math.max(0, limitBytes - usedBytes), limitBytes, trashBytes, messageCount: count || data?.length || 0, percentage: Math.min(100, (usedBytes / limitBytes) * 100) });
+}
+
 export async function PATCH(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
