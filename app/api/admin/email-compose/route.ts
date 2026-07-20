@@ -11,6 +11,7 @@ const MAX_FILES = 8;
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 15 * 1024 * 1024;
 const BLOCKED_EXTENSIONS = new Set(["exe", "msi", "bat", "cmd", "com", "scr", "ps1", "vbs", "js", "jar", "app", "dmg", "iso"]);
+type EmailAttachment = { filename: string; contentType: string; contentBase64: string; size: number };
 const clean = (value: unknown, max: number) => String(value || "").trim().slice(0, max);
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (recipients.length > MAX_RECIPIENTS) return NextResponse.json({ error: `You can send to up to ${MAX_RECIPIENTS} recipients at once.` }, { status: 400 });
     const invalidRecipients = recipients.filter((email) => !EMAIL.test(email));
     if (invalidRecipients.length) return NextResponse.json({ error: `Invalid email address: ${invalidRecipients[0]}` }, { status: 400 });
-    const attachments = Array.isArray(body.attachments) ? body.attachments.slice(0, MAX_FILES + 1).map((file: any) => ({ filename: clean(file?.filename, 180).replace(/[\\/]/g, "_"), contentType: clean(file?.contentType, 120) || "application/octet-stream", contentBase64: String(file?.contentBase64 || "").trim(), size: Number(file?.size || 0) })) : [];
+    const attachments: EmailAttachment[] = Array.isArray(body.attachments) ? body.attachments.slice(0, MAX_FILES + 1).map((file: Record<string, unknown>) => ({ filename: clean(file?.filename, 180).replace(/[\\/]/g, "_"), contentType: clean(file?.contentType, 120) || "application/octet-stream", contentBase64: String(file?.contentBase64 || "").trim(), size: Number(file?.size || 0) })) : [];
     if (attachments.length > MAX_FILES) return NextResponse.json({ error: `You can attach up to ${MAX_FILES} files.` }, { status: 400 });
     let totalBytes = 0;
     for (const file of attachments) {
