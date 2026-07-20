@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export function proxy(req: NextRequest) {
+  if (req.nextUrl.hostname === "tarawork.online") {
+    const canonicalUrl = req.nextUrl.clone();
+    canonicalUrl.hostname = "www.tarawork.online";
+    canonicalUrl.protocol = "https:";
+    canonicalUrl.port = "";
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
   const response = NextResponse.next();
 
   response.headers.set("X-Frame-Options", "DENY");

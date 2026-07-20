@@ -28,6 +28,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    ...["/about", "/safety", "/privacy", "/terms", "/cookies", "/payment-policy", "/contact"].map((path) => ({
+      url: absoluteUrl(path),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: path === "/safety" || path === "/about" ? 0.8 : 0.65,
+    })),
     {
       url: absoluteUrl("/hire-filipino-freelancers"),
       lastModified: new Date(),

@@ -1,0 +1,9 @@
+import type { Metadata } from "next";
+import PublicInfoPage from "@/components/PublicInfoPage";
+export const metadata: Metadata = { title: "About TaraWork", description: "Learn about TaraWork and its Filipino remote talent marketplace." };
+export default function AboutPage() { return <PublicInfoPage eyebrow="Company" title="About TaraWork" introduction="TaraWork is an online marketplace focused on helping businesses discover Filipino freelancers and helping remote professionals present their work clearly." sections={[
+  { heading: "What we do", paragraphs: ["TaraWork provides public professional profiles, job listings, applications, talent invitations, messaging, portfolio presentation, and hiring-support tools. The platform is designed for employers, founders, agencies, and Filipino remote professionals."] },
+  { heading: "How the marketplace works", bullets: ["Freelancers create profiles describing their services, experience, availability, portfolios, and rates.", "Employers publish opportunities or request help finding relevant talent.", "Users review available information, communicate, interview, and decide whether to work together.", "TaraWork provides platform tools but does not guarantee a job, hire, payment, or project outcome."] },
+  { heading: "Our commitment", paragraphs: ["We aim to build a transparent marketplace with clearer profiles, responsible moderation, practical safety guidance, and accessible support. We do not tolerate fake jobs, application-fee schemes, identity impersonation, review manipulation, or misleading qualifications."] },
+  { heading: "Operator and contact", paragraphs: ["TaraWork.online is operated as the TaraWork platform. Official support communication is available through hello@tarawork.online. Additional verified business details will be published here when applicable and confirmed; TaraWork does not publish fabricated registrations, addresses, partnerships, or customer claims."] },
+]} />; }

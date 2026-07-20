@@ -26,6 +26,13 @@ const structuredData = {
       alternateName: ["TaraWork.online", "Tara Work", "Tara Work online", "tare work", "tarabjo"],
       url: absoluteUrl("/"),
       logo: absoluteUrl("/tarawork-removebg-preview.png"),
+      email: "hello@tarawork.online",
+      contactPoint: {
+        "@type": "ContactPoint",
+        email: "hello@tarawork.online",
+        contactType: "customer support",
+        availableLanguage: ["English", "Filipino"],
+      },
       sameAs: [],
     },
     {
