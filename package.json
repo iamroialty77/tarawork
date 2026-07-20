@@ -23,8 +23,10 @@
     "clsx": "^2.1.1",
     "date-fns": "4.1.0",
     "framer-motion": "^12.34.3",
+    "imapflow": "^1.4.7",
     "lightningcss": "^1.31.1",
     "lucide-react": "^0.575.0",
+    "mailparser": "^3.9.14",
     "next": "16.1.6",
     "nodemailer": "^8.0.3",
     "openai": "^6.25.0",
@@ -38,6 +40,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/mailparser": "^3.4.6",
     "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",

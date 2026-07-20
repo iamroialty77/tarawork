@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminUser } from "@/lib/authz";
 import { assertSameOrigin } from "@/lib/security";
 import { supabaseAdmin } from "@/lib/supabase_admin";
+import { applyImapMessageAction, getImapQuota } from "@/lib/imapMailbox";
 
 export const runtime = "nodejs";
 
@@ -28,9 +29,12 @@ export async function GET() {
     usedBytes += messageBytes;
     if (message.metadata?.trashedAt) trashBytes += messageBytes;
   }
+  const imapQuota = await getImapQuota().catch(() => null);
+  if (imapQuota) usedBytes = imapQuota.usedBytes;
   const configuredLimit = Number(process.env.ADMIN_EMAIL_STORAGE_LIMIT_BYTES || 5 * 1024 * 1024 * 1024);
-  const limitBytes = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : 5 * 1024 * 1024 * 1024;
-  return NextResponse.json({ usedBytes, availableBytes: Math.max(0, limitBytes - usedBytes), limitBytes, trashBytes, messageCount: count || data?.length || 0, percentage: Math.min(100, (usedBytes / limitBytes) * 100) });
+  const providerLimit = imapQuota?.limitBytes;
+  const limitBytes = providerLimit || (Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : 5 * 1024 * 1024 * 1024);
+  return NextResponse.json({ usedBytes, availableBytes: Math.max(0, limitBytes - usedBytes), limitBytes, trashBytes, messageCount: count || data?.length || 0, percentage: Math.min(100, (usedBytes / limitBytes) * 100), source: imapQuota ? "imap" : "local" });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -54,13 +58,14 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle();
     if (error || !message) return NextResponse.json({ error: "Email not found." }, { status: 404 });
 
-    const metadata = message.metadata && typeof message.metadata === "object" ? { ...message.metadata } : {};
+    let metadata = message.metadata && typeof message.metadata === "object" ? { ...message.metadata } : {};
     if (action === "read" || action === "unread") metadata.isRead = action === "read";
     if (action === "trash") {
       metadata.trashedAt = new Date().toISOString();
       metadata.previousFolder = message.status === "draft" ? "drafts" : message.direction === "outbound" ? "sent" : "inbox";
     }
     if (action === "restore") delete metadata.trashedAt;
+    metadata = await applyImapMessageAction(metadata, action as "read" | "unread" | "trash" | "restore");
 
     const { error: updateError } = await supabaseAdmin.from("email_messages").update({ metadata }).eq("id", id);
     if (updateError) throw updateError;
@@ -80,6 +85,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "Email id is required." }, { status: 400 });
   const { data: message } = await supabaseAdmin.from("email_messages").select("metadata").eq("id", id).maybeSingle();
   if (!message?.metadata?.trashedAt) return NextResponse.json({ error: "Move the email to Trash first." }, { status: 400 });
+  await applyImapMessageAction({ ...message.metadata }, "delete");
   const { error } = await supabaseAdmin.from("email_messages").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
