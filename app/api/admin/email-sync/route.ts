@@ -7,6 +7,11 @@ import { supabaseAdmin } from "@/lib/supabase_admin";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+const toIsoDate = (value: string | Date | undefined | null) => {
+  if (!value) return new Date().toISOString();
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+};
 
 export async function POST(req: NextRequest) {
   const originError = assertSameOrigin(req);
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
             const key = `${folderPath}:${uid}`;
             const flags = Array.from(message.flags || []);
             const metadata: Record<string, any> = { imapUid: uid, imapFolder: folderPath, imapFolderType: folderType, isRead: flags.includes("\\Seen"), imapFlags: flags, syncedAt: new Date().toISOString() };
-            if (folderType === "trash") metadata.trashedAt = message.internalDate?.toISOString() || new Date().toISOString();
+            if (folderType === "trash") metadata.trashedAt = toIsoDate(message.internalDate);
             const found = existing.get(key);
             if (found) {
               await supabaseAdmin.from("email_messages").update({ metadata: { ...found.metadata, ...metadata } }).eq("id", found.id);
@@ -56,7 +61,7 @@ export async function POST(req: NextRequest) {
               reply_to: parsed?.replyTo?.value?.[0]?.address || fromEmail || null, subject: parsed?.subject || message.envelope?.subject || "(No subject)",
               text_body: parsed?.text || (parsed?.html ? "This email contains HTML content." : ""), html_body: null,
               status: folderType === "drafts" ? "draft" : "sent", metadata,
-              created_at: message.internalDate?.toISOString() || new Date().toISOString(),
+              created_at: toIsoDate(message.internalDate),
             });
             if (!error) imported++;
           }
