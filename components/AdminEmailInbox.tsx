@@ -18,7 +18,6 @@ export default function AdminEmailInbox({ messages, refresh, reply }: { messages
   const [compose, setCompose] = useState<Compose | null>(null);
   const [replyBody, setReplyBody] = useState("");
   const [busy, setBusy] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState("");
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const trashed = (item: any) => Boolean(item.metadata?.trashedAt);
@@ -29,16 +28,25 @@ export default function AdminEmailInbox({ messages, refresh, reply }: { messages
   const loadStorage = async () => { const response = await fetch("/api/admin/email-messages", { cache: "no-store" }); if (response.ok) setStorage(await response.json()); };
   useEffect(() => { void loadStorage(); }, []);
   const syncMailbox = async () => {
-    setSyncing(true); setNotice("");
     try {
       const response = await fetch("/api/admin/email-sync", { method: "POST" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to sync mailbox.");
-      setNotice(`Mailbox synced: ${data.imported} new, ${data.updated} updated.`);
       refresh(); void loadStorage();
     } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to sync mailbox."); }
-    finally { setSyncing(false); }
   };
+  useEffect(() => {
+    const storageKey = "tarawork-imap-last-sync";
+    const runSync = () => {
+      const lastSync = Number(sessionStorage.getItem(storageKey) || 0);
+      if (Date.now() - lastSync < 2 * 60 * 1000) return;
+      sessionStorage.setItem(storageKey, String(Date.now()));
+      void syncMailbox();
+    };
+    runSync();
+    const interval = window.setInterval(runSync, 2 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const mutate = async (id: string, action: "read" | "unread" | "trash" | "restore") => {
     const response = await fetch("/api/admin/email-messages", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action }) });
@@ -85,16 +93,15 @@ export default function AdminEmailInbox({ messages, refresh, reply }: { messages
   return <div className="relative grid min-h-[700px] grid-cols-1 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 lg:grid-cols-[230px_360px_minmax(0,1fr)]">
     <aside className="border-b border-slate-200 bg-slate-50/80 p-4 lg:border-b-0 lg:border-r">
       <div className="mb-4 flex items-center gap-3 px-3 py-2"><div className="rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 p-2 text-white"><Mail className="h-5 w-5" /></div><div><h3 className="font-black text-slate-900">TaraWork Mail</h3><p className="text-[11px] font-semibold text-slate-400">Admin workspace</p></div></div>
-      <button type="button" onClick={() => void syncMailbox()} disabled={syncing} className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-black text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />{syncing ? "Syncing mailbox..." : "Sync mailbox"}</button>
       <button onClick={() => { setCompose({ ...emptyCompose }); setSelectedId(null); }} className="mb-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"><PenLine className="h-4 w-4" />Compose email</button>
-      {storage && <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+      <nav className="flex gap-2 overflow-x-auto lg:block lg:space-y-1">{folders.map((item) => <button key={item.id} onClick={() => { setFolder(item.id); setSelectedId(null); setCompose(null); }} className={`flex min-w-fit items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition lg:w-full ${folder === item.id && !compose ? "bg-indigo-100 text-indigo-800" : "text-slate-600 hover:bg-slate-100"}`}><item.icon className="h-4 w-4" /><span className="flex-1 text-left">{item.label}</span><span className="text-xs">{items.filter((mail) => inFolder(mail, item.id)).length}</span></button>)}</nav>
+      {storage && <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
         <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className={`rounded-lg p-1.5 ${storage.percentage >= 90 ? "bg-red-50 text-red-600" : storage.percentage >= 75 ? "bg-amber-50 text-amber-600" : "bg-indigo-50 text-indigo-600"}`}><HardDrive className="h-4 w-4" /></div><p className="text-xs font-black text-slate-700">Mailbox storage</p></div><span className={`text-[11px] font-black ${storage.percentage >= 90 ? "text-red-600" : storage.percentage >= 75 ? "text-amber-600" : "text-slate-500"}`}>{storage.percentage.toFixed(storage.percentage < 1 ? 2 : 1)}%</span></div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full transition-all duration-500 ${storage.percentage >= 90 ? "bg-red-500" : storage.percentage >= 75 ? "bg-amber-500" : "bg-indigo-500"}`} style={{ width: `${Math.max(storage.percentage > 0 ? 1 : 0, Math.min(100, storage.percentage))}%` }} /></div>
         <p className="mt-2 text-[10px] font-semibold leading-4 text-slate-500"><span className="font-black text-slate-700">{formatBytes(storage.usedBytes)}</span> used of {formatBytes(storage.limitBytes)}</p><p className="mt-1 text-[9px] font-black uppercase tracking-wider text-slate-400">{storage.source === "imap" ? "Live IMAP quota" : "TaraWork estimate"}</p>
         <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-semibold text-slate-400"><span>{formatBytes(storage.availableBytes)} available</span><span>{storage.messageCount.toLocaleString()} messages</span></div>
         {storage.percentage >= 75 && <p className={`mt-2 rounded-lg px-2 py-1.5 text-[10px] font-bold ${storage.percentage >= 90 ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{storage.percentage >= 90 ? "Storage is almost full. Delete old messages from Trash." : "Storage usage is getting high."}</p>}
       </div>}
-      <nav className="flex gap-2 overflow-x-auto lg:block lg:space-y-1">{folders.map((item) => <button key={item.id} onClick={() => { setFolder(item.id); setSelectedId(null); setCompose(null); }} className={`flex min-w-fit items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition lg:w-full ${folder === item.id && !compose ? "bg-indigo-100 text-indigo-800" : "text-slate-600 hover:bg-slate-100"}`}><item.icon className="h-4 w-4" /><span className="flex-1 text-left">{item.label}</span><span className="text-xs">{items.filter((mail) => inFolder(mail, item.id)).length}</span></button>)}</nav>
     </aside>
     <section className={`border-slate-200 lg:border-r ${selected || compose ? "hidden lg:block" : "block"}`}>
       <div className="flex gap-2 border-b border-slate-200 p-4"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${folder}`} className="w-full rounded-xl bg-slate-100 py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-200" /></div><button onClick={refresh} title="Refresh" className="rounded-xl p-2.5 text-slate-500 hover:bg-slate-100"><RefreshCw className="h-4 w-4" /></button></div>
