@@ -1257,6 +1257,7 @@ export default function TaraWorkApp() {
           if (error.message?.includes('portfolio_url')) setMissingColumns(prev => [...new Set([...prev, 'portfolio_url'])]);
           if (error.message?.includes('interview_url')) setMissingColumns(prev => [...new Set([...prev, 'interview_url'])]);
           if (error.message?.includes('resume_url')) setMissingColumns(prev => [...new Set([...prev, 'resume_url'])]);
+          if (error.message?.includes('cover_letter')) setMissingColumns(prev => [...new Set([...prev, 'cover_letter'])]);
           if (error.message?.includes('seeker_id')) setMissingColumns(prev => [...new Set([...prev, 'seeker_id'])]);
           
           // Fallback if some columns are missing
@@ -1523,6 +1524,7 @@ export default function TaraWorkApp() {
           if (error.message?.includes('portfolio_url')) setMissingColumns(prev => [...new Set([...prev, 'portfolio_url'])]);
           if (error.message?.includes('interview_url')) setMissingColumns(prev => [...new Set([...prev, 'interview_url'])]);
           if (error.message?.includes('resume_url')) setMissingColumns(prev => [...new Set([...prev, 'resume_url'])]);
+          if (error.message?.includes('cover_letter')) setMissingColumns(prev => [...new Set([...prev, 'cover_letter'])]);
           if (error.message?.includes('seeker_id')) setMissingColumns(prev => [...new Set([...prev, 'seeker_id'])]);
 
           // Retry with absolute minimal columns
@@ -5042,6 +5044,16 @@ export default function TaraWorkApp() {
                             )}
                           </div>
 
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <div className="mb-2 flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-indigo-500" />
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cover Letter</p>
+                            </div>
+                            <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                              {app.cover_letter?.trim() || "No cover letter was included with this application."}
+                            </p>
+                          </div>
+
                           <div className="flex flex-wrap gap-3 pt-2">
                             <TooltipAction text="Open employer talent profile with hiring and review controls">
                               <button
@@ -5086,13 +5098,14 @@ export default function TaraWorkApp() {
                                 </button>
                               </TooltipAction>
                             )}
-                            {app.status !== 'pending' && app.status !== 'rejected' && (
-                              <span
-                                className="px-6 py-3 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-xl uppercase tracking-widest flex items-center gap-2 border border-emerald-100"
+                            {app.status === 'hired' && (
+                              <Link
+                                href={`/messages?with=${encodeURIComponent(app.freelancer_id)}&official=1`}
+                                className="px-6 py-3 bg-emerald-600 text-white text-[10px] font-bold rounded-xl uppercase tracking-widest flex items-center gap-2 border border-emerald-600 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                               >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Added
-                              </span>
+                                <Mail className="w-4 h-4" />
+                                Message Freelancer
+                              </Link>
                             )}
                           </div>
                         </div>
