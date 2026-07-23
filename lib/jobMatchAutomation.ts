@@ -18,6 +18,8 @@ export type JobMatchRecipient = {
   company: string;
   score: number;
   matchedSkills: string[];
+  missingSkills: string[];
+  totalRequirements: number;
   jobUrl: string;
 };
 
@@ -26,6 +28,20 @@ const MESSAGE_TYPE = "job_match_reminder";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (value: unknown, max: number) => String(value || "").trim().slice(0, max);
 const normalize = (value: unknown) => clean(value, 120).toLowerCase();
+const normalizeText = (value: unknown) =>
+  String(value || "").toLowerCase().replace(/[^a-z0-9+#.]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 12000);
+const SMART_JOB_KEYWORDS = [
+  "python", "django", "flask", "fastapi", "javascript", "typescript", "react", "next.js", "vue", "angular",
+  "node.js", "express", "php", "laravel", "wordpress", "woocommerce", "shopify", "html", "css", "tailwind",
+  "java", "spring boot", "c#", ".net", "ruby on rails", "golang", "rust", "sql", "mysql", "postgresql",
+  "mongodb", "firebase", "supabase", "aws", "azure", "google cloud", "docker", "kubernetes", "git", "github",
+  "rest api", "graphql", "api integration", "web development", "mobile development", "react native", "flutter",
+  "figma", "adobe photoshop", "adobe illustrator", "graphic design", "ui design", "ux design", "video editing",
+  "content writing", "copywriting", "seo", "email marketing", "social media", "facebook ads", "google ads",
+  "lead generation", "appointment setting", "customer support", "virtual assistant", "data entry", "bookkeeping",
+  "quickbooks", "xero", "excel", "google sheets", "data analysis", "power bi", "tableau", "automation", "zapier",
+  "make.com", "n8n", "project management", "agile", "scrum", "quality assurance", "software testing",
+] as const;
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -68,12 +84,25 @@ export async function saveJobMatchConfig(config: JobMatchConfig, adminId?: strin
 }
 
 function scoreMatch(profile: Record<string, unknown>, job: Record<string, unknown>) {
-  const userSkills = new Set((Array.isArray(profile.skills) ? profile.skills : []).map(normalize).filter(Boolean));
-  const jobSkills = (Array.isArray(job.skills) ? job.skills : []).map(normalize).filter(Boolean);
-  const matchedSkills = jobSkills.filter((skill) => userSkills.has(skill));
-  const skillScore = jobSkills.length ? (matchedSkills.length / jobSkills.length) * 100 : 55;
-  const categoryScore = normalize(profile.category) && normalize(profile.category) === normalize(job.category) ? 100 : 0;
-  return { score: Math.round(skillScore * 0.75 + categoryScore * 0.25), matchedSkills };
+  const profileSkills = (Array.isArray(profile.skills) ? profile.skills : []).map(normalize).filter(Boolean);
+  const profileText = ` ${normalizeText(profile.category)} ${normalizeText(profile.bio)} ${profileSkills.join(" ")} `;
+  const jobText = ` ${normalizeText(job.title)} ${normalizeText(job.description)} `;
+  const explicitSkills = (Array.isArray(job.skills) ? job.skills : []).map(normalize).filter(Boolean);
+  const descriptionKeywords = SMART_JOB_KEYWORDS.filter((keyword) => jobText.includes(` ${keyword} `));
+  const jobRequirements = [...new Set([...explicitSkills, ...descriptionKeywords])];
+  const isProfileMatch = (requirement: string) =>
+    profileSkills.some((skill) =>
+      skill === requirement ||
+      (skill.length >= 3 && requirement.length >= 3 && (skill.includes(requirement) || requirement.includes(skill))),
+    ) || profileText.includes(` ${requirement} `);
+  const matchedSkills = jobRequirements.filter(isProfileMatch);
+  const missingSkills = jobRequirements.filter((requirement) => !isProfileMatch(requirement));
+  const score = jobRequirements.length
+    ? Math.round((matchedSkills.length / jobRequirements.length) * 100)
+    : normalize(profile.category) && normalize(profile.category) === normalize(job.category)
+      ? 100
+      : 0;
+  return { score, matchedSkills, missingSkills, totalRequirements: jobRequirements.length };
 }
 
 async function getEmail(profile: Record<string, unknown>) {
@@ -90,8 +119,8 @@ async function getEmail(profile: Record<string, unknown>) {
 
 export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecentlySent = true) {
   const [{ data: profiles, error: profileError }, { data: jobs, error: jobError }, { data: applications, error: applicationError }] = await Promise.all([
-    supabaseAdmin.from("profiles").select("id, name, category, skills, aiInsights").eq("role", "freelancer"),
-    supabaseAdmin.from("jobs").select("id, title, company, category, skills, status, createdAt").eq("status", "live"),
+    supabaseAdmin.from("profiles").select("id, name, category, skills, bio, aiInsights").eq("role", "freelancer"),
+    supabaseAdmin.from("jobs").select("id, title, description, company, category, skills, status, createdAt").eq("status", "live"),
     supabaseAdmin.from("applications").select("freelancer_id, job_id"),
   ]);
   if (profileError) throw profileError;
@@ -129,6 +158,8 @@ export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecen
       company: clean(best.job.company, 180) || "TaraWork employer",
       score: best.score,
       matchedSkills: best.matchedSkills,
+      missingSkills: best.missingSkills,
+      totalRequirements: best.totalRequirements,
       jobUrl: `${baseUrl}${getJobSharePath({ id: best.job.id, title: best.job.title })}`,
     } satisfies JobMatchRecipient;
   }));
@@ -142,9 +173,10 @@ function render(template: string, recipient: JobMatchRecipient) {
     company: recipient.company,
     match_score: String(recipient.score),
     matched_skills: recipient.matchedSkills.join(", ") || "your profile skills",
+    missing_skills: recipient.missingSkills.join(", ") || "none",
     job_url: recipient.jobUrl,
   };
-  return template.replace(/\{\{(name|job_title|company|match_score|matched_skills|job_url)\}\}/g, (_, key: string) => values[key]);
+  return template.replace(/\{\{(name|job_title|company|match_score|matched_skills|missing_skills|job_url)\}\}/g, (_, key: string) => values[key]);
 }
 
 export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string) {
@@ -175,7 +207,14 @@ export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string
         type: MESSAGE_TYPE, direction: "outbound", from_email: smtpUser, from_name: fromName,
         to_email: recipient.email, reply_to: smtpUser, subject, text_body: message, status: "sent",
         related_table: "profiles", related_id: recipient.userId,
-        metadata: { jobId: recipient.jobId, matchScore: recipient.score, triggeredBy },
+        metadata: {
+          jobId: recipient.jobId,
+          matchScore: recipient.score,
+          matchedKeywords: recipient.matchedSkills,
+          missingKeywords: recipient.missingSkills,
+          totalRequirements: recipient.totalRequirements,
+          triggeredBy,
+        },
       });
       await supabaseAdmin.from("notifications").insert({
         user_id: recipient.userId, title: subject, message, type: "info", link: getJobSharePath({ id: recipient.jobId, title: recipient.jobTitle }),

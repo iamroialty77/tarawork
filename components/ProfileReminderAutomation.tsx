@@ -58,7 +58,7 @@ export default function ProfileReminderAutomation({ close }: { close: () => void
       <button onClick={close} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
     </div>
     {notice && <div className="border-b border-violet-100 bg-violet-50 px-5 py-3 text-sm font-bold text-violet-700 md:px-8">{notice}</div>}
-    <div className="mx-auto max-w-5xl p-5 md:p-8">
+    <div className="w-full p-4 md:p-5">
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <div><p className="font-black text-slate-800">Daily reminder bot</p><p className="text-xs font-medium text-slate-500">The scheduled job runs daily and respects the cooldown.</p></div>
         <label className="inline-flex cursor-pointer items-center gap-3"><span className={`text-xs font-black ${config.enabled ? "text-emerald-700" : "text-slate-500"}`}>{config.enabled ? "Enabled" : "Disabled"}</span><input type="checkbox" checked={config.enabled} onChange={(event) => setConfig({ ...config, enabled: event.target.checked })} className="h-5 w-5 accent-violet-600" /></label>

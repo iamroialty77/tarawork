@@ -703,7 +703,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
+      <div className={activeTab === "email_messages" ? "w-full p-0" : "mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8"}>
 
       <AnimatePresence mode="wait">
         {activeTab === "overview" && (
