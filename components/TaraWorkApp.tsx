@@ -4974,7 +4974,7 @@ export default function TaraWorkApp() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
+              className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
@@ -4989,10 +4989,10 @@ export default function TaraWorkApp() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
                 {selectedJobApplicants.length > 0 ? (
                   selectedJobApplicants.map((app: any) => (
-                    <div key={app.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group">
+                    <div key={app.id} className="group min-w-0 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 p-4 transition-all hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 sm:p-6">
                       <div className="flex flex-col md:flex-row items-start gap-6">
                         <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
                           {(app.freelancer_profile || app.profiles)?.avatar_url ? (
@@ -5044,12 +5044,12 @@ export default function TaraWorkApp() {
                             )}
                           </div>
 
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                          <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
                             <div className="mb-2 flex items-center gap-2">
                               <Mail className="h-4 w-4 text-indigo-500" />
                               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cover Letter</p>
                             </div>
-                            <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                            <p className="max-w-full whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 [overflow-wrap:anywhere]">
                               {app.cover_letter?.trim() || "No cover letter was included with this application."}
                             </p>
                           </div>
@@ -5098,13 +5098,13 @@ export default function TaraWorkApp() {
                                 </button>
                               </TooltipAction>
                             )}
-                            {app.status === 'hired' && (
+                            {(app.freelancer_id || (app.freelancer_profile || app.profiles)?.id) && (
                               <Link
-                                href={`/messages?with=${encodeURIComponent(app.freelancer_id)}&official=1`}
+                                href={`/messages?with=${encodeURIComponent(app.freelancer_id || (app.freelancer_profile || app.profiles)?.id)}&official=1`}
                                 className="px-6 py-3 bg-emerald-600 text-white text-[10px] font-bold rounded-xl uppercase tracking-widest flex items-center gap-2 border border-emerald-600 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                               >
                                 <Mail className="w-4 h-4" />
-                                Message Freelancer
+                                Message Applicant
                               </Link>
                             )}
                           </div>
