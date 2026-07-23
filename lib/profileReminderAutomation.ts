@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabase_admin";
+import { getProfileSlug } from "@/lib/profileUrl";
 
 export type ReminderAudience = "all" | "freelancer" | "employer";
 export type ProfileReminderConfig = {
@@ -17,6 +18,9 @@ export type ProfileReminderRecipient = {
   role: "freelancer" | "employer";
   email: string;
   completion: number;
+  missingFields: string[];
+  profileUrl: string;
+  messageUrl: string;
 };
 
 export const DEFAULT_PROFILE_REMINDER_CONFIG: ProfileReminderConfig = {
@@ -76,18 +80,28 @@ export async function saveProfileReminderConfig(config: ProfileReminderConfig, a
 
 const hasText = (value: unknown) => typeof value === "string" && value.trim().length > 0;
 
-function calculateCompletion(profile: Record<string, unknown>, hasPortfolio: boolean) {
+function getCompletionDetails(profile: Record<string, unknown>, hasPortfolio: boolean) {
   const role = String(profile.role || "").toLowerCase();
-  const checkpoints = role === "employer"
-    ? [hasText(profile.name), hasText(profile.bio), hasText(profile.username), hasText(profile.companyName), hasText(profile.avatar_url)]
+  const checkpoints: Array<{ label: string; complete: boolean }> = role === "employer"
+    ? [
+        { label: "Full Name", complete: hasText(profile.name) },
+        { label: "About / Bio", complete: hasText(profile.bio) },
+        { label: "Profile Username", complete: hasText(profile.username) },
+        { label: "Company Name", complete: hasText(profile.companyName) },
+        { label: "Profile Photo", complete: hasText(profile.avatar_url) },
+      ]
     : [
-        hasText(profile.bio),
-        Array.isArray(profile.skills) && profile.skills.length > 0,
-        hasText(profile.username),
-        hasPortfolio,
-        hasText(profile.hourlyRate) && profile.hourlyRate !== "$0",
+        { label: "About / Bio", complete: hasText(profile.bio) },
+        { label: "Skills / Services", complete: Array.isArray(profile.skills) && profile.skills.length > 0 },
+        { label: "Profile Username", complete: hasText(profile.username) },
+        { label: "Portfolio", complete: hasPortfolio },
+        { label: "Hourly Rate", complete: hasText(profile.hourlyRate) && profile.hourlyRate !== "$0" },
+        { label: "Profile Photo", complete: hasText(profile.avatar_url) },
       ];
-  return Math.round((checkpoints.filter(Boolean).length / checkpoints.length) * 100);
+  return {
+    completion: Math.round((checkpoints.filter((checkpoint) => checkpoint.complete).length / checkpoints.length) * 100),
+    missingFields: checkpoints.filter((checkpoint) => !checkpoint.complete).map((checkpoint) => checkpoint.label),
+  };
 }
 
 async function resolveEmails(profiles: Array<Record<string, unknown>>) {
@@ -126,7 +140,7 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
 
   const eligible = (profiles || []).map((profile) => ({
     profile,
-    completion: calculateCompletion(profile, portfolioIds.has(profile.id)),
+    ...getCompletionDetails(profile, portfolioIds.has(profile.id)),
   })).filter((item) => item.completion <= config.threshold);
   const emails = await resolveEmails(eligible.map((item) => item.profile));
 
@@ -142,24 +156,55 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
     recentlySent = new Set((data || []).map((item) => item.related_id).filter(Boolean));
   }
 
-  return eligible.flatMap(({ profile, completion }): ProfileReminderRecipient[] => {
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://tarawork.online").replace(/\/$/, "");
+  return eligible.flatMap(({ profile, completion, missingFields }): ProfileReminderRecipient[] => {
     const id = String(profile.id);
     const role = String(profile.role).toLowerCase() as "freelancer" | "employer";
     const email = emails.get(id);
     if (!email || recentlySent.has(id)) return [];
-    return [{ id, name: clean(profile.name, 160) || (role === "employer" ? "Employer" : "Freelancer"), role, email, completion }];
+    const slug = getProfileSlug(clean(profile.username, 120), id);
+    return [{
+      id,
+      name: clean(profile.name, 160) || (role === "employer" ? "Employer" : "Freelancer"),
+      role,
+      email,
+      completion,
+      missingFields,
+      profileUrl: `${baseUrl}/${encodeURIComponent(slug)}`,
+      messageUrl: `${baseUrl}/messages`,
+    }];
   });
 }
 
 function renderTemplate(template: string, recipient: ProfileReminderRecipient) {
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://tarawork.online").replace(/\/$/, "");
   const values: Record<string, string> = {
     name: recipient.name,
-    role: recipient.role,
+    role: recipient.role === "employer" ? "Employer" : "Freelancer",
     completion: String(recipient.completion),
-    profile_url: `${baseUrl}/settings`,
+    profile_url: recipient.profileUrl,
+    missing_fields: recipient.missingFields.join(", ") || "None",
   };
-  return template.replace(/\{\{(name|role|completion|profile_url)\}\}/g, (_, key: string) => values[key]);
+  return template.replace(/\{\{(name|role|completion|profile_url|missing_fields)\}\}/g, (_, key: string) => values[key]);
+}
+
+function renderHtmlTemplate(template: string, recipient: ProfileReminderRecipient) {
+  const values: Record<string, string> = {
+    role: recipient.role === "employer" ? "Employer" : "Freelancer",
+    completion: String(recipient.completion),
+    missing_fields: recipient.missingFields.join(", ") || "None",
+  };
+  const tokens = template.split(/(\{\{(?:name|role|completion|profile_url|missing_fields)\}\})/g);
+  return tokens.map((token) => {
+    if (token === "{{name}}") {
+      return `<a href="${escapeHtml(recipient.messageUrl)}" style="color:#4f46e5;font-weight:700;text-decoration:underline">${escapeHtml(recipient.name)}</a>`;
+    }
+    if (token === "{{profile_url}}") {
+      return `<a href="${escapeHtml(recipient.profileUrl)}" style="color:#4f46e5;font-weight:700">${escapeHtml(recipient.profileUrl)}</a>`;
+    }
+    const match = token.match(/^\{\{(role|completion|missing_fields)\}\}$/);
+    if (match) return escapeHtml(values[match[1]]);
+    return escapeHtml(token);
+  }).join("").replace(/\n/g, "<br />");
 }
 
 export async function sendProfileReminders(config: ProfileReminderConfig, triggeredBy: string) {
@@ -191,7 +236,7 @@ export async function sendProfileReminders(config: ProfileReminderConfig, trigge
         replyTo: smtpUser,
         subject,
         text: message,
-        html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p style="white-space:pre-line">${escapeHtml(message)}</p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Support</p></div>`,
+        html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p>${renderHtmlTemplate(config.message, recipient)}</p><p><a href="${escapeHtml(recipient.profileUrl)}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700">Complete your profile</a></p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Support</p></div>`,
       });
       sent += 1;
       await supabaseAdmin.from("email_messages").insert({
@@ -206,14 +251,14 @@ export async function sendProfileReminders(config: ProfileReminderConfig, trigge
         status: "sent",
         related_table: "profiles",
         related_id: recipient.id,
-        metadata: { completion: recipient.completion, role: recipient.role, triggeredBy },
+        metadata: { completion: recipient.completion, role: recipient.role, missingFields: recipient.missingFields, triggeredBy },
       });
       await supabaseAdmin.from("notifications").insert({
         user_id: recipient.id,
         title: subject,
         message,
         type: "warning",
-        link: "/settings",
+        link: recipient.profileUrl,
       });
     } catch {
       failed += 1;
