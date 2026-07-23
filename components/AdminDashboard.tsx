@@ -5,6 +5,7 @@ import { Fragment, useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import RichTextEditor from "./RichTextEditor";
 import AdminEmailInbox from "./AdminEmailInbox";
+import AdminAutomation from "./AdminAutomation";
 import { 
   Users, 
   Briefcase, 
@@ -37,10 +38,11 @@ import {
   Mail,
   Paperclip,
   X,
-  BookOpen
+  BookOpen,
+  Bot
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "blog" | "marketing" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "blog" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 type MarketingAttachment = {
@@ -625,6 +627,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "disputes", label: "Disputes", icon: Scale },
     { id: "talent_requests", label: "Talent Requests", icon: Users },
     { id: "email_messages", label: "Email", icon: Mail },
+    { id: "automation", label: "Automation", icon: Bot },
     { id: "blog", label: "Blog Studio", icon: BookOpen },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
@@ -1326,6 +1329,8 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         )}
 
         {activeTab === "email_messages" && <AdminEmailInbox key={emailMessages.map((message) => message.id + (message.metadata?.trashedAt || "")).join(":")} messages={emailMessages} refresh={() => void fetchData()} reply={(id, body) => submitEmailReply(id, body)} />}
+
+        {activeTab === "automation" && <AdminAutomation />}
 
         {false && (
           <motion.div
