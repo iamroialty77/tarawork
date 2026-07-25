@@ -612,12 +612,12 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
     ].filter((item) => typeof item.value === "string" && item.value.trim().length > 0);
 
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-10">
+      <main className="min-h-screen overflow-x-hidden bg-slate-50 px-3 py-4 sm:px-4 sm:py-10">
         <div className="mx-auto max-w-5xl">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="bg-slate-950 p-8 text-white sm:p-10">
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/10 text-3xl font-black">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-3xl">
+            <div className="bg-slate-950 p-5 text-white sm:p-10">
+              <div className="flex flex-col gap-5 min-[420px]:flex-row min-[420px]:items-center sm:gap-6">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/10 text-2xl font-black sm:h-24 sm:w-24 sm:rounded-3xl sm:text-3xl">
                   {profile.avatar_url ? (
                     <img src={profile.avatar_url} alt={`${companyName} logo`} className="h-full w-full object-cover" />
                   ) : (
@@ -626,7 +626,7 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-indigo-300">TaraWork Company Profile</p>
-                  <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{companyName}</h1>
+                  <h1 className="mt-2 break-words text-2xl font-black tracking-tight sm:text-4xl">{companyName}</h1>
                   <p className="mt-2 text-sm font-semibold text-slate-300">
                     {companyProfile.industry || "Employer"}{companyProfile.companySize ? ` · ${companyProfile.companySize}` : ""}
                   </p>
@@ -634,7 +634,7 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
               </div>
             </div>
 
-            <div className="space-y-8 p-6 sm:p-8">
+            <div className="space-y-6 p-4 sm:space-y-8 sm:p-8">
               <section className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Jobs</p>
@@ -653,14 +653,14 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
               </section>
 
               <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                   <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Company Description</h2>
                   <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-slate-700">
                     {profile.bio || "This company has not added a description yet."}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                   <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Contact Details</h2>
                   {contactItems.length > 0 ? (
                     <div className="mt-4 space-y-3">
@@ -689,7 +689,7 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
               <div className="flex items-center gap-3 pt-2">
                 <Link
                   href="/"
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-300 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-slate-700 transition-colors hover:bg-slate-50 sm:w-auto"
                 >
                   Back to Marketplace
                 </Link>

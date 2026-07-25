@@ -66,8 +66,8 @@ const getDisplayRate = (profile: FreelancerProfile, services: ReturnType<typeof 
 const normalizeServicesForDisplay = (services: FreelancerProfile['servicesOffered']) => services || [];
 
 const ProjectCard = ({ project }: { project: PortfolioProject }) => (
-  <div className="group rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm">
-    <div className="relative mb-5 aspect-video overflow-hidden rounded-xl bg-slate-100">
+  <div className="group min-w-0 rounded-2xl border border-slate-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm sm:p-5">
+    <div className="relative mb-4 aspect-video overflow-hidden rounded-xl bg-slate-100 sm:mb-5">
       <img
         src={project.image_url || '/tarawork-icon.png'}
         alt={project.title}
@@ -79,7 +79,7 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
       />
     </div>
 
-    <h3 className="text-lg font-bold tracking-tight text-slate-900">{project.title}</h3>
+    <h3 className="break-words text-lg font-bold tracking-tight text-slate-900">{project.title}</h3>
     <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600">{project.description}</p>
 
     <div className="mt-4 flex flex-wrap gap-2">
@@ -93,7 +93,7 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
       ))}
     </div>
 
-    <div className="mt-5 flex gap-4">
+    <div className="mt-5 flex flex-wrap gap-4">
       {project.project_url && (
         <a
           href={project.project_url}
@@ -402,20 +402,20 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
       <nav className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-6">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex min-h-16 max-w-screen-xl items-center justify-between gap-2 px-3 py-2 sm:h-16 sm:px-6 sm:py-0">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <img
               src="/tarawork-icon.png"
               alt="TaraWork Logo"
-              className="h-10 w-10 rounded-xl object-contain"
+              className="h-9 w-9 shrink-0 rounded-xl object-contain sm:h-10 sm:w-10"
             />
             <div>
-              <span className="block text-lg font-bold tracking-tight">TaraWork</span>
+              <span className="hidden text-lg font-bold tracking-tight min-[430px]:block">TaraWork</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
             {inviteStatus ? (
               <span className="hidden max-w-48 truncate text-xs font-bold text-slate-500 sm:inline">
                 {inviteStatus}
@@ -429,35 +429,36 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             <button
               onClick={handleSaveTalent}
               disabled={!isPublic}
-              className="rounded-full border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="min-h-10 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
             >
               <span className="inline-flex items-center gap-1.5">
-                <Bookmark size={14} />
-                {isSavedTalent ? 'Saved' : 'Save'}
+                <Bookmark className="shrink-0" size={14} />
+                <span className="hidden min-[360px]:inline">{isSavedTalent ? 'Saved' : 'Save'}</span>
               </span>
             </button>
             <button
               onClick={handleInvite}
               disabled={!isPublic || isInviting || hasSentInvite}
-              className="rounded-full border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="min-h-10 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
             >
               {isInviting ? 'Inviting...' : hasSentInvite ? 'Invited' : 'Invite'}
             </button>
             <button
               onClick={handleHireMe}
               disabled={!isPublic}
-              className="rounded-full bg-slate-900 px-5 py-2 text-xs font-bold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="min-h-10 rounded-full bg-slate-900 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
             >
-              Send Inquiry
+              <span className="sm:hidden">Inquiry</span>
+              <span className="hidden sm:inline">Send Inquiry</span>
             </button>
           </div>
         </div>
       </nav>
 
-      <div className="mx-auto flex max-w-screen-xl flex-col gap-12 px-6 py-28 lg:flex-row">
-        <aside className="lg:w-[320px] lg:shrink-0">
-          <div className="space-y-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="space-y-4">
+      <div className="mx-auto flex max-w-screen-xl flex-col gap-8 px-3 pb-16 pt-24 sm:gap-12 sm:px-6 sm:py-28 lg:flex-row">
+        <aside className="min-w-0 lg:w-[320px] lg:shrink-0">
+          <div className="space-y-7 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:space-y-8 sm:rounded-3xl sm:p-6">
+            <div className="flex min-w-0 items-center gap-4 sm:block sm:space-y-4">
               <div className="relative h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
                 <img
                   src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'}
@@ -465,9 +466,9 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{profile.name}</h1>
-                <p className="mt-1 font-medium text-slate-500">{profession}</p>
+              <div className="min-w-0">
+                <h1 className="break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{profile.name}</h1>
+                <p className="mt-1 break-words text-sm font-medium text-slate-500 sm:text-base">{profession}</p>
                 <div className="mt-2 inline-flex items-center gap-2 text-sm text-slate-400">
                   <MapPin size={14} />
                   <span>Remote / Freelance</span>
@@ -524,8 +525,8 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   <div className={`rounded-2xl border bg-white p-4 transition-all duration-500 ${
                     contactUnlockedPulse ? 'border-emerald-300 ring-4 ring-emerald-100 shadow-lg shadow-emerald-100' : 'border-slate-200'
                   }`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
+                    <div className="flex flex-col items-start gap-3 min-[400px]:flex-row min-[400px]:justify-between">
+                      <div className="min-w-0">
                         <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Contact Details</p>
                         <p className="mt-1 text-xs font-semibold text-slate-500">
                           Direct outreach unlocks after you save or invite this talent.
@@ -546,7 +547,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                           {contactEmail ? (
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Email</p>
-                              <div className="mt-1 flex items-center justify-between gap-3">
+                              <div className="mt-1 flex flex-col items-start gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
                                 <a
                                   href={`mailto:${contactEmail}`}
                                   className="flex min-w-0 items-center gap-3 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
@@ -556,7 +557,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                                 </a>
                                 <button
                                   onClick={() => navigator.clipboard.writeText(contactEmail)}
-                                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                                   className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
                                 >
                                   <Copy className="h-3.5 w-3.5" />
                                   Copy
@@ -567,7 +568,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                           {contactPhone ? (
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Contact Number</p>
-                              <div className="mt-1 flex items-center justify-between gap-3">
+                              <div className="mt-1 flex flex-col items-start gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
                                 <a
                                   href={`tel:${contactPhone.replace(/\s+/g, '')}`}
                                   className="flex min-w-0 items-center gap-3 text-sm font-semibold text-slate-700 transition-colors hover:text-slate-900"
@@ -577,7 +578,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                                 </a>
                                 <button
                                   onClick={() => navigator.clipboard.writeText(contactPhone)}
-                                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                                   className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
                                 >
                                   <Copy className="h-3.5 w-3.5" />
                                   Copy
@@ -645,33 +646,33 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
           </div>
         </aside>
 
-        <main className="flex-1 space-y-12">
+        <main className="min-w-0 flex-1 space-y-8 sm:space-y-12">
           {contactUnlockMessage ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-widest text-emerald-700 shadow-sm">
               <ShieldCheck className="h-3.5 w-3.5" />
               {contactUnlockMessage}
             </div>
           ) : null}
-          <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Profile Summary</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+                <h2 className="mt-3 break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                   {profile.category || profile.role || 'Freelancer'} services for modern teams
                 </h2>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Hourly Rate</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">{displayRate}</p>
+                <p className="mt-2 break-words text-xl font-black text-slate-900 sm:text-2xl">{displayRate}</p>
               </div>
             </div>
           </section>
 
-          <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          <div className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm min-[420px]:grid-cols-3">
             <button
               type="button"
               onClick={() => setActiveSection('services')}
-              className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+              className={`min-h-11 rounded-xl px-3 py-2 text-sm font-bold transition-colors ${
                 activeSection === 'services'
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
@@ -682,7 +683,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             <button
               type="button"
               onClick={() => setActiveSection('projects')}
-              className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+              className={`min-h-11 rounded-xl px-3 py-2 text-sm font-bold transition-colors ${
                 activeSection === 'projects'
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
@@ -693,7 +694,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             <button
               type="button"
               onClick={() => setActiveSection('feedback')}
-              className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+              className={`min-h-11 rounded-xl px-3 py-2 text-sm font-bold transition-colors ${
                 activeSection === 'feedback'
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
@@ -705,17 +706,17 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
 
           {activeSection === 'services' ? (
             <section className="space-y-6">
-              <div className="flex items-end justify-between">
-                <h2 className="text-3xl font-bold tracking-tight text-slate-900">Services Offered</h2>
+              <div className="flex flex-col gap-1 min-[400px]:flex-row min-[400px]:items-end min-[400px]:justify-between">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Services Offered</h2>
                 <p className="text-sm font-medium text-slate-400">{servicesOffered.length} services</p>
               </div>
 
               {servicesOffered.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   {servicesOffered.map((service, index) => (
-                    <div key={`${service.serviceName}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div key={`${service.serviceName}-${index}`} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Service</p>
-                      <h3 className="mt-2 text-lg font-bold text-slate-900">{service.serviceName}</h3>
+                      <h3 className="mt-2 break-words text-lg font-bold text-slate-900">{service.serviceName}</h3>
                       <p className="mt-4 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Starting Price</p>
                       <p className="mt-1 text-lg font-black text-slate-900">
                         {formatServicePrice(service.currency, Number(service.startingPrice || 0))}
@@ -726,15 +727,15 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-500">
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-slate-500 sm:p-10">
                   No services listed yet.
                 </div>
               )}
             </section>
           ) : activeSection === 'projects' ? (
             <section className="space-y-6">
-              <div className="flex items-end justify-between">
-                <h2 className="text-3xl font-bold tracking-tight text-slate-900">Featured Projects</h2>
+              <div className="flex flex-col gap-1 min-[400px]:flex-row min-[400px]:items-end min-[400px]:justify-between">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Featured Projects</h2>
                 <p className="text-sm font-medium text-slate-400">{projects.length} projects</p>
               </div>
 
@@ -745,7 +746,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-20 text-slate-500">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-14 text-center text-slate-500 sm:py-20">
                   <Briefcase size={40} strokeWidth={1} className="mb-4" />
                   <p>No projects showcased yet.</p>
                 </div>
@@ -753,10 +754,10 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
             </section>
           ) : (
             <section className="space-y-6">
-              <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600">Client Feedback</p>
-                  <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Reviews from clients</h2>
+                  <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Reviews from clients</h2>
                 </div>
                 <div className="flex items-center gap-4 rounded-2xl bg-yellow-100 px-5 py-4">
                   <div>
@@ -815,7 +816,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-20 text-center text-slate-500">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-14 text-center text-slate-500 sm:py-20">
                   <MessageSquareText size={40} strokeWidth={1} className="mb-4 text-slate-400" />
                   <p className="font-semibold text-slate-700">No client feedback yet.</p>
                   <p className="mt-2 max-w-md text-sm">Client ratings and comments will appear here after completed work is reviewed by employers or clients.</p>
@@ -827,12 +828,12 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       </div>
 
       {isInquiryModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center overflow-y-auto bg-slate-950/60 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Send Inquiry</p>
-                <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Reach out to {profile.name}</h3>
+                <h3 className="mt-2 break-words text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Reach out to {profile.name}</h3>
               </div>
               <button
                 onClick={() => setIsInquiryModalOpen(false)}
@@ -897,13 +898,13 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
       )}
 
       {isEmployerRegisterModalOpen && (
-        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-            <div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
+        <div className="fixed inset-0 z-[75] flex items-end justify-center overflow-y-auto bg-slate-950/70 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[calc(100dvh-1rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl">
+            <div className="border-b border-slate-100 bg-slate-50 px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-600">Employer Access</p>
-                  <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Register as an employer</h3>
+                  <h3 className="mt-2 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Register as an employer</h3>
                 </div>
                 <button
                   type="button"
@@ -915,7 +916,7 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
                 </button>
               </div>
             </div>
-            <div className="space-y-5 px-6 py-6">
+            <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-6">
               <p className="text-sm leading-relaxed text-slate-600">
                 Create a TaraWork employer account to save freelancers, send invitations, unlock contact details, and manage hiring conversations professionally.
               </p>
