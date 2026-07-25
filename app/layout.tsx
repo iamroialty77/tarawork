@@ -27,13 +27,23 @@ const structuredData = {
       url: absoluteUrl("/"),
       logo: absoluteUrl("/tarawork-removebg-preview.png"),
       email: "hello@tarawork.online",
+      telephone: "+639944834740",
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "Waling-Waling, Purok Sta. Cruz, Calumpang",
+        addressLocality: "General Santos City",
+        addressCountry: "PH",
+      },
       contactPoint: {
         "@type": "ContactPoint",
         email: "hello@tarawork.online",
         contactType: "customer support",
         availableLanguage: ["English", "Filipino"],
       },
-      sameAs: [],
+      sameAs: [
+        "https://www.facebook.com/profile.php?id=61581316087458",
+        "https://www.linkedin.com/company/tarawork-online/",
+      ],
     },
     {
       "@type": "WebSite",

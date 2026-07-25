@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Briefcase, Search, ShieldCheck, Users } from "lucide-react";
 import { absoluteUrl } from "@/lib/seo";
+import SiteFooter from "@/components/SiteFooter";
 
 type SeoLandingPageProps = {
   eyebrow: string;
@@ -218,5 +219,6 @@ export default function SeoLandingPage({
         </div>
       </section>
     </main>
+    <SiteFooter />
   );
 }

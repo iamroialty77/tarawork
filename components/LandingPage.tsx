@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import type { BlogPost } from "@/lib/blog";
+import SiteFooter from "@/components/SiteFooter";
 
 type LandingBlogPost = Pick<BlogPost, "title" | "excerpt" | "href" | "image" | "imageAlt" | "category" | "readTime">;
 
@@ -519,20 +520,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="w-full border-t border-zinc-200 bg-white px-4 py-8 sm:px-6 lg:px-10">
-        <div className="flex w-full flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
-          <p className="text-sm font-bold text-zinc-500">© 2026 TaraWork.online. All rights reserved.</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm font-bold text-zinc-500 sm:justify-end">
-            <Link href="/about" className="hover:text-zinc-950">About</Link>
-            <Link href="/safety" className="hover:text-zinc-950">Safety</Link>
-            <Link href="/privacy" className="hover:text-zinc-950">Privacy</Link>
-            <Link href="/terms" className="hover:text-zinc-950">Terms</Link>
-            <Link href="/cookies" className="hover:text-zinc-950">Cookies</Link>
-            <Link href="/payment-policy" className="hover:text-zinc-950">Payments</Link>
-            <Link href="/contact" className="hover:text-zinc-950">Contact</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

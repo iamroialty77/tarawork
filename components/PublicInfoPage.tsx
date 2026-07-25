@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Mail, ShieldCheck } from "lucide-react";
+import SiteFooter from "@/components/SiteFooter";
 
 export type InfoSection = { heading: string; paragraphs?: string[]; bullets?: string[] };
 
@@ -10,5 +11,6 @@ export default function PublicInfoPage({ eyebrow, title, introduction, sections,
       <div className="mt-10 space-y-6">{sections.map((section) => <section key={section.heading} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"><h2 className="text-xl font-black">{section.heading}</h2>{section.paragraphs?.map((paragraph) => <p key={paragraph} className="mt-4 text-sm font-medium leading-7 text-slate-600">{paragraph}</p>)}{section.bullets && <ul className="mt-4 list-disc space-y-2 pl-5 text-sm font-medium leading-7 text-slate-600">{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>}</section>)}</div>
       <div className="mt-8 rounded-2xl bg-slate-950 p-6 text-white"><h2 className="font-black">Questions or concerns?</h2><p className="mt-2 text-sm leading-6 text-slate-300">Contact TaraWork at <a className="font-bold text-indigo-300 underline" href="mailto:hello@tarawork.online">hello@tarawork.online</a>.</p></div>
     </main>
+    <SiteFooter />
   </div>;
 }
