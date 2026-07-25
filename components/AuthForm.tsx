@@ -36,6 +36,22 @@ export default function AuthForm() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaChallenge, setCaptchaChallenge] = useState(0);
   const captchaSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
+  const requiresCaptcha =
+    mode === "login" || mode === "signup" || mode === "forgot_password";
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    setCaptchaChallenge((value) => value + 1);
+  };
+
+  const changeMode = (
+    nextMode: "login" | "signup" | "forgot_password" | "update_password",
+  ) => {
+    setMode(nextMode);
+    resetCaptcha();
+    setError(null);
+    setSuccess(null);
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -149,11 +165,25 @@ export default function AuthForm() {
     setSuccess(null);
 
     try {
+      if (requiresCaptcha && !captchaSiteKey) {
+        setError("Authentication is temporarily unavailable because bot protection is not configured.");
+        setLoading(false);
+        return;
+      }
+
+      if (requiresCaptcha && !captchaToken) {
+        setError("Please complete the security check before continuing.");
+        setLoading(false);
+        return;
+      }
+
       if (mode === "forgot_password") {
         const resetTarget = "/auth?mode=update_password";
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(resetTarget)}`,
+          captchaToken: captchaToken!,
         });
+        resetCaptcha();
         if (error) throw error;
         setSuccess("Password reset link sent! Please check your email.");
         return;
@@ -187,17 +217,6 @@ export default function AuthForm() {
           setLoading(false);
           return;
         }
-        if (!captchaSiteKey) {
-          setError("Registration is temporarily unavailable because bot protection is not configured.");
-          setLoading(false);
-          return;
-        }
-        if (!captchaToken) {
-          setError("Please complete the security check before creating an account.");
-          setLoading(false);
-          return;
-        }
-
         const { error, data } = await supabase.auth.signUp({
           email,
           password,
@@ -209,11 +228,10 @@ export default function AuthForm() {
               username: email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
-            captchaToken,
+            captchaToken: captchaToken!,
           },
         });
-        setCaptchaToken(null);
-        setCaptchaChallenge((value) => value + 1);
+        resetCaptcha();
         
         if (error) {
           // Explicitly check for 500 or SMTP errors in the error object
@@ -243,7 +261,11 @@ export default function AuthForm() {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
+          options: {
+            captchaToken: captchaToken!,
+          },
         });
+        resetCaptcha();
         if (error) throw error;
         setSuccess("Logged in successfully!");
         window.location.href = nextPath;
@@ -398,7 +420,7 @@ export default function AuthForm() {
                       {mode === "login" && (
                         <button 
                           type="button" 
-                          onClick={() => setMode("forgot_password")}
+                          onClick={() => changeMode("forgot_password")}
                           className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700"
                         >
                           Forgot password?
@@ -487,11 +509,11 @@ export default function AuthForm() {
               </div>
             )}
 
-            {mode === "signup" && (
+            {requiresCaptcha && (
               <div className="space-y-2">
                 {captchaSiteKey ? (
                   <TurnstileWidget
-                    key={captchaChallenge}
+                    key={`${mode}-${captchaChallenge}`}
                     siteKey={captchaSiteKey}
                     onToken={setCaptchaToken}
                     onError={(errorCode) =>
@@ -504,7 +526,7 @@ export default function AuthForm() {
                   />
                 ) : (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
-                    Registration is paused until CAPTCHA protection is configured.
+                    Authentication is paused until CAPTCHA protection is configured.
                   </div>
                 )}
               </div>
@@ -523,7 +545,7 @@ export default function AuthForm() {
 
             <button
               type="submit"
-              disabled={loading || (mode === "signup" && (!captchaSiteKey || !captchaToken))}
+              disabled={loading || (requiresCaptcha && (!captchaSiteKey || !captchaToken))}
               className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg shadow-slate-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70 group"
             >
               {loading ? (
@@ -592,7 +614,7 @@ export default function AuthForm() {
               <>
                 Don't have an account?{" "}
                 <button
-                  onClick={() => setMode("signup")}
+                  onClick={() => changeMode("signup")}
                   className="text-indigo-600 font-bold hover:underline"
                 >
                   Create one now
@@ -603,7 +625,7 @@ export default function AuthForm() {
               <>
                 Already have an account?{" "}
                 <button
-                  onClick={() => setMode("login")}
+                  onClick={() => changeMode("login")}
                   className="text-indigo-600 font-bold hover:underline"
                 >
                   Sign in instead
@@ -612,7 +634,7 @@ export default function AuthForm() {
             )}
             {(mode === "forgot_password" || mode === "update_password") && (
               <button
-                onClick={() => setMode("login")}
+                onClick={() => changeMode("login")}
                 className="text-indigo-600 font-bold hover:underline"
               >
                 Back to Login
