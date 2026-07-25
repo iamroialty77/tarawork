@@ -60,7 +60,8 @@ export default function SeoLandingPage({
   };
 
   return (
-    <main className="min-h-screen bg-white text-zinc-950">
+    <>
+      <main className="min-h-screen bg-white text-zinc-950">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
@@ -218,7 +219,8 @@ export default function SeoLandingPage({
           </div>
         </div>
       </section>
-    </main>
-    <SiteFooter />
+      </main>
+      <SiteFooter />
+    </>
   );
 }
