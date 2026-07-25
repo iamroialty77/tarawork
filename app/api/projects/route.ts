@@ -14,12 +14,11 @@ export async function GET() {
   });
 }
 
-export async function POST(request: Request) {
-  const data = await request.json();
-  
-  // Logic for creating new projects or logging time would go here
+export async function POST() {
   return NextResponse.json({
-    message: "Time logged successfully (Placeholder)",
-    received: data
-  }, { status: 201 });
+    error: "Project mutations are not implemented.",
+  }, {
+    status: 501,
+    headers: { "Cache-Control": "no-store" },
+  });
 }

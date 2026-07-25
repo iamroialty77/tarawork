@@ -88,7 +88,7 @@ function MessagesContent() {
       // 3. Handle 'with' parameter if provided
       if (withUserId && withUserId !== userId) {
         // Check if conversation already exists
-        let existingConv = formattedConversations.find(c => 
+        const existingConv = formattedConversations.find(c =>
           c.participant_1 === withUserId || c.participant_2 === withUserId
         );
 

@@ -36,8 +36,6 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
     };
   }, []);
 
-  useEffect(() => setIsMenuOpen(false), [pathname]);
-
   const isActive = (href: string) => {
     const [linkPath, linkHash] = href.split("#");
     if (linkHash) return pathname === "/" && hash === `#${linkHash}`;

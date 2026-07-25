@@ -46,16 +46,20 @@ const sql = databaseUrl
 
 export async function GET(req: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    if (!isUuid(user.id)) {
+      return NextResponse.json({ error: "Invalid authenticated user." }, { status: 400 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const userId = (searchParams.get("userId") || "").trim();
-    if (!userId) return NextResponse.json({ error: "Missing user id." }, { status: 400 });
     if (!sql) return NextResponse.json({ error: "Database connection is not configured." }, { status: 500 });
 
     const scope = searchParams.get("scope") === "received" ? "received" : "sent";
     const userColumnFilter =
       scope === "received"
-        ? sql`ti.freelancer_id = ${userId}::uuid`
-        : sql`ti.employer_id = ${userId}::uuid`;
+        ? sql`ti.freelancer_id = ${user.id}::uuid`
+        : sql`ti.employer_id = ${user.id}::uuid`;
 
     const invitations = await sql`
       select

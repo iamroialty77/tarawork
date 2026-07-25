@@ -31,8 +31,8 @@ export default function AuthPage() {
         <div className="mt-12 text-center">
           <p className="text-xs text-slate-400 font-medium">
             By continuing, you agree to Tara's{" "}
-            <a href="/terms" className="underline hover:text-slate-600 transition-colors">Terms of Service</a> and{" "}
-            <a href="/privacy" className="underline hover:text-slate-600 transition-colors">Privacy Policy</a>.
+            <Link href="/terms" className="underline hover:text-slate-600 transition-colors">Terms of Service</Link> and{" "}
+            <Link href="/privacy" className="underline hover:text-slate-600 transition-colors">Privacy Policy</Link>.
           </p>
         </div>
       </div>

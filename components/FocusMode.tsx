@@ -31,17 +31,19 @@ export default function FocusMode({ isOpen, onClose, tasks }: FocusModeProps) {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (timeLeft === 0) {
-      setIsActive(false);
-      // Play sound or notification
-      if (!isBreak) {
-        alert("Time for a 10-minute break!");
-        setIsBreak(true);
-        setTimeLeft(10 * 60);
-      } else {
-        alert("Break over! Ready to focus?");
-        setIsBreak(false);
-        setTimeLeft(50 * 60);
-      }
+      const completionTimer = setTimeout(() => {
+        setIsActive(false);
+        if (!isBreak) {
+          alert("Time for a 10-minute break!");
+          setIsBreak(true);
+          setTimeLeft(10 * 60);
+        } else {
+          alert("Break over! Ready to focus?");
+          setIsBreak(false);
+          setTimeLeft(50 * 60);
+        }
+      }, 0);
+      return () => clearTimeout(completionTimer);
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft, isBreak]);

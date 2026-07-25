@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabase_admin";
+import { getConfirmedAuthEmail } from "@/lib/emailEligibility.mjs";
 import { getJobSharePath } from "@/lib/jobShare";
 
 export type JobMatchConfig = {
@@ -25,7 +26,6 @@ export type JobMatchRecipient = {
 
 const CONFIG_TYPE = "job_match_automation_config";
 const MESSAGE_TYPE = "job_match_reminder";
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (value: unknown, max: number) => String(value || "").trim().slice(0, max);
 const normalize = (value: unknown) => clean(value, 120).toLowerCase();
 const normalizeText = (value: unknown) =>
@@ -106,15 +106,8 @@ function scoreMatch(profile: Record<string, unknown>, job: Record<string, unknow
 }
 
 async function getEmail(profile: Record<string, unknown>) {
-  const insights = profile.aiInsights && typeof profile.aiInsights === "object"
-    ? profile.aiInsights as Record<string, unknown> : {};
-  const application = insights.applicationProfile && typeof insights.applicationProfile === "object"
-    ? insights.applicationProfile as Record<string, unknown> : {};
-  const savedEmail = clean(application.contactEmail, 320).toLowerCase();
-  if (EMAIL.test(savedEmail)) return savedEmail;
   const { data } = await supabaseAdmin.auth.admin.getUserById(String(profile.id));
-  const authEmail = clean(data.user?.email, 320).toLowerCase();
-  return EMAIL.test(authEmail) ? authEmail : "";
+  return getConfirmedAuthEmail(data.user);
 }
 
 export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecentlySent = true) {

@@ -2,6 +2,12 @@
 
 TaraWork is a Next.js marketplace app backed by Supabase.
 
+## Engineering foundation
+
+Architecture decisions, security priorities, testing strategy, database lifecycle, deployment gates, and the stabilization roadmap are documented in [`docs/engineering-foundation.md`](docs/engineering-foundation.md).
+
+Registration-bot and SMTP-quota incidents are handled using [`docs/auth-abuse-response.md`](docs/auth-abuse-response.md).
+
 ## Workflow
 
 ### 1. Clone and install
@@ -10,16 +16,13 @@ npm install
 ```
 
 ### 2. Configure environment
-Create `.env.local` in the project root:
+Copy the committed environment contract, then replace its placeholders:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-DATABASE_URL=your_postgres_connection_string
-OPENAI_API_KEY=your_openai_api_key
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+cp .env.example .env.local
 ```
+
+Never expose `SUPABASE_SERVICE_ROLE_KEY`, database credentials, webhook secrets, or provider API keys through a `NEXT_PUBLIC_` variable.
 
 ### 3. Initialize database
 1. Open Supabase SQL Editor.
@@ -43,7 +46,9 @@ npm run db:check
 - Run lint checks:
 
 ```bash
+npm run typecheck
 npm run lint
+npm test
 ```
 
 ### 6. Build check before release
@@ -52,10 +57,19 @@ npm run build
 npm run start
 ```
 
+Run the complete local quality gate with:
+
+```bash
+npm run check
+```
+
 ## Scripts
 
 - `npm run dev` - Start local development server
 - `npm run lint` - Run ESLint
+- `npm run typecheck` - Validate TypeScript without emitting files
+- `npm test` - Run automated tests
+- `npm run check` - Run type-check, lint, tests, and production build
 - `npm run build` - Create production build
 - `npm run start` - Run production server
 

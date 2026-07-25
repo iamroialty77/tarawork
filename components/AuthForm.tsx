@@ -18,6 +18,7 @@ import {
   Users
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import TurnstileWidget from "./security/TurnstileWidget";
 
 export default function AuthForm() {
   const [mode, setMode] = useState<"login" | "signup" | "forgot_password" | "update_password">("login");
@@ -32,6 +33,9 @@ export default function AuthForm() {
   const [showSMTPHelp, setShowSMTPHelp] = useState(false);
   const [referringId, setReferringId] = useState<string | null>(null);
   const [nextPath, setNextPath] = useState("/dashboard");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaChallenge, setCaptchaChallenge] = useState(0);
+  const captchaSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -183,6 +187,16 @@ export default function AuthForm() {
           setLoading(false);
           return;
         }
+        if (!captchaSiteKey) {
+          setError("Registration is temporarily unavailable because bot protection is not configured.");
+          setLoading(false);
+          return;
+        }
+        if (!captchaToken) {
+          setError("Please complete the security check before creating an account.");
+          setLoading(false);
+          return;
+        }
 
         const { error, data } = await supabase.auth.signUp({
           email,
@@ -195,8 +209,11 @@ export default function AuthForm() {
               username: email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+            captchaToken,
           },
         });
+        setCaptchaToken(null);
+        setCaptchaChallenge((value) => value + 1);
         
         if (error) {
           // Explicitly check for 500 or SMTP errors in the error object
@@ -456,7 +473,7 @@ export default function AuthForm() {
                         <ul className="space-y-2 opacity-90">
                           <li className="flex gap-2">
                             <span className="text-indigo-400 font-bold">1.</span>
-                            <span>Go to <b>Authentication {">"} Providers {">"} Email</b> and disable <b>"Confirm email"</b> for a temporary fix.</span>
+                            <span>Keep <b>Confirm email</b> enabled. Review Authentication logs and rate limits before restoring signup traffic.</span>
                           </li>
                           <li className="flex gap-2">
                             <span className="text-indigo-400 font-bold">2.</span>
@@ -467,6 +484,25 @@ export default function AuthForm() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+              </div>
+            )}
+
+            {mode === "signup" && (
+              <div className="space-y-2">
+                {captchaSiteKey ? (
+                  <TurnstileWidget
+                    key={captchaChallenge}
+                    siteKey={captchaSiteKey}
+                    onToken={setCaptchaToken}
+                    onError={() =>
+                      setError("The security check could not load. Please refresh and try again.")
+                    }
+                  />
+                ) : (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                    Registration is paused until CAPTCHA protection is configured.
+                  </div>
+                )}
               </div>
             )}
 
@@ -483,7 +519,7 @@ export default function AuthForm() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (mode === "signup" && (!captchaSiteKey || !captchaToken))}
               className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg shadow-slate-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70 group"
             >
               {loading ? (

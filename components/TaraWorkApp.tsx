@@ -945,8 +945,7 @@ export default function TaraWorkApp() {
         );
       };
 
-      let response: Response;
-      response = await saveProfileRequest();
+      const response = await saveProfileRequest();
 
       const payload = await response.json().catch(() => ({}));
 

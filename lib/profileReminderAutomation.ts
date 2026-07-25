@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { getProfileSlug } from "@/lib/profileUrl";
+import { getConfirmedAuthEmail } from "@/lib/emailEligibility.mjs";
 
 export type ReminderAudience = "all" | "freelancer" | "employer";
 export type ProfileReminderConfig = {
@@ -34,7 +35,6 @@ export const DEFAULT_PROFILE_REMINDER_CONFIG: ProfileReminderConfig = {
 
 const CONFIG_TYPE = "profile_completion_automation_config";
 const REMINDER_TYPE = "profile_completion_reminder";
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (value: unknown, max: number) => String(value || "").trim().slice(0, max);
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -106,17 +106,9 @@ function getCompletionDetails(profile: Record<string, unknown>, hasPortfolio: bo
 
 async function resolveEmails(profiles: Array<Record<string, unknown>>) {
   const results = await Promise.all(profiles.map(async (profile) => {
-    const insights = profile.aiInsights && typeof profile.aiInsights === "object"
-      ? profile.aiInsights as Record<string, unknown>
-      : {};
-    const application = insights.applicationProfile && typeof insights.applicationProfile === "object"
-      ? insights.applicationProfile as Record<string, unknown>
-      : {};
-    const savedEmail = clean(application.contactEmail, 320).toLowerCase();
-    if (EMAIL.test(savedEmail)) return { id: String(profile.id), email: savedEmail };
     const { data } = await supabaseAdmin.auth.admin.getUserById(String(profile.id));
-    const authEmail = clean(data.user?.email, 320).toLowerCase();
-    return EMAIL.test(authEmail) ? { id: String(profile.id), email: authEmail } : null;
+    const authEmail = getConfirmedAuthEmail(data.user);
+    return authEmail ? { id: String(profile.id), email: authEmail } : null;
   }));
   return new Map(results.filter(Boolean).map((item) => [item!.id, item!.email]));
 }
