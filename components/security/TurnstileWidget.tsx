@@ -10,7 +10,7 @@ type TurnstileApi = {
       sitekey: string;
       callback: (token: string) => void;
       "expired-callback": () => void;
-      "error-callback": () => void;
+      "error-callback": (errorCode?: string) => void;
       theme: "auto";
     },
   ) => string;
@@ -30,7 +30,7 @@ export default function TurnstileWidget({
 }: {
   siteKey: string;
   onToken: (token: string | null) => void;
-  onError: () => void;
+  onError: (errorCode?: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -42,9 +42,9 @@ export default function TurnstileWidget({
       theme: "auto",
       callback: (token) => onToken(token),
       "expired-callback": () => onToken(null),
-      "error-callback": () => {
+      "error-callback": (errorCode) => {
         onToken(null);
-        onError();
+        onError(errorCode);
       },
     });
   }, [onError, onToken, siteKey]);
@@ -71,4 +71,3 @@ export default function TurnstileWidget({
     </>
   );
 }
-

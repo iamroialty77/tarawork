@@ -494,8 +494,12 @@ export default function AuthForm() {
                     key={captchaChallenge}
                     siteKey={captchaSiteKey}
                     onToken={setCaptchaToken}
-                    onError={() =>
-                      setError("The security check could not load. Please refresh and try again.")
+                    onError={(errorCode) =>
+                      setError(
+                        `The security check could not load${
+                          errorCode ? ` (Cloudflare code: ${errorCode})` : ""
+                        }. Check the allowed hostname, disable content blockers, then refresh.`,
+                      )
                     }
                   />
                 ) : (
