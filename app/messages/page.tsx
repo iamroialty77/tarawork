@@ -8,6 +8,18 @@ import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { useSearchParams } from "next/navigation";
 
+const normalizeMessagingRole = (role: unknown) => {
+  if (typeof role !== "string") return "";
+  const normalized = role.trim().toLowerCase();
+  if (normalized === "employer" || normalized === "client" || normalized === "hirer") {
+    return "employer";
+  }
+  if (normalized === "freelancer" || normalized === "talent" || normalized === "va") {
+    return "freelancer";
+  }
+  return normalized;
+};
+
 function MessagesContent() {
   const searchParams = useSearchParams();
   const withUserId = searchParams.get('with');
@@ -102,26 +114,60 @@ function MessagesContent() {
             .eq('id', withUserId)
             .maybeSingle();
 
-          const { data: follow1 } = await supabase.from('follows').select('*').eq('follower_id', userId).eq('following_id', withUserId).maybeSingle();
-          const { data: follow2 } = await supabase.from('follows').select('*').eq('follower_id', withUserId).eq('following_id', userId).maybeSingle();
+          const [{ data: follow1 }, { data: follow2 }] = await Promise.all([
+            supabase
+              .from('follows')
+              .select('follower_id')
+              .eq('follower_id', userId)
+              .eq('following_id', withUserId)
+              .maybeSingle(),
+            supabase
+              .from('follows')
+              .select('follower_id')
+              .eq('follower_id', withUserId)
+              .eq('following_id', userId)
+              .maybeSingle(),
+          ]);
           
-          const isMutualFollow = follow1 && follow2;
+          const isMutualFollow = Boolean(follow1 && follow2);
+          const currentRole = normalizeMessagingRole(currentUser?.role);
+          const targetRole = normalizeMessagingRole(targetProfile?.role);
 
           const isEmployerToFreelancer =
-            currentUser?.role === 'employer' &&
-            targetProfile?.role === 'freelancer';
+            currentRole === 'employer' &&
+            targetRole === 'freelancer';
 
           const isFreelancerToEmployer =
-            currentUser?.role === 'freelancer' &&
-            targetProfile?.role === 'employer';
+            currentRole === 'freelancer' &&
+            targetRole === 'employer';
 
-          const allowOfficialOutreach =
-            isOfficialOutreach && (isEmployerToFreelancer || isFreelancerToEmployer);
+          let hasHiringRelationship = false;
+          if (isEmployerToFreelancer || isFreelancerToEmployer) {
+            const freelancerId = isEmployerToFreelancer ? withUserId : userId;
+            const employerId = isEmployerToFreelancer ? userId : withUserId;
+            const { data: application } = await supabase
+              .from('applications')
+              .select('job_id, jobs!inner(employer_id)')
+              .eq('freelancer_id', freelancerId)
+              .eq('jobs.employer_id', employerId)
+              .limit(1)
+              .maybeSingle();
 
-          if (!isMutualFollow && !allowOfficialOutreach) {
+            hasHiringRelationship = Boolean(application);
+          }
+
+          // Employers may contact talent they follow. Applicants and their
+          // employer may also communicate without requiring a mutual follow.
+          const allowEmployerFollow = isEmployerToFreelancer && Boolean(follow1);
+          const allowVerifiedOutreach =
+            isOfficialOutreach &&
+            hasHiringRelationship &&
+            (isEmployerToFreelancer || isFreelancerToEmployer);
+
+          if (!isMutualFollow && !allowEmployerFollow && !allowVerifiedOutreach) {
             setRestrictionError(
               isEmployerToFreelancer
-                ? "You can only message this freelancer after a mutual follow."
+                ? "Follow this freelancer first, or message them from an application to one of your jobs."
                 : "You can only message users you mutually follow."
             );
             return;
