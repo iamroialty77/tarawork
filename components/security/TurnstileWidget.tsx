@@ -34,20 +34,29 @@ export default function TurnstileWidget({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const onTokenRef = useRef(onToken);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    // Keep the latest callbacks without destroying and recreating the widget
+    // whenever the parent form renders.
+    onTokenRef.current = onToken;
+    onErrorRef.current = onError;
+  }, [onError, onToken]);
 
   const renderWidget = useCallback(() => {
     if (!containerRef.current || !window.turnstile || widgetIdRef.current) return;
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
       theme: "auto",
-      callback: (token) => onToken(token),
-      "expired-callback": () => onToken(null),
+      callback: (token) => onTokenRef.current(token),
+      "expired-callback": () => onTokenRef.current(null),
       "error-callback": (errorCode) => {
-        onToken(null);
-        onError(errorCode);
+        onTokenRef.current(null);
+        onErrorRef.current(errorCode);
       },
     });
-  }, [onError, onToken, siteKey]);
+  }, [siteKey]);
 
   useEffect(() => {
     renderWidget();
