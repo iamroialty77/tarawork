@@ -4961,7 +4961,7 @@ export default function TaraWorkApp() {
       {/* Job Applicants Modal */}
       <AnimatePresence>
         {showApplicantsModal && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 lg:p-8">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4973,12 +4973,12 @@ export default function TaraWorkApp() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+              className="relative flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
             >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white p-5 sm:p-6 lg:px-8">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">Applicants for</h3>
-                  <p className="text-sm font-medium text-indigo-600 truncate max-w-md">{selectedJobTitle}</p>
+                  <h3 className="text-xl font-bold text-slate-900 sm:text-2xl">Applicants for</h3>
+                  <p className="max-w-[70vw] truncate text-sm font-medium text-indigo-600 sm:max-w-2xl">{selectedJobTitle}</p>
                 </div>
                 <button 
                   onClick={() => setShowApplicantsModal(false)}
@@ -4988,10 +4988,10 @@ export default function TaraWorkApp() {
                 </button>
               </div>
 
-              <div className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4 sm:p-6">
+              <div className="flex-1 space-y-5 overflow-x-hidden overflow-y-auto p-3 sm:p-6 lg:p-8">
                 {selectedJobApplicants.length > 0 ? (
                   selectedJobApplicants.map((app: any) => (
-                    <div key={app.id} className="group min-w-0 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 p-4 transition-all hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 sm:p-6">
+                    <div key={app.id} className="group min-w-0 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 p-4 transition-all hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 sm:p-6 lg:p-7">
                       <div className="flex flex-col md:flex-row items-start gap-6">
                         <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
                           {(app.freelancer_profile || app.profiles)?.avatar_url ? (
