@@ -2651,9 +2651,9 @@ export default function TaraWorkApp() {
                 className="flex items-center hover:opacity-85 transition-opacity"
               >
                 <img
-                  src="/tarawork-removebg-preview.png"
+                  src="/tarawork-logo.png"
                   alt="TaraWork Logo"
-                  className="h-12 w-auto object-contain"
+                  className="h-auto w-[150px] object-contain sm:w-[170px]"
                 />
               </button>
               <div className="hidden lg:flex items-center gap-6">
@@ -5490,7 +5490,7 @@ export default function TaraWorkApp() {
             className="flex items-center justify-center gap-2 mb-6 mx-auto hover:opacity-80 transition-opacity"
           >
             <img 
-              src="/tarawork-removebg-preview.png" 
+              src="/tarawork-logo.png"
               alt="Tara Logo" 
               className="h-10 w-auto grayscale opacity-40"
             />

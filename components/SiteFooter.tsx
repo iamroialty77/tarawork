@@ -43,15 +43,16 @@ export default function SiteFooter() {
 
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-14 sm:px-6 lg:grid-cols-[1.35fr_0.8fr_1fr] lg:px-10">
         <div className="max-w-md">
-          <Link href="/" className="inline-flex items-center gap-3 text-white">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white">
-              <Image src="/tarawork-removebg-preview.png" alt="TaraWork logo" width={34} height={34} />
-            </span>
-            <span>
-              <span className="block text-lg font-black tracking-tight">TaraWork.online</span>
-              <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-teal-400">
-                Filipino talent. Global opportunities.
-              </span>
+          <Link href="/" className="inline-flex flex-col items-start text-white" aria-label="TaraWork home">
+            <Image
+              src="/tarawork-logo.png"
+              alt="TaraWork"
+              width={194}
+              height={30}
+              className="h-auto w-[180px] object-contain sm:w-[194px]"
+            />
+            <span className="mt-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-teal-400">
+              Filipino talent. Global opportunities.
             </span>
           </Link>
           <p className="mt-5 text-sm leading-7 text-zinc-400">

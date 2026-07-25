@@ -81,13 +81,13 @@ export async function generateMetadata({
       siteName,
       title,
       description,
-      images: ["/tarawork-removebg-preview.png"],
+      images: ["/tarawork-icon.png"],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/tarawork-removebg-preview.png"],
+      images: ["/tarawork-icon.png"],
     },
   };
 }

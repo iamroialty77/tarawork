@@ -148,7 +148,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       "@type": "Organization",
       name: siteName,
       url: absoluteUrl("/"),
-      logo: { "@type": "ImageObject", url: absoluteUrl("/tarawork-removebg-preview.png") },
+      logo: { "@type": "ImageObject", url: absoluteUrl("/tarawork-logo.png") },
     },
     articleSection: post.category,
     keywords: [post.keyword, post.category, "Filipino freelancers", "remote work Philippines"],

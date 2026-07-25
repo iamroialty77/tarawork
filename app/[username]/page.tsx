@@ -535,7 +535,7 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
   const description = truncateSeoText(
     `${displayName} on ${siteName}. ${profile.bio || `Professional ${category} profile.`}${skills}`,
   );
-  const image = profile.avatar_url || '/tarawork-removebg-preview.png';
+  const image = profile.avatar_url || '/tarawork-icon.png';
 
   return {
     title,

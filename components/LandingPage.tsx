@@ -127,11 +127,12 @@ export default function LandingPage() {
         }`}
       >
         <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white sm:h-10 sm:w-10">
-              <img src="/tarawork-removebg-preview.png" alt="TaraWork" className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
-            </span>
-            <span className="text-base font-black text-white sm:text-lg">TaraWork.online</span>
+          <Link href="/" className="flex items-center" aria-label="TaraWork home">
+            <img
+              src="/tarawork-logo.png"
+              alt="TaraWork"
+              className="h-auto w-[142px] object-contain sm:w-[168px]"
+            />
           </Link>
 
           <nav className="hidden items-center gap-7 lg:flex">

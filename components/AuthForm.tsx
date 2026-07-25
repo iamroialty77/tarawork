@@ -265,9 +265,9 @@ export default function AuthForm() {
         <div className="p-8">
           <div className="flex justify-center mb-8">
             <img 
-              src="/tarawork-removebg-preview.png" 
-              alt="Tara Logo" 
-              className="h-12 w-auto object-contain"
+              src="/tarawork-icon.png"
+              alt="TaraWork"
+              className="h-14 w-14 rounded-2xl object-contain"
             />
           </div>
 

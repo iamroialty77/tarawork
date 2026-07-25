@@ -69,12 +69,12 @@ const ProjectCard = ({ project }: { project: PortfolioProject }) => (
   <div className="group rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm">
     <div className="relative mb-5 aspect-video overflow-hidden rounded-xl bg-slate-100">
       <img
-        src={project.image_url || '/tarawork-removebg-preview.png'}
+        src={project.image_url || '/tarawork-icon.png'}
         alt={project.title}
         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         onError={(event) => {
           event.currentTarget.onerror = null;
-          event.currentTarget.src = '/tarawork-removebg-preview.png';
+          event.currentTarget.src = '/tarawork-icon.png';
         }}
       />
     </div>
@@ -407,9 +407,9 @@ export default function PortfolioPreview({ profile, isPublic = true }: Portfolio
         <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <img
-              src="/tarawork-removebg-preview.png"
+              src="/tarawork-icon.png"
               alt="TaraWork Logo"
-              className="h-10 w-auto object-contain"
+              className="h-10 w-10 rounded-xl object-contain"
             />
             <div>
               <span className="block text-lg font-bold tracking-tight">TaraWork</span>

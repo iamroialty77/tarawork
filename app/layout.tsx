@@ -25,7 +25,7 @@ const structuredData = {
       name: siteName,
       alternateName: ["TaraWork.online", "Tara Work", "Tara Work online", "tare work", "tarabjo"],
       url: absoluteUrl("/"),
-      logo: absoluteUrl("/tarawork-removebg-preview.png"),
+      logo: absoluteUrl("/tarawork-logo.png"),
       email: "hello@tarawork.online",
       telephone: "+639944834740",
       address: {
@@ -141,8 +141,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/tarawork-removebg-preview.png",
-    apple: "/tarawork-removebg-preview.png",
+    icon: "/tarawork-icon.png",
+    apple: "/tarawork-icon.png",
   },
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? {
