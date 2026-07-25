@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
+import SiteHeader from "@/components/SiteHeader";
 import { ArrowRight, CheckCircle2, Clock, Mail, ShieldCheck, Users } from "lucide-react";
 
 const roleOptions = [
@@ -101,16 +101,7 @@ export default function TalentRequestForm() {
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
-          <Link href="/" className="text-lg font-black text-teal-800">
-            TaraWork.online
-          </Link>
-          <Link href="/hire-filipino-freelancers" className="text-sm font-black text-zinc-600 hover:text-zinc-950">
-            Hiring guide
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="bg-zinc-950 px-4 py-16 text-white sm:px-6 sm:py-20 lg:px-10">
         <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">

@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen, Briefcase, Search, Users } from "lucide-react";
 import { absoluteUrl, defaultOgImage, siteName } from "@/lib/seo";
 import { blogCategories } from "@/lib/blog";
 import { getPublishedBlogPosts } from "@/lib/blogData";
+import SiteHeader from "@/components/SiteHeader";
 
 const title = "TaraWork Blog";
 const description =
@@ -54,16 +55,7 @@ export default async function BlogPage() {
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
-          <Link href="/" className="text-lg font-black text-teal-800">
-            TaraWork.online
-          </Link>
-          <Link href="/hire/request" className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-black text-white hover:bg-zinc-800">
-            Get Shortlist
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="bg-zinc-950 px-4 py-16 text-white sm:px-6 sm:py-20 lg:px-10">
         <div className="mx-auto w-full max-w-7xl">

@@ -9,32 +9,20 @@ import {
   Briefcase,
   CheckCircle2,
   Mail,
-  Menu,
   ShieldCheck,
   Sparkles,
   Star,
   Users,
-  X,
 } from "lucide-react";
 import type { BlogPost } from "@/lib/blog";
 import SiteFooter from "@/components/SiteFooter";
+import SiteHeader from "@/components/SiteHeader";
 
 type LandingBlogPost = Pick<BlogPost, "title" | "excerpt" | "href" | "image" | "imageAlt" | "category" | "readTime">;
 
 const heroImage = "/landing/filipino-hero.png";
 const collaborationImage = "/landing/filipino-collaboration.png";
 const workspaceImage = "/landing/filipino-remote-work.png";
-
-const navLinks = [
-  { label: "Features", href: "#features" },
-  { label: "Get Shortlist", href: "/hire/request" },
-  { label: "Hire Freelancers", href: "/hire-filipino-freelancers" },
-  { label: "Virtual Assistants", href: "/virtual-assistant-philippines" },
-  { label: "Blog", href: "/blog" },
-  { label: "Safety", href: "/safety" },
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Contact", href: "#contact" },
-];
 
 const categories = [
   "Virtual Assistants",
@@ -46,8 +34,6 @@ const categories = [
 ];
 
 export default function LandingPage() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -59,12 +45,6 @@ export default function LandingPage() {
     message: "",
   });
   const [landingBlogPosts, setLandingBlogPosts] = useState<LandingBlogPost[]>([]);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -121,73 +101,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-white text-zinc-950">
-      <header
-        className={`fixed inset-x-0 top-0 z-50 border-b transition-all ${
-          scrolled ? "border-white/20 bg-zinc-950/88 shadow-lg backdrop-blur-md" : "border-white/15 bg-zinc-950/50 backdrop-blur-sm"
-        }`}
-      >
-        <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
-          <Link href="/" className="flex items-center" aria-label="TaraWork home">
-            <img
-              src="/tarawork-logo.png"
-              alt="TaraWork"
-              className="h-auto w-[142px] object-contain sm:w-[168px]"
-            />
-          </Link>
-
-          <nav className="hidden items-center gap-7 lg:flex">
-            {navLinks.map((link) =>
-              link.href.startsWith("#") ? (
-                <a key={link.href} href={link.href} className="text-sm font-bold text-white/78 transition hover:text-white">
-                  {link.label}
-                </a>
-              ) : (
-                <Link key={link.href} href={link.href} className="text-sm font-bold text-white/78 transition hover:text-white">
-                  {link.label}
-                </Link>
-              ),
-            )}
-          </nav>
-
-          <div className="hidden items-center gap-2 md:flex">
-            <Link href="/auth" className="rounded-lg border border-white/25 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10">
-              Sign In
-            </Link>
-            <Link href="/auth" className="rounded-lg bg-white px-4 py-2 text-sm font-black text-zinc-950 transition hover:bg-amber-100">
-              Join Now
-            </Link>
-          </div>
-
-          <button
-            className="rounded-lg border border-white/20 p-2 text-white md:hidden"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            aria-label="Toggle menu"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-
-        {isMenuOpen && (
-          <div className="border-t border-white/15 bg-zinc-950 px-4 py-4 shadow-2xl md:hidden">
-            <div className="flex flex-col gap-2">
-              {navLinks.map((link) =>
-                link.href.startsWith("#") ? (
-                  <a key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-bold text-white/80 hover:bg-white/10">
-                    {link.label}
-                  </a>
-                ) : (
-                  <Link key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)} className="rounded-lg px-3 py-2 text-sm font-bold text-white/80 hover:bg-white/10">
-                    {link.label}
-                  </Link>
-                ),
-              )}
-              <Link href="/auth" onClick={() => setIsMenuOpen(false)} className="mt-2 rounded-lg bg-white px-3 py-3 text-center text-sm font-black text-zinc-950">
-                Join Now
-              </Link>
-            </div>
-          </div>
-        )}
-      </header>
+      <SiteHeader overlay />
 
       <main>
         <section className="relative min-h-[760px] w-full overflow-hidden bg-zinc-950 sm:min-h-[92vh]">

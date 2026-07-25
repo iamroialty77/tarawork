@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Briefcase, Search, ShieldCheck, Users } from "lucide-react";
 import { absoluteUrl } from "@/lib/seo";
 import SiteFooter from "@/components/SiteFooter";
+import SiteHeader from "@/components/SiteHeader";
 
 type SeoLandingPageProps = {
   eyebrow: string;
@@ -70,21 +71,7 @@ export default function SeoLandingPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
-          <Link href="/" className="text-lg font-black text-teal-800">
-            TaraWork.online
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link href="/auth" className="border border-zinc-300 px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-100">
-              Sign In
-            </Link>
-            <Link href="/auth" className="bg-zinc-950 px-4 py-2 text-sm font-bold text-white hover:bg-zinc-800">
-              Join Now
-            </Link>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="border-b border-zinc-200 bg-zinc-950 px-4 py-20 text-white sm:px-6 lg:px-10">
         <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">

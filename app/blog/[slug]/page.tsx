@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Clock, Facebook, Link2 } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, Clock, Facebook, Link2 } from "lucide-react";
 import { absoluteUrl, siteName } from "@/lib/seo";
 import { getPublishedBlogPostBySlug, getPublishedBlogPosts } from "@/lib/blogData";
+import SiteHeader from "@/components/SiteHeader";
 
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
@@ -174,17 +175,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData).replace(/</g, "\\u003c") }}
       />
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
-          <Link href="/" className="text-lg font-black text-teal-800">
-            TaraWork.online
-          </Link>
-          <Link href="/blog" className="inline-flex items-center gap-2 text-sm font-black text-zinc-600 hover:text-zinc-950">
-            <ArrowLeft className="h-4 w-4" />
-            Blog
-          </Link>
-        </div>
-      </header>
+      <SiteHeader />
 
       <article>
         <section className="bg-zinc-950 text-white">
