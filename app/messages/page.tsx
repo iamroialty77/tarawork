@@ -137,36 +137,39 @@ function MessagesContent() {
             currentRole === 'employer' &&
             targetRole === 'freelancer';
 
-          const isFreelancerToEmployer =
-            currentRole === 'freelancer' &&
-            targetRole === 'employer';
+          // Job ownership is the authoritative employer signal. Some older
+          // profiles have missing or legacy role values, so role labels alone
+          // must not block a real employer from contacting their applicant.
+          const { data: ownedJobs } = await supabase
+            .from('jobs')
+            .select('id')
+            .eq('employer_id', userId);
+          const ownedJobIds = (ownedJobs || []).map((job) => job.id);
+          const ownsJobs = ownedJobIds.length > 0;
 
-          let hasHiringRelationship = false;
-          if (isEmployerToFreelancer || isFreelancerToEmployer) {
-            const freelancerId = isEmployerToFreelancer ? withUserId : userId;
-            const employerId = isEmployerToFreelancer ? userId : withUserId;
+          let targetAppliedToOwnedJob = false;
+          if (ownsJobs) {
             const { data: application } = await supabase
               .from('applications')
-              .select('job_id, jobs!inner(employer_id)')
-              .eq('freelancer_id', freelancerId)
-              .eq('jobs.employer_id', employerId)
+              .select('job_id')
+              .eq('freelancer_id', withUserId)
+              .in('job_id', ownedJobIds)
               .limit(1)
               .maybeSingle();
 
-            hasHiringRelationship = Boolean(application);
+            targetAppliedToOwnedJob = Boolean(application);
           }
 
           // Employers may contact talent they follow. Applicants and their
           // employer may also communicate without requiring a mutual follow.
-          const allowEmployerFollow = isEmployerToFreelancer && Boolean(follow1);
+          const allowEmployerFollow = ownsJobs && Boolean(follow1);
           const allowVerifiedOutreach =
             isOfficialOutreach &&
-            hasHiringRelationship &&
-            (isEmployerToFreelancer || isFreelancerToEmployer);
+            targetAppliedToOwnedJob;
 
           if (!isMutualFollow && !allowEmployerFollow && !allowVerifiedOutreach) {
             setRestrictionError(
-              isEmployerToFreelancer
+              isEmployerToFreelancer || ownsJobs
                 ? "Follow this freelancer first, or message them from an application to one of your jobs."
                 : "You can only message users you mutually follow."
             );
