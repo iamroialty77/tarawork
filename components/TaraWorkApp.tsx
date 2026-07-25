@@ -50,6 +50,7 @@ import {
   Coins,
   Bookmark,
   Building2,
+  ArrowLeft,
   Menu,
   UserPlus,
   X,
@@ -261,6 +262,7 @@ export default function TaraWorkApp() {
   const [contactUnlockTalentId, setContactUnlockTalentId] = useState<string | null>(null);
   const [showFreelancerModal, setShowFreelancerModal] = useState(false);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
+  const [talentProfileOpenedFromApplicants, setTalentProfileOpenedFromApplicants] = useState(false);
   const [pendingApplyJobId, setPendingApplyJobId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [sentTalentInvitations, setSentTalentInvitations] = useState<TalentInvitation[]>([]);
@@ -2225,7 +2227,10 @@ export default function TaraWorkApp() {
     );
   }, [selectedFreelancer, selectedFreelancerAcceptedInvitation, user?.id]);
 
-  const openTalentProfile = (freelancerLike: Partial<UserProfile> & { id?: string | null }) => {
+  const openTalentProfile = (
+    freelancerLike: Partial<UserProfile> & { id?: string | null },
+    options?: { fromApplicants?: boolean },
+  ) => {
     const freelancerId = freelancerLike.id || "";
     const fullProfile = freelancers.find((freelancer) => freelancer.id === freelancerId);
     const nextProfile =
@@ -2250,7 +2255,22 @@ export default function TaraWorkApp() {
     setFreelancerFeedbackComment("");
     setFreelancerFeedbackProjectTitle("");
     setFreelancerFeedbackRating(5);
+    setTalentProfileOpenedFromApplicants(Boolean(options?.fromApplicants));
+    if (options?.fromApplicants) {
+      setShowApplicantsModal(false);
+    }
     setShowFreelancerModal(true);
+  };
+
+  const closeTalentProfile = () => {
+    setShowFreelancerModal(false);
+    setTalentProfileOpenedFromApplicants(false);
+  };
+
+  const returnToApplicants = () => {
+    setShowFreelancerModal(false);
+    setTalentProfileOpenedFromApplicants(false);
+    setShowApplicantsModal(true);
   };
 
   const searchedFreelancers = useMemo(() => {
@@ -4479,7 +4499,7 @@ export default function TaraWorkApp() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowFreelancerModal(false)}
+              onClick={closeTalentProfile}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
             <motion.div 
@@ -4490,6 +4510,17 @@ export default function TaraWorkApp() {
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div className="flex items-center gap-4">
+                  {talentProfileOpenedFromApplicants && (
+                    <button
+                      type="button"
+                      onClick={returnToApplicants}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                      aria-label="Back to applicants"
+                      title="Back to applicants"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                  )}
                   <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center overflow-hidden border border-indigo-100">
                     {selectedFreelancer.avatar_url ? (
                       <img src={selectedFreelancer.avatar_url} className="w-full h-full object-cover" alt="" />
@@ -4506,7 +4537,7 @@ export default function TaraWorkApp() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => setShowFreelancerModal(false)}
+                  onClick={closeTalentProfile}
                   className="p-2 hover:bg-slate-50 rounded-xl transition-all"
                 >
                   <XCircle className="w-6 h-6 text-slate-300 hover:text-slate-500" />
@@ -5058,10 +5089,13 @@ export default function TaraWorkApp() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  openTalentProfile({
-                                    ...((app.freelancer_profile || app.profiles) || {}),
-                                    id: (app.freelancer_profile || app.profiles)?.id || app.freelancer_id,
-                                  } as Partial<UserProfile>)
+                                  openTalentProfile(
+                                    {
+                                      ...((app.freelancer_profile || app.profiles) || {}),
+                                      id: (app.freelancer_profile || app.profiles)?.id || app.freelancer_id,
+                                    } as Partial<UserProfile>,
+                                    { fromApplicants: true },
+                                  )
                                 }
                                 className="px-6 py-3 bg-white text-slate-700 text-[10px] font-bold rounded-xl hover:bg-slate-50 transition-all uppercase tracking-widest flex items-center gap-2 border border-slate-200 active:scale-95"
                               >
