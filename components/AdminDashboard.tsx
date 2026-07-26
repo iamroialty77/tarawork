@@ -7,6 +7,7 @@ import RichTextEditor from "./RichTextEditor";
 import AdminEmailInbox from "./AdminEmailInbox";
 import AdminAutomation from "./AdminAutomation";
 import SiteSettingsEditor from "./SiteSettingsEditor";
+import AdminProfileEditorModal from "./AdminProfileEditorModal";
 import { blogCategories } from "@/lib/blog";
 import { 
   Users, 
@@ -73,6 +74,23 @@ const createUserEditDraft = (user?: any) => ({
   skills: Array.isArray(user?.skills) ? user.skills.join(", ") : "",
 });
 
+const getAccountRisk = (user: any, allUsers: any[]) => {
+  let score = 0;
+  const reasons: string[] = [];
+  const normalizedName = String(user.name || "").trim().toLowerCase();
+  const duplicateNames = normalizedName ? allUsers.filter((item) => String(item.name || "").trim().toLowerCase() === normalizedName).length : 0;
+  const duplicateAvatar = user.avatar_url ? allUsers.filter((item) => item.id !== user.id && item.avatar_url === user.avatar_url).length : 0;
+  const age = user.created_at ? Date.now() - new Date(user.created_at).getTime() : Number.POSITIVE_INFINITY;
+  if (duplicateNames >= 3) { score += 35; reasons.push(`${duplicateNames} accounts share this name`); }
+  if (duplicateAvatar) { score += 35; reasons.push("Profile photo reused"); }
+  if (age < 24 * 60 * 60 * 1000) { score += 10; reasons.push("Created in the last 24 hours"); }
+  if (!String(user.bio || "").trim()) { score += 10; reasons.push("No profile bio"); }
+  if (!user.avatar_url) { score += 10; reasons.push("No profile photo"); }
+  if (!Array.isArray(user.verification_documents) || !user.verification_documents.length) { score += 10; reasons.push("No verification document"); }
+  if (!user.username || String(user.username).length < 3) { score += 10; reasons.push("Missing username"); }
+  return { score: Math.min(score, 100), reasons, suspicious: score >= 50 };
+};
+
 type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "site_settings" | "blog" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
@@ -98,6 +116,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userEditDraft, setUserEditDraft] = useState(createUserEditDraft);
   const [userEditLoading, setUserEditLoading] = useState(false);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [suspiciousOnly, setSuspiciousOnly] = useState(false);
+  const [accountSecurityLoading, setAccountSecurityLoading] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [talentRequests, setTalentRequests] = useState<any[]>([]);
@@ -340,6 +361,31 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       notify("Profile update error: " + (error?.message || "Unknown error"));
     } finally {
       setUserEditLoading(false);
+    }
+  };
+
+  const processSelectedAccounts = async (action: "suspend" | "delete") => {
+    if (!selectedAccountIds.length) return;
+    const confirmation = action === "delete"
+      ? window.prompt(`Permanently delete ${selectedAccountIds.length} selected account(s)? Type DELETE to confirm.`)
+      : window.confirm(`Suspend ${selectedAccountIds.length} selected account(s)?`) ? "SUSPEND" : "";
+    if ((action === "delete" && confirmation !== "DELETE") || !confirmation) return;
+    setAccountSecurityLoading(true);
+    try {
+      const response = await fetch("/api/admin/bulk-accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, userIds: selectedAccountIds, confirmation }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to process selected accounts.");
+      notify(`${result.affected} account${result.affected === 1 ? "" : "s"} ${action === "delete" ? "deleted" : "suspended"}.`);
+      setSelectedAccountIds([]);
+      await fetchData();
+    } catch (error: any) {
+      notify("Account security error: " + (error?.message || "Unknown error"));
+    } finally {
+      setAccountSecurityLoading(false);
     }
   };
 
@@ -664,6 +710,13 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "health", label: "System Health", icon: Activity },
   ];
 
+  const visibleVerificationUsers = users.filter((user) => {
+    if (user.role !== verificationRole) return false;
+    if (suspiciousOnly && !getAccountRisk(user, users).suspicious) return false;
+    const search = verificationSearch.trim().toLowerCase();
+    return !search || [user.name, user.username, user.category, user.companyName].some((value) => String(value || "").toLowerCase().includes(search));
+  });
+
   return (
     <div className="min-h-screen bg-[#f4f6fa] lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="hidden min-h-screen border-r border-slate-800 bg-[#111827] px-4 py-6 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
@@ -871,28 +924,28 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   />
                 </div>
               </div>
-              <div className="flex gap-2 border-b border-slate-100 bg-slate-50/70 px-5 py-3 sm:px-6">
-                {(["freelancer", "employer"] as const).map((role) => <button key={role} type="button" onClick={() => setVerificationRole(role)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black capitalize transition ${verificationRole === role ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100"}`}>{role === "freelancer" ? "Freelancers" : "Employers"}<span className={`rounded-full px-2 py-0.5 text-[10px] ${verificationRole === role ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"}`}>{users.filter((user) => user.role === role).length}</span></button>)}
+              <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <div className="flex gap-2">{(["freelancer", "employer"] as const).map((role) => <button key={role} type="button" onClick={() => { setVerificationRole(role); setSelectedAccountIds([]); }} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black capitalize transition ${verificationRole === role ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100"}`}>{role === "freelancer" ? "Freelancers" : "Employers"}<span className={`rounded-full px-2 py-0.5 text-[10px] ${verificationRole === role ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"}`}>{users.filter((user) => user.role === role).length}</span></button>)}</div>
+                <button type="button" onClick={() => { setSuspiciousOnly((value) => !value); setSelectedAccountIds([]); }} className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black ${suspiciousOnly ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}`}><Shield className="h-4 w-4" /> Suspicious only <span className="rounded-full bg-rose-100 px-2 py-0.5 text-rose-700">{users.filter((user) => user.role === verificationRole && getAccountRisk(user, users).suspicious).length}</span></button>
               </div>
+              {selectedAccountIds.length > 0 && <div className="flex flex-col gap-3 border-b border-indigo-100 bg-indigo-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"><p className="text-xs font-black text-indigo-800">{selectedAccountIds.length} account{selectedAccountIds.length === 1 ? "" : "s"} selected</p><div className="flex gap-2"><button type="button" onClick={() => void processSelectedAccounts("suspend")} disabled={accountSecurityLoading} className="rounded-lg border border-amber-200 bg-white px-4 py-2 text-xs font-black text-amber-700 disabled:opacity-50">Suspend selected</button><button type="button" onClick={() => void processSelectedAccounts("delete")} disabled={accountSecurityLoading} className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50">Delete selected</button></div></div>}
               
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
+                      <th className="w-12 px-5 py-4"><input type="checkbox" checked={visibleVerificationUsers.length > 0 && visibleVerificationUsers.every((user) => selectedAccountIds.includes(user.id))} onChange={(event) => setSelectedAccountIds((current) => event.target.checked ? [...new Set([...current, ...visibleVerificationUsers.map((user) => user.id)])] : current.filter((id) => !visibleVerificationUsers.some((user) => user.id === id)))} aria-label="Select all visible accounts" className="h-4 w-4 accent-indigo-600" /></th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">User</th>
-                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">AI Audit</th>
+                      <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Security</th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Documents</th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                       <th className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {users.filter((user) => {
-                      if (user.role !== verificationRole) return false;
-                      const search = verificationSearch.trim().toLowerCase();
-                      return !search || [user.name, user.username, user.category, user.companyName].some((value) => String(value || "").toLowerCase().includes(search));
-                    }).map((user) => (
+                    {visibleVerificationUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-5 py-6"><input type="checkbox" checked={selectedAccountIds.includes(user.id)} onChange={(event) => setSelectedAccountIds((current) => event.target.checked ? [...new Set([...current, user.id])] : current.filter((id) => id !== user.id))} aria-label={`Select ${user.name || "account"}`} className="h-4 w-4 accent-indigo-600" /></td>
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-500 overflow-hidden">
@@ -909,7 +962,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                          {user.status === 'approved' ? (
+                          {getAccountRisk(user, users).suspicious ? (
+                            <div><div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-rose-600"><AlertTriangle className="h-3.5 w-3.5" /> Risk {getAccountRisk(user, users).score}/100</div><p className="mt-1 max-w-52 text-[10px] font-semibold leading-4 text-slate-400">{getAccountRisk(user, users).reasons.slice(0, 2).join(" · ")}</p></div>
+                          ) : user.status === 'approved' ? (
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase">
                               <ShieldCheck className="w-3.5 h-3.5" /> AI Verified
                             </div>
@@ -990,11 +1045,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                         </td>
                       </tr>
                     ))}
-                    {users.filter((user) => {
-                      if (user.role !== verificationRole) return false;
-                      const search = verificationSearch.trim().toLowerCase();
-                      return !search || [user.name, user.username, user.category, user.companyName].some((value) => String(value || "").toLowerCase().includes(search));
-                    }).length === 0 && <tr><td colSpan={5} className="px-6 py-14 text-center"><Users className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-black text-slate-700">No {verificationRole}s found</p><p className="mt-1 text-xs font-semibold text-slate-400">{verificationSearch ? "Try a different search." : `New ${verificationRole} accounts will appear here.`}</p></td></tr>}
+                    {visibleVerificationUsers.length === 0 && <tr><td colSpan={6} className="px-6 py-14 text-center"><Users className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-black text-slate-700">No {verificationRole}s found</p><p className="mt-1 text-xs font-semibold text-slate-400">{verificationSearch || suspiciousOnly ? "Try a different search or filter." : `New ${verificationRole} accounts will appear here.`}</p></td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -1370,7 +1421,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                 </table>
               </div>
             </div>
-            {editingUserId && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+            {false && editingUserId && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
               <div role="dialog" aria-modal="true" aria-labelledby="profile-editor-title" className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-white/20 bg-white shadow-2xl">
                 <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
                   <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600">Verification Queue</p><h4 id="profile-editor-title" className="mt-1 text-xl font-black text-slate-900">Edit {userEditDraft.role} profile</h4></div>
@@ -2083,6 +2134,8 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         )}
       </AnimatePresence>
       </div>
+
+      {editingUserId && <AdminProfileEditorModal draft={userEditDraft} setDraft={setUserEditDraft} saving={userEditLoading} close={() => setEditingUserId(null)} save={() => void saveUserProfile()} />}
 
       {/* Toast Notification */}
       <AnimatePresence>
