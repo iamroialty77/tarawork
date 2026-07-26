@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const state = crypto.randomBytes(24).toString("hex");
     const origin = new URL(req.url).origin;
-    const redirectUri = `${origin}/api/admin/google-sheets/callback`;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${origin}/api/admin/google-sheets/callback`;
     const response = NextResponse.redirect(googleAuthorizationUrl(state, redirectUri));
     response.cookies.set("google_sheets_oauth_state", state, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 600, path: "/" });
     return response;
