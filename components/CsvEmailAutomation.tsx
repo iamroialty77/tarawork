@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, FileSpreadsheet, Send, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileSpreadsheet, Mail, Send, Upload, X } from "lucide-react";
 
 type CsvRow = Record<string, string>;
 
@@ -23,55 +23,73 @@ function parseCsv(text: string) {
   const rawHeaders = records.shift()?.map((value) => value.replace(/^\uFEFF/, "").trim()) || [];
   if (!rawHeaders.length || rawHeaders.some((header) => !header)) throw new Error("Every CSV column must have a header.");
   const headers = rawHeaders.map((header, index) => {
-    const clean = header.replace(/[^\p{L}\p{N}_-]+/gu, "_").replace(/^_+|_+$/g, "").toLowerCase() || `column_${index + 1}`;
-    return rawHeaders.slice(0, index).some((item) => item.toLowerCase() === header.toLowerCase()) ? `${clean}_${index + 1}` : clean;
+    const normalized = header.replace(/[^\p{L}\p{N}_-]+/gu, "_").replace(/^_+|_+$/g, "").toLowerCase() || `column_${index + 1}`;
+    return rawHeaders.slice(0, index).some((item) => item.toLowerCase() === header.toLowerCase()) ? `${normalized}_${index + 1}` : normalized;
   });
   const rows = records.slice(0, 500).map((values) => Object.fromEntries(headers.map((header, index) => [header, (values[index] || "").trim()])));
   return { headers, rows, wasLimited: records.length > 500 };
 }
 
-const renderTemplate = (template: string, alias: string, row?: CsvRow) =>
-  template.replace(/\{\{\s*([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\s*\}\}/g, (match, source, column) =>
-    source.toLowerCase() === alias.toLowerCase() && row && column in row ? row[column] : match);
+const renderTemplate = (template: string, alias: string, row?: CsvRow) => {
+  if (!row) return template;
+  return template
+    .replace(/\{\{\s*([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\s*\}\}/g, (match, source, column) =>
+      source.toLowerCase() === alias.toLowerCase() && column in row ? row[column] : match)
+    .replace(/\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/g, (match, column) => column in row ? row[column] : match);
+};
 
 export default function CsvEmailAutomation({ close }: { close: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
   const [fileName, setFileName] = useState("");
   const [alias, setAlias] = useState("contacts");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<CsvRow[]>([]);
+  const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [emailColumn, setEmailColumn] = useState("");
+  const [showComposer, setShowComposer] = useState(false);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const validRows = useMemo(() => rows.filter((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row[emailColumn] || "")), [rows, emailColumn]);
-  const duplicateCount = validRows.length - new Set(validRows.map((row) => row[emailColumn].toLowerCase())).size;
-  const sample = validRows[0] || rows[0];
+  const selectedRows = useMemo(() => selectedIndexes.map((index) => rows[index]).filter(Boolean), [rows, selectedIndexes]);
+  const validRows = useMemo(() => selectedRows.filter((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row[emailColumn] || "")), [selectedRows, emailColumn]);
+  const uniqueCount = new Set(validRows.map((row) => row[emailColumn].toLowerCase())).size;
+  const sample = validRows[0] || selectedRows[0];
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    setError(""); setNotice("");
+    setError(""); setNotice(""); setShowComposer(false);
     if (file.size > 2 * 1024 * 1024) { setError("CSV files must be 2 MB or smaller."); return; }
     try {
       const parsed = parseCsv(await file.text());
       const base = file.name.replace(/\.csv$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase() || "contacts";
       const detected = parsed.headers.find((header) => /^(email|email_address|emailaddress|e_mail)$/i.test(header)) || parsed.headers.find((header) => header.includes("email")) || "";
-      setFileName(file.name); setAlias(base); setHeaders(parsed.headers); setRows(parsed.rows); setEmailColumn(detected);
-      setNotice(`${parsed.rows.length} rows loaded${parsed.wasLimited ? " (first 500 only)" : ""}. Select the email column and review your campaign.`);
+      setFileName(file.name); setAlias(base); setHeaders(parsed.headers); setRows(parsed.rows); setEmailColumn(detected); setSelectedIndexes([]);
+      setNotice(`${parsed.rows.length} rows loaded${parsed.wasLimited ? " (first 500 only)" : ""}. Select the recipients for this campaign.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to read this CSV."); }
   };
 
+  const insertVariable = (header: string) => {
+    const token = `{{${header}}}`;
+    const textarea = messageRef.current;
+    if (!textarea) { setMessage((value) => `${value}${token}`); return; }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    setMessage((value) => `${value.slice(0, start)}${token}${value.slice(end)}`);
+    requestAnimationFrame(() => { textarea.focus(); textarea.setSelectionRange(start + token.length, start + token.length); });
+  };
+
   const send = async () => {
-    if (!window.confirm(`Send one personalized email to ${new Set(validRows.map((row) => row[emailColumn].toLowerCase())).size} unique recipients? This cannot be undone.`)) return;
+    if (!window.confirm(`Send one personalized email to ${uniqueCount} selected recipients? This cannot be undone.`)) return;
     setBusy(true); setError(""); setNotice("");
     try {
       const response = await fetch("/api/admin/csv-email-automation", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ alias, emailColumn, subject, message, rows }),
+        body: JSON.stringify({ alias, emailColumn, subject, message, rows: selectedRows }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Campaign could not be sent.");
@@ -80,38 +98,42 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
     finally { setBusy(false); }
   };
 
-  return <div className="absolute inset-0 z-20 overflow-y-auto bg-white">
-    <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 md:px-6">
-      <div className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5 text-blue-600" /><h2 className="text-lg font-black text-slate-900">CSV Email Campaign</h2></div>
+  return <div className="absolute inset-0 z-20 min-h-[820px] overflow-y-auto bg-slate-50">
+    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 md:px-7">
+      <div className="flex items-center gap-3"><div className="rounded-xl bg-blue-50 p-2 text-blue-600"><FileSpreadsheet className="h-5 w-5" /></div><div><h2 className="text-lg font-black text-slate-900">CSV Email Campaign</h2><p className="text-xs font-medium text-slate-500">{rows.length ? `${selectedIndexes.length} of ${rows.length} selected` : "Upload a contact list to begin"}</p></div></div>
       <button type="button" onClick={close} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
-    </div>
-    {notice && <div className="flex items-center gap-2 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 md:px-8"><CheckCircle2 className="h-4 w-4" />{notice}</div>}
-    {error && <div className="flex items-center gap-2 border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-700 md:px-8"><AlertCircle className="h-4 w-4" />{error}</div>}
-    <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:p-6">
-      <div>
-        <section className="rounded-xl border border-dashed border-blue-300 bg-blue-50/60 p-4 text-center">
-          <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={upload} className="hidden" />
-          <div className="mx-auto w-fit rounded-xl bg-white p-2 text-blue-600 shadow-sm"><Upload className="h-5 w-5" /></div>
-          <h3 className="mt-2 truncate text-sm font-black text-slate-900">{fileName || "Upload contact CSV"}</h3>
-          <button type="button" onClick={() => inputRef.current?.click()} className="mt-3 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace" : "Choose file"}</button>
-        </section>
-        {headers.length > 0 && <>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-black uppercase tracking-wider text-slate-500">Template name<input value={alias} onChange={(e) => setAlias(e.target.value.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase())} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold normal-case tracking-normal" /></label>
-            <label className="text-xs font-black uppercase tracking-wider text-slate-500">Email column<select value={emailColumn} onChange={(e) => setEmailColumn(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal"><option value="">Select a column</option>{headers.map((header) => <option key={header}>{header}</option>)}</select></label>
+    </header>
+    {notice && <div className="flex items-center gap-2 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 md:px-7"><CheckCircle2 className="h-4 w-4" />{notice}</div>}
+    {error && <div className="flex items-center gap-2 border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-700 md:px-7"><AlertCircle className="h-4 w-4" />{error}</div>}
+    <div className="p-5 md:p-7">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-blue-300 bg-blue-50/60 p-4">
+        <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={upload} className="hidden" />
+        <div className="flex min-w-0 items-center gap-3"><div className="rounded-xl bg-white p-2.5 text-blue-600 shadow-sm"><Upload className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{fileName || "Upload contact CSV"}</p><p className="text-[10px] font-semibold text-slate-400">Maximum 500 rows · 2 MB</p></div></div>
+        <button type="button" onClick={() => inputRef.current?.click()} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace CSV" : "Choose CSV"}</button>
+      </section>
+
+      {headers.length > 0 && <>
+        <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 p-4">
+            <div><h3 className="text-sm font-black text-slate-900">CSV recipients</h3><p className="text-xs text-slate-500">Choose the rows that should receive this campaign.</p></div>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Email column<select value={emailColumn} onChange={(event) => setEmailColumn(event.target.value)} className="ml-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold normal-case tracking-normal text-slate-800"><option value="">Select column</option>{headers.map((header) => <option key={header}>{header}</option>)}</select></label>
           </div>
-          <label className="mt-5 block text-xs font-black uppercase tracking-wider text-slate-500">Subject<input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={`Hello {{${alias}.name}}`} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold normal-case tracking-normal outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" /></label>
-          <label className="mt-5 block text-xs font-black uppercase tracking-wider text-slate-500">Professional message<textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={10} placeholder={`Hello {{${alias}.name}},\n\nWrite your message here.`} className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-7 normal-case tracking-normal outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" /></label>
-          <div className="mt-3 flex flex-wrap gap-2">{headers.map((header) => <button type="button" key={header} onClick={() => setMessage((value) => `${value}{{${alias}.${header}}}`)} className="rounded-lg bg-slate-100 px-2.5 py-1.5 font-mono text-[11px] font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-700">{`{{${alias}.${header}}}`}</button>)}</div>
-        </>}
-      </div>
-      <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-20">
-        <h3 className="text-sm font-black text-slate-900">Campaign review</h3>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white p-3"><p className="text-lg font-black">{rows.length}</p><p className="text-[9px] font-black uppercase text-slate-400">Rows</p></div><div className="rounded-xl bg-white p-3"><p className="text-lg font-black text-emerald-600">{validRows.length}</p><p className="text-[9px] font-black uppercase text-slate-400">Valid</p></div><div className="rounded-xl bg-white p-3"><p className="text-lg font-black text-amber-600">{rows.length - validRows.length}</p><p className="text-[9px] font-black uppercase text-slate-400">Invalid</p></div></div>
-        {duplicateCount > 0 && <p className="mt-3 text-xs font-bold text-amber-700">{duplicateCount} duplicate email{duplicateCount === 1 ? "" : "s"} will be skipped.</p>}
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">First-recipient preview</p><p className="mt-3 text-xs font-bold text-slate-500">To: {sample?.[emailColumn] || "—"}</p><p className="mt-2 border-b border-slate-100 pb-3 text-sm font-black text-slate-900">{renderTemplate(subject, alias, sample) || "Your subject appears here"}</p><p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-6 text-slate-600">{renderTemplate(message, alias, sample) || "Your personalized message appears here."}</p></div>
-        <button type="button" onClick={() => void send()} disabled={busy || !alias || !emailColumn || !subject.trim() || !message.trim() || validRows.length === 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-4 w-4" />{busy ? "Sending campaign..." : `Send to ${new Set(validRows.map((row) => row[emailColumn]?.toLowerCase())).size} recipients`}</button>
-      </aside>
+          <div className="max-h-[430px] overflow-auto"><table className="w-full min-w-max text-left text-xs"><thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="w-12 px-4 py-3"><input type="checkbox" checked={rows.length > 0 && selectedIndexes.length === rows.length} onChange={(event) => setSelectedIndexes(event.target.checked ? rows.map((_, index) => index) : [])} className="h-4 w-4 accent-blue-600" /></th><th className="w-14 px-2 py-3">#</th>{headers.map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-100">{rows.map((row, index) => <tr key={index} className={selectedIndexes.includes(index) ? "bg-blue-50/50" : "hover:bg-slate-50"}><td className="px-4 py-3"><input type="checkbox" checked={selectedIndexes.includes(index)} onChange={(event) => setSelectedIndexes((current) => event.target.checked ? [...current, index] : current.filter((value) => value !== index))} className="h-4 w-4 accent-blue-600" /></td><td className="px-2 py-3 font-bold text-slate-400">{index + 1}</td>{headers.map((header) => <td key={header} className="max-w-72 truncate px-4 py-3 text-slate-700">{row[header] || "—"}</td>)}</tr>)}</tbody>
+          </table></div>
+          <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3"><p className="text-xs font-bold text-slate-500">{selectedIndexes.length} selected · {validRows.length} valid email rows</p><button type="button" onClick={() => setShowComposer(true)} disabled={!emailColumn || validRows.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white disabled:opacity-40"><Mail className="h-4 w-4" /> Compose message</button></div>
+        </section>
+
+        {showComposer && <section className="mt-5 grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div>
+            <div className="flex items-center justify-between gap-3"><div><h3 className="font-black text-slate-900">Compose campaign</h3><p className="text-xs text-slate-500">{uniqueCount} unique recipients</p></div><button onClick={() => setShowComposer(false)} className="text-xs font-black text-slate-500">Close composer</button></div>
+            <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Subject<input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Your email subject" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-400" /></label>
+            <div className="mt-4"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Insert CSV field</p><div className="mt-2 flex flex-wrap gap-2">{headers.map((header) => <button type="button" key={header} onClick={() => insertVariable(header)} className="rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 font-mono text-[11px] font-bold text-blue-700 hover:border-blue-300 hover:bg-blue-100">{`{{${header}}}`}</button>)}</div></div>
+            <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Message<textarea ref={messageRef} value={message} onChange={(event) => setMessage(event.target.value)} rows={9} placeholder="Click a CSV field above to insert it into your message." className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-7 outline-none focus:border-blue-400" /></label>
+          </div>
+          <aside className="h-fit rounded-xl border border-slate-200 bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">First selected recipient</p><p className="mt-3 truncate text-xs font-bold text-slate-500">To: {sample?.[emailColumn] || "—"}</p><p className="mt-2 border-b border-slate-200 pb-3 text-sm font-black text-slate-900">{renderTemplate(subject, alias, sample) || "Subject preview"}</p><p className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-sm font-medium leading-6 text-slate-600">{renderTemplate(message, alias, sample) || "Message preview"}</p><button type="button" onClick={() => void send()} disabled={busy || !subject.trim() || !message.trim() || uniqueCount === 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white disabled:opacity-40"><Send className="h-4 w-4" />{busy ? "Sending..." : `Send to ${uniqueCount}`}</button></aside>
+        </section>}
+      </>}
     </div>
   </div>;
 }

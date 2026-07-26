@@ -11,8 +11,11 @@ const clean = (value: unknown, max: number) => String(value ?? "").trim().slice(
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 function render(template: string, alias: string, row: Record<string, string>) {
-  return template.replace(/\{\{\s*([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\s*\}\}/g, (match, source, column) =>
-    source.toLowerCase() === alias.toLowerCase() && Object.prototype.hasOwnProperty.call(row, column) ? row[column] : match);
+  return template
+    .replace(/\{\{\s*([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\s*\}\}/g, (match, source, column) =>
+      source.toLowerCase() === alias.toLowerCase() && Object.prototype.hasOwnProperty.call(row, column) ? row[column] : match)
+    .replace(/\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/g, (match, column) =>
+      Object.prototype.hasOwnProperty.call(row, column) ? row[column] : match);
 }
 
 export async function GET() {
