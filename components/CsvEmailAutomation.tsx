@@ -1,12 +1,15 @@
 "use client";
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, Cloud, FileSpreadsheet, Link2, LogOut, Mail, Send, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileSpreadsheet, Filter, Link2, LogOut, Mail, Search, Send, Upload, X } from "lucide-react";
 
 type CsvRow = Record<string, string>;
 type GoogleSpreadsheet = { id: string; name: string; modifiedTime?: string };
 type GoogleSheetTab = { title: string; sheetId?: number };
 type GoogleAccount = { name: string; email: string; photoUrl?: string };
+
+const GoogleSheetsLogo = ({ className = "h-4 w-4" }: { className?: string }) =>
+  <img src="https://www.gstatic.com/images/branding/product/2x/sheets_2020q4_48dp.png" alt="" className={className} />;
 
 function parseCsv(text: string) {
   const records: string[][] = [];
@@ -61,6 +64,9 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   const [sheetName, setSheetName] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterColumn, setFilterColumn] = useState("");
+  const [filterValue, setFilterValue] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,6 +75,17 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   const validRows = useMemo(() => selectedRows.filter((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row[emailColumn] || "")), [selectedRows, emailColumn]);
   const uniqueCount = new Set(validRows.map((row) => row[emailColumn].toLowerCase())).size;
   const sample = validRows[0] || selectedRows[0];
+  const filteredRows = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase();
+    const filter = filterValue.trim().toLowerCase();
+    return rows.map((row, index) => ({ row, index })).filter(({ row }) => {
+      const matchesSearch = !search || headers.some((header) => (row[header] || "").toLowerCase().includes(search));
+      const matchesFilter = !filter || !filterColumn || (row[filterColumn] || "").toLowerCase().includes(filter);
+      return matchesSearch && matchesFilter;
+    });
+  }, [filterColumn, filterValue, headers, rows, searchQuery]);
+  const visibleIndexes = filteredRows.map(({ index }) => index);
+  const allVisibleSelected = visibleIndexes.length > 0 && visibleIndexes.every((index) => selectedIndexes.includes(index));
 
   const loadGoogle = useCallback(async () => {
     setBusy(true); setError("");
@@ -129,6 +146,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
       const sourceName = spreadsheetLabel || selectedSpreadsheet?.name || "Google Sheet";
       const detected = importedHeaders.find((header) => /^(email|email_address|emailaddress|e_mail)$/i.test(header)) || importedHeaders.find((header) => header.includes("email")) || "";
       setHeaders(importedHeaders); setRows(importedRows); setSelectedIndexes([]); setEmailColumn(detected);
+      setSearchQuery(""); setFilterColumn(""); setFilterValue("");
       setFileName(`${sourceName} - ${targetSheetName}`);
       setAlias(sourceName.replace(/[^a-zA-Z0-9_-]+/g, "_").toLowerCase() || "google_sheet");
       setShowComposer(false); setShowGoogle(false);
@@ -155,6 +173,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
         const sourceName = String(data.fileName || "Google Drive CSV").replace(/\.csv$/i, "");
         const detected = importedHeaders.find((header) => /^(email|email_address|emailaddress|e_mail)$/i.test(header)) || importedHeaders.find((header) => header.includes("email")) || "";
         setHeaders(importedHeaders); setRows(importedRows); setSelectedIndexes([]); setEmailColumn(detected);
+        setSearchQuery(""); setFilterColumn(""); setFilterValue("");
         setFileName(data.fileName || "Google Drive CSV"); setAlias(sourceName.replace(/[^a-zA-Z0-9_-]+/g, "_").toLowerCase() || "google_drive_csv");
         setShowComposer(false); setShowGoogle(false); setGoogleSheetUrl("");
         setNotice(`${importedRows.length} rows imported from Google Drive${data.wasLimited ? " (first 500 only)" : ""}.`);
@@ -183,6 +202,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
       const base = file.name.replace(/\.csv$/i, "").replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase() || "contacts";
       const detected = parsed.headers.find((header) => /^(email|email_address|emailaddress|e_mail)$/i.test(header)) || parsed.headers.find((header) => header.includes("email")) || "";
       setFileName(file.name); setAlias(base); setHeaders(parsed.headers); setRows(parsed.rows); setEmailColumn(detected); setSelectedIndexes([]);
+      setSearchQuery(""); setFilterColumn(""); setFilterValue("");
       setNotice(`${parsed.rows.length} rows loaded${parsed.wasLimited ? " (first 500 only)" : ""}. Select the recipients for this campaign.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to read this CSV."); }
   };
@@ -223,12 +243,12 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-blue-300 bg-blue-50/60 p-4">
         <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={upload} className="hidden" />
         <div className="flex min-w-0 items-center gap-3"><div className="rounded-xl bg-white p-2.5 text-blue-600 shadow-sm"><Upload className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{fileName || "Upload contact CSV"}</p><p className="text-[10px] font-semibold text-slate-400">Maximum 500 rows · 2 MB</p></div></div>
-        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void loadGoogle()} className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50"><Cloud className="h-4 w-4" /> Google Sheets</button><button type="button" onClick={() => inputRef.current?.click()} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace CSV" : "Choose CSV"}</button></div>
+        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void loadGoogle()} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-xs font-black text-emerald-700 hover:bg-emerald-50"><GoogleSheetsLogo /> Google Sheets</button><button type="button" onClick={() => inputRef.current?.click()} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace CSV" : "Choose CSV"}</button></div>
       </section>
 
       {showGoogle && <section className="mt-4 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3"><div><h3 className="font-black text-slate-900">Import from Google Sheets</h3><p className="text-xs text-slate-500">{googleConnected ? `Connected as ${googleAccount?.email || "your Google account"}. Only your spreadsheets are shown.` : "Connect your Google account to access your private spreadsheets."}</p></div><button onClick={() => setShowGoogle(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
-        {!googleConnected ? <button type="button" onClick={connectGoogle} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white"><Cloud className="h-4 w-4" /> Connect Google Sheets</button> :
+        {!googleConnected ? <button type="button" onClick={connectGoogle} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white"><GoogleSheetsLogo className="h-5 w-5" /> Connect Google Sheets</button> :
           <><div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4"><label className="text-[10px] font-black uppercase tracking-wider text-blue-700">Paste Google Sheets link</label><div className="mt-2 flex flex-col gap-2 sm:flex-row"><div className="relative min-w-0 flex-1"><Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" /><input type="url" value={googleSheetUrl} onChange={(event) => setGoogleSheetUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void importGoogleLink(); } }} placeholder="https://docs.google.com/spreadsheets/d/..." className="w-full rounded-xl border border-blue-200 bg-white py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-400" /></div><button type="button" onClick={() => void importGoogleLink()} disabled={busy || !googleSheetUrl.trim()} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white disabled:opacity-40">{busy ? "Importing..." : "Parse & import"}</button></div><p className="mt-2 text-[11px] font-medium text-blue-600">The worksheet in the link will be detected automatically. Without a worksheet ID, the first tab will be imported.</p></div><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3"><div className="flex items-center gap-3">{googleAccount?.photoUrl ? <img src={googleAccount.photoUrl} alt="" className="h-9 w-9 rounded-full" /> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-black text-emerald-700">{(googleAccount?.name || googleAccount?.email || "G").charAt(0).toUpperCase()}</div>}<div><p className="text-xs font-black text-emerald-900">{googleAccount?.name || "Google account"}</p><p className="text-[11px] font-semibold text-emerald-700">{googleAccount?.email}</p></div></div><button type="button" onClick={() => void disconnectGoogle()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"><LogOut className="h-3.5 w-3.5" /> Sign out Google</button></div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Spreadsheet<select value={spreadsheetId} onChange={(event) => void chooseSpreadsheet(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal"><option value="">Select spreadsheet</option>{spreadsheets.map((sheet) => <option key={sheet.id} value={sheet.id}>{sheet.name}</option>)}</select></label><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Worksheet<select value={sheetName} onChange={(event) => setSheetName(event.target.value)} disabled={!spreadsheetId} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal disabled:opacity-50"><option value="">Select worksheet</option>{sheetTabs.map((sheet) => <option key={sheet.sheetId ?? sheet.title} value={sheet.title}>{sheet.title}</option>)}</select></label><button type="button" onClick={() => void importGoogleSheet()} disabled={busy || !spreadsheetId || !sheetName} className="self-end rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Import</button></div></>}
       </section>}
 
@@ -238,10 +258,16 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
             <div><h3 className="text-sm font-black text-slate-900">CSV recipients</h3><p className="text-xs text-slate-500">Choose the rows that should receive this campaign.</p></div>
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Email column<select value={emailColumn} onChange={(event) => setEmailColumn(event.target.value)} className="ml-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold normal-case tracking-normal text-slate-800"><option value="">Select column</option>{headers.map((header) => <option key={header}>{header}</option>)}</select></label>
           </div>
-          <div className="max-h-[430px] overflow-auto"><table className="w-full min-w-max text-left text-xs"><thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="w-12 px-4 py-3"><input type="checkbox" checked={rows.length > 0 && selectedIndexes.length === rows.length} onChange={(event) => setSelectedIndexes(event.target.checked ? rows.map((_, index) => index) : [])} className="h-4 w-4 accent-blue-600" /></th><th className="w-14 px-2 py-3">#</th>{headers.map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-100">{rows.map((row, index) => <tr key={index} className={selectedIndexes.includes(index) ? "bg-blue-50/50" : "hover:bg-slate-50"}><td className="px-4 py-3"><input type="checkbox" checked={selectedIndexes.includes(index)} onChange={(event) => setSelectedIndexes((current) => event.target.checked ? [...current, index] : current.filter((value) => value !== index))} className="h-4 w-4 accent-blue-600" /></td><td className="px-2 py-3 font-bold text-slate-400">{index + 1}</td>{headers.map((header) => <td key={header} className="max-w-72 truncate px-4 py-3 text-slate-700">{row[header] || "—"}</td>)}</tr>)}</tbody>
+          <div className="grid gap-3 border-b border-slate-200 bg-slate-50/70 p-4 lg:grid-cols-[minmax(240px,1fr)_200px_minmax(220px,1fr)_auto]">
+            <label className="relative"><span className="sr-only">Search all rows</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search all columns..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs font-semibold outline-none focus:border-blue-400" /></label>
+            <label className="relative"><span className="sr-only">Filter column</span><Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><select value={filterColumn} onChange={(event) => { setFilterColumn(event.target.value); setFilterValue(""); }} className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs font-bold outline-none focus:border-blue-400"><option value="">Filter by column</option>{headers.map((header) => <option key={header} value={header}>{header}</option>)}</select></label>
+            <input value={filterValue} onChange={(event) => setFilterValue(event.target.value)} disabled={!filterColumn} placeholder={filterColumn ? `Filter ${filterColumn}...` : "Select a column first"} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400" />
+            <button type="button" onClick={() => { setSearchQuery(""); setFilterColumn(""); setFilterValue(""); }} disabled={!searchQuery && !filterColumn && !filterValue} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-600 hover:bg-slate-100 disabled:opacity-40">Clear filters</button>
+          </div>
+          <div className="max-h-[430px] overflow-auto"><table className="w-full min-w-max text-left text-xs"><thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="w-12 px-4 py-3"><input type="checkbox" checked={allVisibleSelected} onChange={(event) => setSelectedIndexes((current) => event.target.checked ? [...new Set([...current, ...visibleIndexes])] : current.filter((index) => !visibleIndexes.includes(index)))} className="h-4 w-4 accent-blue-600" /></th><th className="w-14 px-2 py-3">#</th>{headers.map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-100">{filteredRows.length ? filteredRows.map(({ row, index }) => <tr key={index} className={selectedIndexes.includes(index) ? "bg-blue-50/50" : "hover:bg-slate-50"}><td className="px-4 py-3"><input type="checkbox" checked={selectedIndexes.includes(index)} onChange={(event) => setSelectedIndexes((current) => event.target.checked ? [...current, index] : current.filter((value) => value !== index))} className="h-4 w-4 accent-blue-600" /></td><td className="px-2 py-3 font-bold text-slate-400">{index + 1}</td>{headers.map((header) => <td key={header} className="max-w-72 truncate px-4 py-3 text-slate-700">{row[header] || "—"}</td>)}</tr>) : <tr><td colSpan={headers.length + 2} className="px-4 py-12 text-center text-sm font-semibold text-slate-400">No rows match the current search and filters.</td></tr>}</tbody>
           </table></div>
-          <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3"><p className="text-xs font-bold text-slate-500">{selectedIndexes.length} selected · {validRows.length} valid email rows</p><button type="button" onClick={() => setShowComposer(true)} disabled={!emailColumn || validRows.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white disabled:opacity-40"><Mail className="h-4 w-4" /> Compose message</button></div>
+          <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3"><p className="text-xs font-bold text-slate-500">{filteredRows.length} of {rows.length} shown · {selectedIndexes.length} selected · {validRows.length} valid email rows</p><button type="button" onClick={() => setShowComposer(true)} disabled={!emailColumn || validRows.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white disabled:opacity-40"><Mail className="h-4 w-4" /> Compose message</button></div>
         </section>
 
         {showComposer && <section className="mt-5 grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[minmax(0,1fr)_340px]">
