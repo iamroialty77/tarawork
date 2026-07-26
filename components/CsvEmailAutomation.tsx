@@ -81,23 +81,22 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   };
 
   return <div className="absolute inset-0 z-20 overflow-y-auto bg-white">
-    <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-5 py-4 md:px-8">
-      <div><div className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5 text-blue-600" /><h2 className="text-xl font-black text-slate-900">CSV Email Campaign</h2></div><p className="mt-1 text-sm font-medium text-slate-500">Send safe, personalized emails from an uploaded contact list.</p></div>
+    <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 md:px-6">
+      <div className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5 text-blue-600" /><h2 className="text-lg font-black text-slate-900">CSV Email Campaign</h2></div>
       <button type="button" onClick={close} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
     </div>
     {notice && <div className="flex items-center gap-2 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 md:px-8"><CheckCircle2 className="h-4 w-4" />{notice}</div>}
     {error && <div className="flex items-center gap-2 border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-700 md:px-8"><AlertCircle className="h-4 w-4" />{error}</div>}
-    <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,.8fr)] md:p-8">
+    <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:p-6">
       <div>
-        <section className="rounded-2xl border border-dashed border-blue-300 bg-blue-50/60 p-6 text-center">
+        <section className="rounded-xl border border-dashed border-blue-300 bg-blue-50/60 p-4 text-center">
           <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={upload} className="hidden" />
-          <div className="mx-auto w-fit rounded-2xl bg-white p-3 text-blue-600 shadow-sm"><Upload className="h-6 w-6" /></div>
-          <h3 className="mt-3 font-black text-slate-900">{fileName || "Upload your contact CSV"}</h3>
-          <p className="mt-1 text-xs font-medium text-slate-500">Header row required · maximum 500 contacts · 2 MB</p>
-          <button type="button" onClick={() => inputRef.current?.click()} className="mt-4 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace CSV" : "Choose CSV file"}</button>
+          <div className="mx-auto w-fit rounded-xl bg-white p-2 text-blue-600 shadow-sm"><Upload className="h-5 w-5" /></div>
+          <h3 className="mt-2 truncate text-sm font-black text-slate-900">{fileName || "Upload contact CSV"}</h3>
+          <button type="button" onClick={() => inputRef.current?.click()} className="mt-3 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace" : "Choose file"}</button>
         </section>
         {headers.length > 0 && <>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-black uppercase tracking-wider text-slate-500">Template name<input value={alias} onChange={(e) => setAlias(e.target.value.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase())} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold normal-case tracking-normal" /></label>
             <label className="text-xs font-black uppercase tracking-wider text-slate-500">Email column<select value={emailColumn} onChange={(e) => setEmailColumn(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal"><option value="">Select a column</option>{headers.map((header) => <option key={header}>{header}</option>)}</select></label>
           </div>
@@ -106,13 +105,12 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
           <div className="mt-3 flex flex-wrap gap-2">{headers.map((header) => <button type="button" key={header} onClick={() => setMessage((value) => `${value}{{${alias}.${header}}}`)} className="rounded-lg bg-slate-100 px-2.5 py-1.5 font-mono text-[11px] font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-700">{`{{${alias}.${header}}}`}</button>)}</div>
         </>}
       </div>
-      <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <h3 className="font-black text-slate-900">Campaign review</h3>
+      <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-20">
+        <h3 className="text-sm font-black text-slate-900">Campaign review</h3>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white p-3"><p className="text-lg font-black">{rows.length}</p><p className="text-[9px] font-black uppercase text-slate-400">Rows</p></div><div className="rounded-xl bg-white p-3"><p className="text-lg font-black text-emerald-600">{validRows.length}</p><p className="text-[9px] font-black uppercase text-slate-400">Valid</p></div><div className="rounded-xl bg-white p-3"><p className="text-lg font-black text-amber-600">{rows.length - validRows.length}</p><p className="text-[9px] font-black uppercase text-slate-400">Invalid</p></div></div>
         {duplicateCount > 0 && <p className="mt-3 text-xs font-bold text-amber-700">{duplicateCount} duplicate email{duplicateCount === 1 ? "" : "s"} will be skipped.</p>}
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">First-recipient preview</p><p className="mt-3 text-xs font-bold text-slate-500">To: {sample?.[emailColumn] || "—"}</p><p className="mt-2 border-b border-slate-100 pb-3 text-sm font-black text-slate-900">{renderTemplate(subject, alias, sample) || "Your subject appears here"}</p><p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-6 text-slate-600">{renderTemplate(message, alias, sample) || "Your personalized message appears here."}</p></div>
         <button type="button" onClick={() => void send()} disabled={busy || !alias || !emailColumn || !subject.trim() || !message.trim() || validRows.length === 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-4 w-4" />{busy ? "Sending campaign..." : `Send to ${new Set(validRows.map((row) => row[emailColumn]?.toLowerCase())).size} recipients`}</button>
-        <p className="mt-3 text-center text-[10px] font-medium leading-4 text-slate-400">Each recipient receives a separate email. Addresses are never exposed to other recipients.</p>
       </aside>
     </div>
   </div>;

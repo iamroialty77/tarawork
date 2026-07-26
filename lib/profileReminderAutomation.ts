@@ -79,6 +79,10 @@ export async function saveProfileReminderConfig(config: ProfileReminderConfig, a
 }
 
 const hasText = (value: unknown) => typeof value === "string" && value.trim().length > 0;
+const hasRate = (value: unknown) => {
+  const normalized = String(value || "").replace(/[^0-9.]/g, "");
+  return normalized.length > 0 && Number(normalized) > 0;
+};
 
 function getCompletionDetails(profile: Record<string, unknown>, hasPortfolio: boolean) {
   const role = String(profile.role || "").toLowerCase();
@@ -91,11 +95,13 @@ function getCompletionDetails(profile: Record<string, unknown>, hasPortfolio: bo
         { label: "Profile Photo", complete: hasText(profile.avatar_url) },
       ]
     : [
+        { label: "Full Name", complete: hasText(profile.name) },
         { label: "About / Bio", complete: hasText(profile.bio) },
+        { label: "Professional Category", complete: hasText(profile.category) && String(profile.category).trim().toLowerCase() !== "general" },
         { label: "Skills / Services", complete: Array.isArray(profile.skills) && profile.skills.length > 0 },
         { label: "Profile Username", complete: hasText(profile.username) },
         { label: "Portfolio", complete: hasPortfolio },
-        { label: "Hourly Rate", complete: hasText(profile.hourlyRate) && profile.hourlyRate !== "$0" },
+        { label: "Hourly Rate", complete: hasRate(profile.hourlyRate) },
         { label: "Profile Photo", complete: hasText(profile.avatar_url) },
       ];
   return {
@@ -116,8 +122,9 @@ async function resolveEmails(profiles: Array<Record<string, unknown>>) {
 export async function getProfileReminderRecipients(config: ProfileReminderConfig, excludeRecentlySent = true) {
   let query = supabaseAdmin
     .from("profiles")
-    .select("id, name, role, bio, username, skills, hourlyRate, companyName, avatar_url, aiInsights")
-    .in("role", ["freelancer", "employer"]);
+    .select("id, name, role, category, bio, username, skills, hourlyRate, companyName, avatar_url, aiInsights, status")
+    .in("role", ["freelancer", "employer"])
+    .or("status.is.null,status.neq.suspended");
   if (config.audience !== "all") query = query.eq("role", config.audience);
   const { data: profiles, error } = await query;
   if (error) throw error;
@@ -126,8 +133,16 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
   const portfolioIds = new Set<string>();
   for (let index = 0; index < ids.length; index += 500) {
     const batch = ids.slice(index, index + 500);
-    const { data } = await supabaseAdmin.from("portfolio_items").select("profile_id").in("profile_id", batch);
-    (data || []).forEach((item) => portfolioIds.add(item.profile_id));
+    const [legacyResult, currentResult] = await Promise.all([
+      supabaseAdmin.from("portfolio_items").select("profile_id").in("profile_id", batch),
+      supabaseAdmin.from("portfolios").select("profile_id, portfolio_projects(id)").in("profile_id", batch),
+    ]);
+    if (legacyResult.error) throw new Error(`Unable to verify legacy portfolios: ${legacyResult.error.message}`);
+    if (currentResult.error) throw new Error(`Unable to verify current portfolios: ${currentResult.error.message}`);
+    (legacyResult.data || []).forEach((item) => portfolioIds.add(item.profile_id));
+    (currentResult.data || []).forEach((item) => {
+      if (Array.isArray(item.portfolio_projects) && item.portfolio_projects.length > 0) portfolioIds.add(item.profile_id);
+    });
   }
 
   const eligible = (profiles || []).map((profile) => ({

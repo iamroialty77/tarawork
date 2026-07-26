@@ -10,6 +10,7 @@ const initial: Config = { enabled: false, threshold: 50, subject: "", message: "
 export default function JobMatchAutomation({ close }: { close: () => void }) {
   const [config, setConfig] = useState(initial);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(true);
   const [notice, setNotice] = useState("");
 
@@ -19,23 +20,24 @@ export default function JobMatchAutomation({ close }: { close: () => void }) {
       const response = await fetch("/api/admin/job-match-automation", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load job match automation.");
-      setConfig(data.config); setRecipients(data.recipients || []);
+      setConfig(data.config); setRecipients(data.recipients || []); setSelectedUserIds((data.recipients || []).map((recipient: Recipient) => recipient.userId));
     } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to load automation."); }
     finally { setBusy(false); }
   };
   useEffect(() => { void load(); }, []);
 
   const process = async (action: "save" | "preview" | "run") => {
-    if (action === "run" && !window.confirm(`Send the best matching job to ${recipients.length} eligible freelancers?`)) return;
+    if (action === "run" && !window.confirm(`Send the best matching job to ${selectedUserIds.length} selected freelancer${selectedUserIds.length === 1 ? "" : "s"}?`)) return;
     setBusy(true); setNotice("");
     try {
       const response = await fetch("/api/admin/job-match-automation", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, config }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, config, selectedUserIds }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to process job matches.");
       if (action === "preview") {
         setRecipients(data.recipients || []);
+        setSelectedUserIds((data.recipients || []).map((recipient: Recipient) => recipient.userId));
         setNotice(`${data.recipientCount} professional job match${data.recipientCount === 1 ? "" : "es"} ready.`);
       } else if (action === "run") {
         setNotice(`Job match run complete: ${data.sent} sent${data.failed ? `, ${data.failed} failed` : ""}.`);
@@ -64,10 +66,10 @@ export default function JobMatchAutomation({ close }: { close: () => void }) {
       <label className="mt-5 block text-xs font-black uppercase tracking-wider text-slate-500">Professional message<textarea value={config.message} onChange={(event) => setConfig({ ...config, message: event.target.value })} rows={9} placeholder="Write the job match message here..." className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-7 normal-case tracking-normal outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" /></label>
       <p className="mt-2 text-xs font-medium text-slate-400">Available fields: {"{{name}}"}, {"{{job_title}}"}, {"{{company}}"}, {"{{match_score}}"}, {"{{matched_skills}}"}, {"{{missing_skills}}"}, {"{{job_url}}"}.</p>
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black text-slate-800">Professional match preview</p><p className="text-xs font-medium text-slate-500">{recipients.length} freelancer{recipients.length === 1 ? "" : "s"} currently qualify.</p></div><button onClick={() => void process("preview")} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-50">Refresh matches</button></div>
-        {recipients.length > 0 && <div className="mt-3 max-h-64 divide-y divide-slate-200 overflow-y-auto rounded-xl border border-slate-200 bg-white">{recipients.map((recipient) => <div key={`${recipient.userId}-${recipient.jobTitle}`} className="flex items-center gap-3 px-3 py-3 text-xs"><div className="min-w-0 flex-1"><p className="truncate font-black text-slate-700">{recipient.name} → {recipient.jobTitle}</p><p className="truncate text-slate-400">{recipient.company} · {recipient.email}</p><p className="mt-1 truncate font-semibold text-emerald-700">{recipient.matchedSkills.length ? `Matched: ${recipient.matchedSkills.join(", ")}` : "No matched keyword"}</p>{recipient.missingSkills.length > 0 && <p className="mt-1 truncate font-medium text-amber-700">Missing: {recipient.missingSkills.join(", ")}</p>}<p className="mt-1 text-[10px] font-bold text-slate-400">{recipient.matchedSkills.length} of {recipient.totalRequirements} detected requirements matched</p></div><span className="rounded-lg bg-emerald-50 px-2 py-1 font-black text-emerald-700">{recipient.score}%</span></div>)}</div>}
+        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black text-slate-800">Professional match preview</p><p className="text-xs font-medium text-slate-500">{selectedUserIds.length} of {recipients.length} eligible freelancers selected.</p></div><button onClick={() => void process("preview")} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-50">Refresh matches</button></div>
+        {recipients.length > 0 && <><label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700"><input type="checkbox" checked={selectedUserIds.length === recipients.length} onChange={(event) => setSelectedUserIds(event.target.checked ? recipients.map((recipient) => recipient.userId) : [])} className="h-4 w-4 accent-emerald-600" /> Select all eligible freelancers</label><div className="mt-2 max-h-64 divide-y divide-slate-200 overflow-y-auto rounded-xl border border-slate-200 bg-white">{recipients.map((recipient) => <label key={`${recipient.userId}-${recipient.jobTitle}`} className="flex cursor-pointer items-center gap-3 px-3 py-3 text-xs hover:bg-slate-50"><input type="checkbox" checked={selectedUserIds.includes(recipient.userId)} onChange={(event) => setSelectedUserIds((current) => event.target.checked ? [...current, recipient.userId] : current.filter((id) => id !== recipient.userId))} className="h-4 w-4 shrink-0 accent-emerald-600" /><div className="min-w-0 flex-1"><p className="truncate font-black text-slate-700">{recipient.name} → {recipient.jobTitle}</p><p className="truncate text-slate-400">{recipient.company} · {recipient.email}</p><p className="mt-1 truncate font-semibold text-emerald-700">{recipient.matchedSkills.length ? `Matched: ${recipient.matchedSkills.join(", ")}` : "No matched keyword"}</p>{recipient.missingSkills.length > 0 && <p className="mt-1 truncate font-medium text-amber-700">Missing: {recipient.missingSkills.join(", ")}</p>}<p className="mt-1 text-[10px] font-bold text-slate-400">{recipient.matchedSkills.length} of {recipient.totalRequirements} detected requirements matched</p></div><span className="rounded-lg bg-emerald-50 px-2 py-1 font-black text-emerald-700">{recipient.score}%</span></label>)}</div></>}
       </div>
-      <div className="mt-6 flex flex-wrap justify-end gap-3"><button onClick={() => void process("save")} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-slate-700 disabled:opacity-50">Save settings</button><button onClick={() => void process("run")} disabled={busy || !config.subject.trim() || !config.message.trim() || recipients.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50"><Send className="h-4 w-4" />{busy ? "Processing..." : "Send job matches now"}</button></div>
+      <div className="mt-6 flex flex-wrap justify-end gap-3"><button onClick={() => void process("save")} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-slate-700 disabled:opacity-50">Save settings</button><button onClick={() => void process("run")} disabled={busy || !config.subject.trim() || !config.message.trim() || selectedUserIds.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50"><Send className="h-4 w-4" />{busy ? "Processing..." : `Send to ${selectedUserIds.length} selected`}</button></div>
     </div>
   </div>;
 }

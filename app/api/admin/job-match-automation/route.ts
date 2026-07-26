@@ -37,7 +37,13 @@ export async function POST(req: NextRequest) {
     if (action === "preview") return NextResponse.json({ success: true, recipients, recipientCount: recipients.length });
     const limited = rateLimit({ key: `admin:job-match:${admin.user?.id || getClientIp(req)}`, limit: 3, windowMs: 3600000 });
     if (limited) return limited;
-    return NextResponse.json({ success: true, ...await sendJobMatches(config, `admin:${admin.user?.id || "unknown"}`) });
+    const selectedUserIds = Array.isArray(body.selectedUserIds)
+      ? [...new Set(body.selectedUserIds.map((value: unknown) => String(value)).filter((value: string) => /^[0-9a-f-]{36}$/i.test(value)))].slice(0, 200)
+      : undefined;
+    if (Array.isArray(body.selectedUserIds) && !selectedUserIds?.length) {
+      return NextResponse.json({ error: "Select at least one eligible freelancer." }, { status: 400 });
+    }
+    return NextResponse.json({ success: true, ...await sendJobMatches(config, `admin:${admin.user?.id || "unknown"}`, selectedUserIds) });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to process job matches." }, { status: 500 });
   }

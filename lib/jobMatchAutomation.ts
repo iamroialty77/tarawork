@@ -91,10 +91,7 @@ function scoreMatch(profile: Record<string, unknown>, job: Record<string, unknow
   const descriptionKeywords = SMART_JOB_KEYWORDS.filter((keyword) => jobText.includes(` ${keyword} `));
   const jobRequirements = [...new Set([...explicitSkills, ...descriptionKeywords])];
   const isProfileMatch = (requirement: string) =>
-    profileSkills.some((skill) =>
-      skill === requirement ||
-      (skill.length >= 3 && requirement.length >= 3 && (skill.includes(requirement) || requirement.includes(skill))),
-    ) || profileText.includes(` ${requirement} `);
+    profileSkills.some((skill) => skill === requirement) || profileText.includes(` ${requirement} `);
   const matchedSkills = jobRequirements.filter(isProfileMatch);
   const missingSkills = jobRequirements.filter((requirement) => !isProfileMatch(requirement));
   const score = jobRequirements.length
@@ -112,7 +109,7 @@ async function getEmail(profile: Record<string, unknown>) {
 
 export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecentlySent = true) {
   const [{ data: profiles, error: profileError }, { data: jobs, error: jobError }, { data: applications, error: applicationError }] = await Promise.all([
-    supabaseAdmin.from("profiles").select("id, name, category, skills, bio, aiInsights").eq("role", "freelancer"),
+    supabaseAdmin.from("profiles").select("id, name, category, skills, bio, aiInsights, status").eq("role", "freelancer").or("status.is.null,status.neq.suspended"),
     supabaseAdmin.from("jobs").select("id, title, description, company, category, skills, status, createdAt").eq("status", "live"),
     supabaseAdmin.from("applications").select("freelancer_id, job_id"),
   ]);
@@ -172,9 +169,12 @@ function render(template: string, recipient: JobMatchRecipient) {
   return template.replace(/\{\{(name|job_title|company|match_score|matched_skills|missing_skills|job_url)\}\}/g, (_, key: string) => values[key]);
 }
 
-export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string) {
+export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string, selectedUserIds?: string[]) {
   if (!config.subject || !config.message) throw new Error("Add a subject and message before running the automation.");
-  const recipients = (await getJobMatchRecipients(config, true)).slice(0, 200);
+  const selected = selectedUserIds ? new Set(selectedUserIds) : null;
+  const recipients = (await getJobMatchRecipients(config, true))
+    .filter((recipient) => !selected || selected.has(recipient.userId))
+    .slice(0, 200);
   if (!recipients.length) return { sent: 0, failed: 0, recipients };
   const smtpUser = process.env.SMTP_USER || "";
   const smtpPass = process.env.SMTP_PASS || "";
