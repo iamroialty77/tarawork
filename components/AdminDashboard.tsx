@@ -59,6 +59,20 @@ const createEmptyBlogDraft = () => ({
   content: "",
 });
 
+const createUserEditDraft = (user?: any) => ({
+  name: user?.name || "",
+  username: user?.username || "",
+  role: user?.role === "employer" ? "employer" : "freelancer",
+  status: user?.status || "pending",
+  category: user?.category || "General",
+  bio: user?.bio || "",
+  avatarUrl: user?.avatar_url || "",
+  companyName: user?.companyName || "",
+  hourlyRate: user?.hourlyRate || "",
+  preferredCurrency: user?.preferredCurrency || "PHP",
+  skills: Array.isArray(user?.skills) ? user.skills.join(", ") : "",
+});
+
 type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "site_settings" | "blog" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
@@ -79,6 +93,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [counts, setCounts] = useState({ users: 0, jobs: 0, employers: 0, freelancers: 0, disputes: 0 });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [verificationRole, setVerificationRole] = useState<"freelancer" | "employer">("freelancer");
+  const [verificationSearch, setVerificationSearch] = useState("");
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userEditDraft, setUserEditDraft] = useState(createUserEditDraft);
+  const [userEditLoading, setUserEditLoading] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [talentRequests, setTalentRequests] = useState<any[]>([]);
@@ -290,35 +309,38 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     }
   };
 
-  const editUserProfile = async (targetUser: any) => {
-    const nextName = prompt("Update full name:", targetUser.name || "")?.trim();
-    if (!nextName) return;
+  const editUserProfile = (targetUser: any) => {
+    setEditingUserId(targetUser.id);
+    setUserEditDraft(createUserEditDraft(targetUser));
+  };
 
-    const nextRole = prompt("Update role (freelancer / employer / admin):", targetUser.role || "freelancer")?.trim();
-    if (!nextRole || !["freelancer", "employer", "admin"].includes(nextRole)) {
-      notify("Profile update cancelled: invalid role.");
+  const saveUserProfile = async () => {
+    if (!editingUserId || !userEditDraft.name.trim()) {
+      notify("Full name is required.");
       return;
     }
-
-    const nextCategory = prompt("Update category:", targetUser.category || "General")?.trim() || "General";
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        name: nextName,
-        role: nextRole,
-        category: nextCategory,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", targetUser.id);
-
-    if (error) {
-      notify("Error updating profile: " + error.message);
-      return;
+    setUserEditLoading(true);
+    try {
+      const response = await fetch("/api/admin/update-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: editingUserId,
+          ...userEditDraft,
+          skills: userEditDraft.skills.split(",").map((skill: string) => skill.trim()).filter(Boolean),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to update profile.");
+      setUsers((current) => current.map((user) => user.id === editingUserId ? result.profile : user));
+      setVerificationRole(result.profile.role === "employer" ? "employer" : "freelancer");
+      setEditingUserId(null);
+      notify("Profile updated successfully.");
+    } catch (error: any) {
+      notify("Profile update error: " + (error?.message || "Unknown error"));
+    } finally {
+      setUserEditLoading(false);
     }
-
-    notify("Profile updated successfully.");
-    fetchData();
   };
 
   const updateJobStatus = async (jobId: string, status: string) => {
@@ -833,19 +855,24 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             className="space-y-6"
           >
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between gap-4 md:items-center">
+              <div className="flex flex-col justify-between gap-4 border-b border-slate-100 p-5 md:flex-row md:items-center sm:p-6">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">Verification Queue</h3>
-                  <p className="text-sm text-slate-500 font-medium">Review IDs and Portfolios to verify users.</p>
+                  <h3 className="text-xl font-black text-slate-900">Verification Queue</h3>
+                  <p className="text-sm font-medium text-slate-500">Review and manage account profiles.</p>
                 </div>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input 
                     type="text" 
-                    placeholder="Search users..." 
-                    className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm outline-none w-full md:w-64"
+                    value={verificationSearch}
+                    onChange={(event) => setVerificationSearch(event.target.value)}
+                    placeholder={`Search ${verificationRole}s...`}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm font-semibold outline-none focus:border-indigo-400 md:w-72"
                   />
                 </div>
+              </div>
+              <div className="flex gap-2 border-b border-slate-100 bg-slate-50/70 px-5 py-3 sm:px-6">
+                {(["freelancer", "employer"] as const).map((role) => <button key={role} type="button" onClick={() => setVerificationRole(role)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black capitalize transition ${verificationRole === role ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100"}`}>{role === "freelancer" ? "Freelancers" : "Employers"}<span className={`rounded-full px-2 py-0.5 text-[10px] ${verificationRole === role ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"}`}>{users.filter((user) => user.role === role).length}</span></button>)}
               </div>
               
               <div className="overflow-x-auto">
@@ -860,7 +887,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {users.map((user) => (
+                    {users.filter((user) => {
+                      if (user.role !== verificationRole) return false;
+                      const search = verificationSearch.trim().toLowerCase();
+                      return !search || [user.name, user.username, user.category, user.companyName].some((value) => String(value || "").toLowerCase().includes(search));
+                    }).map((user) => (
                       <tr key={user.id} className="hover:bg-slate-50/30 transition-colors">
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-3">
@@ -959,6 +990,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                         </td>
                       </tr>
                     ))}
+                    {users.filter((user) => {
+                      if (user.role !== verificationRole) return false;
+                      const search = verificationSearch.trim().toLowerCase();
+                      return !search || [user.name, user.username, user.category, user.companyName].some((value) => String(value || "").toLowerCase().includes(search));
+                    }).length === 0 && <tr><td colSpan={5} className="px-6 py-14 text-center"><Users className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-black text-slate-700">No {verificationRole}s found</p><p className="mt-1 text-xs font-semibold text-slate-400">{verificationSearch ? "Try a different search." : `New ${verificationRole} accounts will appear here.`}</p></td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -1334,6 +1370,39 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                 </table>
               </div>
             </div>
+            {editingUserId && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+              <div role="dialog" aria-modal="true" aria-labelledby="profile-editor-title" className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-white/20 bg-white shadow-2xl">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
+                  <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600">Verification Queue</p><h4 id="profile-editor-title" className="mt-1 text-xl font-black text-slate-900">Edit {userEditDraft.role} profile</h4></div>
+                  <button type="button" onClick={() => setEditingUserId(null)} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+                </div>
+                <div className="grid gap-6 p-5 sm:p-6">
+                  <section>
+                    <h5 className="text-xs font-black uppercase tracking-widest text-slate-400">Account</h5>
+                    <div className="mt-3 grid gap-4 md:grid-cols-2">
+                      <label className="text-xs font-black text-slate-600">Full name<input value={userEditDraft.name} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, name: event.target.value }))} maxLength={160} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-400" /></label>
+                      <label className="text-xs font-black text-slate-600">Username<input value={userEditDraft.username} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, username: event.target.value }))} maxLength={80} placeholder="public-profile-name" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-400" /></label>
+                      <label className="text-xs font-black text-slate-600">Account type<select value={userEditDraft.role} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, role: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold"><option value="freelancer">Freelancer</option><option value="employer">Employer</option></select></label>
+                      <label className="text-xs font-black text-slate-600">Verification status<select value={userEditDraft.status} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, status: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold"><option value="pending">Pending</option><option value="approved">Approved</option><option value="suspended">Suspended</option></select></label>
+                    </div>
+                  </section>
+                  <section className="border-t border-slate-100 pt-5">
+                    <h5 className="text-xs font-black uppercase tracking-widest text-slate-400">Public profile</h5>
+                    <div className="mt-3 grid gap-4 md:grid-cols-2">
+                      <label className="text-xs font-black text-slate-600">Category<input value={userEditDraft.category} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, category: event.target.value }))} maxLength={120} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-400" /></label>
+                      <label className="text-xs font-black text-slate-600">Avatar URL<input type="url" value={userEditDraft.avatarUrl} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, avatarUrl: event.target.value }))} placeholder="https://..." className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-400" /></label>
+                      <label className="text-xs font-black text-slate-600 md:col-span-2">Bio<textarea value={userEditDraft.bio} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, bio: event.target.value }))} rows={5} maxLength={5000} className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-6 outline-none focus:border-indigo-400" /></label>
+                      {userEditDraft.role === "freelancer" ? <>
+                        <label className="text-xs font-black text-slate-600 md:col-span-2">Skills <span className="font-medium text-slate-400">(comma-separated)</span><input value={userEditDraft.skills} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, skills: event.target.value }))} placeholder="Virtual Assistance, SEO, Canva" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-400" /></label>
+                        <label className="text-xs font-black text-slate-600">Hourly rate<input value={userEditDraft.hourlyRate} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, hourlyRate: event.target.value }))} placeholder="PHP 500 / hour" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-400" /></label>
+                      </> : <label className="text-xs font-black text-slate-600">Company name<input value={userEditDraft.companyName} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, companyName: event.target.value }))} maxLength={180} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-400" /></label>}
+                      <label className="text-xs font-black text-slate-600">Preferred currency<select value={userEditDraft.preferredCurrency} onChange={(event) => setUserEditDraft((draft) => ({ ...draft, preferredCurrency: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold">{["PHP", "USD", "EUR", "GBP", "AUD", "CAD", "SGD"].map((currency) => <option key={currency}>{currency}</option>)}</select></label>
+                    </div>
+                  </section>
+                </div>
+                <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6"><button type="button" onClick={() => setEditingUserId(null)} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 hover:bg-slate-100">Cancel</button><button type="button" onClick={() => void saveUserProfile()} disabled={userEditLoading || !userEditDraft.name.trim()} className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-black text-white hover:bg-indigo-700 disabled:opacity-50">{userEditLoading ? "Saving..." : "Save profile"}</button></div>
+              </div>
+            </div>}
           </motion.div>
         )}
 
