@@ -8,6 +8,13 @@ export type SiteSettings = {
   instagramUrl: string;
   youtubeUrl: string;
   xUrl: string;
+  seoTitle: string;
+  seoDescription: string;
+  canonicalUrl: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImageUrl: string;
+  searchIndexing: boolean;
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
@@ -20,4 +27,11 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   instagramUrl: "",
   youtubeUrl: "",
   xUrl: "",
+  seoTitle: "Tara Work | Remote Jobs and Freelancing Platform in the Philippines",
+  seoDescription: "Tara Work connects Filipino freelancers and businesses through remote jobs, verified talent, and practical tools for building successful working relationships.",
+  canonicalUrl: "https://www.tarawork.online/",
+  ogTitle: "Tara Work | Find Remote Work and Filipino Talent",
+  ogDescription: "Discover remote opportunities or hire skilled Filipino freelancers through Tara Work.",
+  ogImageUrl: "/landing/filipino-hero.png",
+  searchIndexing: true,
 };

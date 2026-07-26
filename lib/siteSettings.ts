@@ -7,6 +7,12 @@ const url = (value: unknown) => {
   const result = clean(value, 500);
   return !result || /^https:\/\//i.test(result) ? result : "";
 };
+const imageUrl = (value: unknown) => {
+  const result = clean(value, 500);
+  return !result || /^https:\/\//i.test(result) || result.startsWith("/") ? result : "";
+};
+const valueOrDefault = (input: Record<string, unknown>, key: keyof SiteSettings) =>
+  Object.prototype.hasOwnProperty.call(input, key) ? input[key] : DEFAULT_SITE_SETTINGS[key];
 
 export function normalizeSiteSettings(value: unknown): SiteSettings {
   const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -20,6 +26,13 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
     instagramUrl: url(input.instagramUrl),
     youtubeUrl: url(input.youtubeUrl),
     xUrl: url(input.xUrl),
+    seoTitle: clean(valueOrDefault(input, "seoTitle"), 70),
+    seoDescription: clean(valueOrDefault(input, "seoDescription"), 180),
+    canonicalUrl: url(valueOrDefault(input, "canonicalUrl")),
+    ogTitle: clean(valueOrDefault(input, "ogTitle"), 70),
+    ogDescription: clean(valueOrDefault(input, "ogDescription"), 200),
+    ogImageUrl: imageUrl(valueOrDefault(input, "ogImageUrl")),
+    searchIndexing: typeof input.searchIndexing === "boolean" ? input.searchIndexing : DEFAULT_SITE_SETTINGS.searchIndexing,
   };
 }
 
