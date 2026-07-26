@@ -12,11 +12,13 @@ import {
   Sparkles,
   UserRoundCheck,
   Users,
+  FileSpreadsheet,
 } from "lucide-react";
 import JobMatchAutomation from "./JobMatchAutomation";
 import ProfileReminderAutomation from "./ProfileReminderAutomation";
+import CsvEmailAutomation from "./CsvEmailAutomation";
 
-type BotId = "profile-reminder" | "job-match";
+type BotId = "profile-reminder" | "job-match" | "csv-email";
 type BotSummary = {
   enabled: boolean;
   recipientCount: number;
@@ -31,17 +33,20 @@ export default function AdminAutomation() {
   const [summaries, setSummaries] = useState<Record<BotId, BotSummary>>({
     "profile-reminder": emptySummary,
     "job-match": emptySummary,
+    "csv-email": { enabled: true, recipientCount: 0, loading: false },
   });
 
   const loadSummaries = async () => {
     setSummaries((current) => ({
       "profile-reminder": { ...current["profile-reminder"], loading: true, error: undefined },
       "job-match": { ...current["job-match"], loading: true, error: undefined },
+      "csv-email": current["csv-email"],
     }));
 
     const requests: Array<[BotId, string]> = [
       ["profile-reminder", "/api/admin/profile-reminder-automation"],
       ["job-match", "/api/admin/job-match-automation"],
+      ["csv-email", "/api/admin/csv-email-automation"],
     ];
 
     const results = await Promise.all(
@@ -84,6 +89,16 @@ export default function AdminAutomation() {
       accent: "emerald",
       schedule: "Daily",
       audience: "Qualified freelancers",
+    },
+    {
+      id: "csv-email" as const,
+      name: "CSV Email Campaign",
+      eyebrow: "Custom outreach",
+      description: "Upload a contact list, personalize every email from its columns, preview the result, and send a controlled campaign.",
+      icon: FileSpreadsheet,
+      accent: "blue",
+      schedule: "Manual",
+      audience: "Uploaded CSV contacts",
     },
   ];
 
@@ -139,18 +154,19 @@ export default function AdminAutomation() {
           {bots.map((bot) => {
             const summary = summaries[bot.id];
             const isViolet = bot.accent === "violet";
+            const isBlue = bot.accent === "blue";
             return (
               <article key={bot.id} className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-                <div className={`h-1.5 ${isViolet ? "bg-gradient-to-r from-violet-500 to-indigo-500" : "bg-gradient-to-r from-emerald-500 to-teal-500"}`} />
+                <div className={`h-1.5 ${isViolet ? "bg-gradient-to-r from-violet-500 to-indigo-500" : isBlue ? "bg-gradient-to-r from-blue-500 to-cyan-500" : "bg-gradient-to-r from-emerald-500 to-teal-500"}`} />
                 <div className="p-6">
                   <div className="flex items-start justify-between gap-4">
-                    <div className={`rounded-2xl p-3 ${isViolet ? "bg-violet-50 text-violet-600" : "bg-emerald-50 text-emerald-600"}`}><bot.icon className="h-6 w-6" /></div>
+                    <div className={`rounded-2xl p-3 ${isViolet ? "bg-violet-50 text-violet-600" : isBlue ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"}`}><bot.icon className="h-6 w-6" /></div>
                     <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${summary.loading ? "bg-slate-100 text-slate-500" : summary.error ? "bg-rose-50 text-rose-700" : summary.enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                       <span className={`h-2 w-2 rounded-full ${summary.loading ? "animate-pulse bg-slate-400" : summary.error ? "bg-rose-500" : summary.enabled ? "bg-emerald-500" : "bg-slate-400"}`} />
                       {summary.loading ? "Checking" : summary.error ? "Attention" : summary.enabled ? "Active" : "Paused"}
                     </span>
                   </div>
-                  <p className={`mt-5 text-[10px] font-black uppercase tracking-[0.16em] ${isViolet ? "text-violet-600" : "text-emerald-600"}`}>{bot.eyebrow}</p>
+                  <p className={`mt-5 text-[10px] font-black uppercase tracking-[0.16em] ${isViolet ? "text-violet-600" : isBlue ? "text-blue-600" : "text-emerald-600"}`}>{bot.eyebrow}</p>
                   <h4 className="mt-1 text-xl font-black text-slate-950">{bot.name} Bot</h4>
                   <p className="mt-2 min-h-12 text-sm font-medium leading-6 text-slate-500">{bot.description}</p>
                   {summary.error && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{summary.error}</p>}
@@ -160,7 +176,7 @@ export default function AdminAutomation() {
                   </div>
                   <div className="mt-5 flex items-center justify-between gap-4">
                     <p className="truncate text-xs font-semibold text-slate-400">{bot.audience}</p>
-                    <button type="button" onClick={() => setActiveBot(bot.id)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black text-white transition ${isViolet ? "bg-violet-600 hover:bg-violet-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+                    <button type="button" onClick={() => setActiveBot(bot.id)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black text-white transition ${isViolet ? "bg-violet-600 hover:bg-violet-700" : isBlue ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
                       Manage bot <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
@@ -177,6 +193,7 @@ export default function AdminAutomation() {
 
       {activeBot === "profile-reminder" && <ProfileReminderAutomation close={() => { setActiveBot(null); void loadSummaries(); }} />}
       {activeBot === "job-match" && <JobMatchAutomation close={() => { setActiveBot(null); void loadSummaries(); }} />}
+      {activeBot === "csv-email" && <CsvEmailAutomation close={() => { setActiveBot(null); void loadSummaries(); }} />}
     </div>
   );
 }
