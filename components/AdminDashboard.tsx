@@ -87,6 +87,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [blogDraft, setBlogDraft] = useState(createEmptyBlogDraft);
   const [editingBlogPostId, setEditingBlogPostId] = useState<string | null>(null);
   const [blogEditorOpen, setBlogEditorOpen] = useState(false);
+  const [blogCategoryFilter, setBlogCategoryFilter] = useState("All");
   const [blogLoading, setBlogLoading] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
@@ -988,7 +989,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 p-8">
+              <div className="border-b border-slate-100 p-5 sm:p-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">Marketplace Operations</p>
@@ -1467,12 +1468,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><BookOpen className="h-5 w-5" /></div>
-                <div><h3 className="text-xl font-bold text-slate-900">Blog Studio</h3><p className="text-sm font-medium text-slate-500">{blogPostsAdmin.length} article{blogPostsAdmin.length === 1 ? "" : "s"} organized by category</p></div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white"><BookOpen className="h-5 w-5" /></div>
+                <div><h3 className="text-lg font-black text-slate-900">Blog Studio</h3><div className="mt-1 flex items-center gap-2 text-xs font-semibold text-slate-500"><span>{blogPostsAdmin.length} total</span><span className="text-slate-300">·</span><span className="text-emerald-600">{blogPostsAdmin.filter((post) => post.status === "published").length} published</span><span className="text-slate-300">·</span><span className="text-amber-600">{blogPostsAdmin.filter((post) => post.status === "draft").length} drafts</span></div></div>
               </div>
-              <button type="button" onClick={() => { setEditingBlogPostId(null); setBlogDraft(createEmptyBlogDraft()); setBlogEditorOpen(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-teal-700"><Plus className="h-4 w-4" /> Add article</button>
+              <button type="button" onClick={() => { setEditingBlogPostId(null); setBlogDraft(createEmptyBlogDraft()); setBlogEditorOpen(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-black text-white hover:bg-teal-700"><Plus className="h-4 w-4" /> New article</button>
             </div>
             {blogEditorOpen && (
             <div className="rounded-2xl border border-slate-100 bg-white shadow-sm">
@@ -1483,14 +1484,12 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-slate-900">{editingBlogPostId ? "Edit Article" : "New Article"}</h3>
-                    <p className="text-sm font-medium text-slate-500">
-                      {editingBlogPostId ? "Edit the selected public article." : "Create publishable articles for the public blog section."}
-                    </p>
+                    <p className="text-xs font-semibold text-slate-500">{editingBlogPostId ? "Update content and publishing details" : "Create a publishable article"}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-5 p-8">
+              <div className="grid gap-5 p-5 sm:p-6">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="text-xs font-black uppercase tracking-widest text-slate-500">Title</label>
@@ -1535,7 +1534,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                       className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                       placeholder="https://drive.google.com/file/d/.../view"
                     />
-                    <p className="mt-2 text-xs font-semibold text-slate-400">Paste a Google Drive sharing link. Set the file access to “Anyone with the link” so the image can appear publicly.</p>
                   </div>
                   <div>
                     <label className="text-xs font-black uppercase tracking-widest text-slate-500">Image Description</label>
@@ -1586,7 +1584,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                     value={blogDraft.content}
                     onChange={(content) => setBlogDraft((draft) => ({ ...draft, content }))}
                   />
-                  <p className="mt-2 text-xs font-semibold text-slate-400">Format the article using headings, lists, links, tables, alignment, and other tools above.</p>
                 </div>
 
                 <button
@@ -1612,27 +1609,19 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             </div>
             )}
 
-            <aside className="space-y-5">
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-                <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Published Flow</h4>
-                <p className="mt-3 text-sm font-semibold leading-7 text-slate-600">
-                  Published posts appear on the Blog page, landing page blog cards, and share previews.
-                </p>
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <h4 className="text-sm font-black text-slate-900">Articles</h4>
+                <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">{["All", ...blogCategories].map((category) => {
+                  const count = category === "All" ? blogPostsAdmin.length : blogPostsAdmin.filter((post) => post.category === category).length;
+                  return <button key={category} type="button" onClick={() => setBlogCategoryFilter(category)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-black transition ${blogCategoryFilter === category ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{category}<span className={`ml-2 ${blogCategoryFilter === category ? "text-slate-300" : "text-slate-400"}`}>{count}</span></button>;
+                })}</div>
               </div>
-              <div>
-                <div className="mb-4 flex items-center justify-between"><div><h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Article Library</h4><p className="mt-1 text-xs font-semibold text-slate-400">Articles are grouped by their public blog category.</p></div></div>
-                {blogPostsAdmin.length ? <div className="grid gap-5 xl:grid-cols-2">{blogCategories.map((category) => {
-                  const categoryPosts = blogPostsAdmin.filter((post) => post.category === category);
-                  return <section key={category} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-4"><div><h5 className="text-sm font-black text-slate-900">{category}</h5><p className="mt-0.5 text-[11px] font-semibold text-slate-400">{categoryPosts.length} article{categoryPosts.length === 1 ? "" : "s"}</p></div><span className="rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-black text-teal-700">{categoryPosts.filter((post) => post.status === "published").length} published</span></div>
-                    <div className="divide-y divide-slate-100">{categoryPosts.length ? categoryPosts.map((post) => <article key={post.id} className="p-5">
-                      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{post.title}</p><p className="mt-1 text-xs font-semibold capitalize text-slate-500">{post.status} · {post.published_at ? new Date(post.published_at).toLocaleDateString() : "No publish date"}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider ${post.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{post.status}</span></div>
-                      <div className="mt-4 flex flex-wrap gap-2">{post.status === "published" && <a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer" className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-teal-700 hover:bg-teal-100">View</a>}<button type="button" onClick={() => editBlogPost(post)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Edit</button><button type="button" onClick={() => deleteBlogPost(post.id)} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-700 hover:bg-rose-100">Delete</button></div>
-                    </article>) : <p className="p-6 text-center text-xs font-semibold text-slate-400">No articles in this category yet.</p>}</div>
-                  </section>;
-                })}</div> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><BookOpen className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-4 text-sm font-black text-slate-700">No blog articles yet</p><p className="mt-1 text-xs font-semibold text-slate-400">Click Add article to create the first public blog post.</p></div>}
-              </div>
-            </aside>
+              {blogPostsAdmin.filter((post) => blogCategoryFilter === "All" || post.category === blogCategoryFilter).length ? <div className="divide-y divide-slate-100">{blogPostsAdmin.filter((post) => blogCategoryFilter === "All" || post.category === blogCategoryFilter).map((post) => <article key={post.id} className="grid gap-4 p-4 transition hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-5">
+                <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h5 className="truncate text-sm font-black text-slate-900">{post.title}</h5><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider ${post.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{post.status}</span></div><div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-400"><span className="rounded-md bg-teal-50 px-2 py-1 text-teal-700">{post.category}</span><span>{post.published_at ? new Date(post.published_at).toLocaleDateString() : "No date"}</span></div></div>
+                <div className="flex items-center gap-2">{post.status === "published" && <a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer" className="rounded-lg px-3 py-2 text-xs font-black text-teal-700 hover:bg-teal-50">View</a>}<button type="button" onClick={() => editBlogPost(post)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-100">Edit</button><button type="button" onClick={() => deleteBlogPost(post.id)} aria-label={`Delete ${post.title}`} className="rounded-lg border border-rose-100 bg-white p-2 text-rose-600 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button></div>
+              </article>)}</div> : <div className="p-10 text-center"><BookOpen className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-black text-slate-700">No articles here</p><button type="button" onClick={() => { setEditingBlogPostId(null); setBlogDraft({ ...createEmptyBlogDraft(), category: blogCategoryFilter === "All" ? "Employer Hiring Guides" : blogCategoryFilter }); setBlogEditorOpen(true); }} className="mt-3 text-xs font-black text-teal-700 hover:underline">Create an article</button></div>}
+            </section>
           </motion.div>
         )}
 
