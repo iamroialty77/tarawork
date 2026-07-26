@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const status = await googleConnectionStatus(adminId);
     if (!spreadsheetId) return NextResponse.json({ ...status, spreadsheets: status.connected ? await listGoogleSpreadsheets(adminId) : [] });
     if (!validId(spreadsheetId)) return NextResponse.json({ error: "Invalid spreadsheet ID." }, { status: 400 });
-    if (!sheetName) return NextResponse.json({ sheets: await listGoogleSheetTabs(spreadsheetId, adminId) });
+    if (!sheetName) return NextResponse.json(await listGoogleSheetTabs(spreadsheetId, adminId));
     return NextResponse.json(await readGoogleSheet(spreadsheetId, sheetName, adminId));
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to read Google Sheets." }, { status: 500 });

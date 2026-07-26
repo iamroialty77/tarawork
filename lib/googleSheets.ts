@@ -126,10 +126,11 @@ export async function listGoogleSpreadsheets(adminId: string) {
 }
 
 export async function listGoogleSheetTabs(spreadsheetId: string, adminId: string) {
-  const data = await googleGet(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties`, adminId);
-  return (data.sheets || []).map((sheet: { properties?: { title?: string; sheetId?: number } }) => ({
+  const data = await googleGet(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=properties.title,sheets.properties`, adminId);
+  const sheets = (data.sheets || []).map((sheet: { properties?: { title?: string; sheetId?: number } }) => ({
     title: clean(sheet.properties?.title, 200), sheetId: sheet.properties?.sheetId,
   })).filter((sheet: { title: string }) => sheet.title);
+  return { spreadsheetName: clean(data.properties?.title, 200) || "Google Sheet", sheets };
 }
 
 export async function readGoogleSheet(spreadsheetId: string, sheetName: string, adminId: string) {

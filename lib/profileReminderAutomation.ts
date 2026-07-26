@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { getProfileSlug } from "@/lib/profileUrl";
 import { getConfirmedAuthEmail } from "@/lib/emailEligibility.mjs";
+import { logEmailMessages, type EmailLogInput } from "@/lib/emailLog";
 
 export type ReminderAudience = "all" | "freelancer" | "employer";
 export type ProfileReminderConfig = {
@@ -111,11 +112,14 @@ function getCompletionDetails(profile: Record<string, unknown>, hasPortfolio: bo
 }
 
 async function resolveEmails(profiles: Array<Record<string, unknown>>) {
-  const results = await Promise.all(profiles.map(async (profile) => {
-    const { data } = await supabaseAdmin.auth.admin.getUserById(String(profile.id));
-    const authEmail = getConfirmedAuthEmail(data.user);
-    return authEmail ? { id: String(profile.id), email: authEmail } : null;
-  }));
+  const results: Array<{ id: string; email: string } | null> = [];
+  for (let index = 0; index < profiles.length; index += 10) {
+    results.push(...await Promise.all(profiles.slice(index, index + 10).map(async (profile) => {
+      const { data } = await supabaseAdmin.auth.admin.getUserById(String(profile.id));
+      const authEmail = getConfirmedAuthEmail(data.user);
+      return authEmail ? { id: String(profile.id), email: authEmail } : null;
+    })));
+  }
   return new Map(results.filter(Boolean).map((item) => [item!.id, item!.email]));
 }
 
@@ -123,7 +127,8 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
   let query = supabaseAdmin
     .from("profiles")
     .select("id, name, role, category, bio, username, skills, hourlyRate, companyName, avatar_url, aiInsights, status")
-    .in("role", ["freelancer", "employer"]);
+    .in("role", ["freelancer", "employer"])
+    .limit(2000);
   if (config.audience !== "all") query = query.eq("role", config.audience);
   const { data: profiles, error } = await query;
   if (error) throw error;
@@ -131,8 +136,8 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
   const activeProfiles = (profiles || []).filter((profile) => String(profile.status || "").toLowerCase() !== "suspended");
   const ids = activeProfiles.map((profile) => profile.id);
   const portfolioIds = new Set<string>();
-  for (let index = 0; index < ids.length; index += 500) {
-    const batch = ids.slice(index, index + 500);
+  for (let index = 0; index < ids.length; index += 200) {
+    const batch = ids.slice(index, index + 200);
     const [legacyResult, currentResult] = await Promise.all([
       supabaseAdmin.from("portfolio_items").select("profile_id").in("profile_id", batch),
       supabaseAdmin.from("portfolios").select("profile_id, portfolio_projects(id)").in("profile_id", batch),
@@ -160,7 +165,8 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
       .select("related_id")
       .eq("type", REMINDER_TYPE)
       .eq("status", "sent")
-      .gte("created_at", since);
+      .gte("created_at", since)
+      .limit(5000);
     recentlySent = new Set((data || []).map((item) => item.related_id).filter(Boolean));
   }
 
@@ -234,6 +240,8 @@ export async function sendProfileReminders(config: ProfileReminderConfig, trigge
 
   let sent = 0;
   let failed = 0;
+  const emailLogs: EmailLogInput[] = [];
+  const notifications: Array<{ user_id: string; title: string; message: string; type: string; link: string }> = [];
   for (const recipient of recipients) {
     const subject = renderTemplate(config.subject, recipient);
     const message = renderTemplate(config.message, recipient);
@@ -247,30 +255,21 @@ export async function sendProfileReminders(config: ProfileReminderConfig, trigge
         html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p>${renderHtmlTemplate(config.message, recipient)}</p><p><a href="${escapeHtml(recipient.profileUrl)}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700">Complete your profile</a></p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Support</p></div>`,
       });
       sent += 1;
-      await supabaseAdmin.from("email_messages").insert({
-        type: REMINDER_TYPE,
-        direction: "outbound",
-        from_email: smtpUser,
-        from_name: fromName,
-        to_email: recipient.email,
-        reply_to: smtpUser,
-        subject,
-        text_body: message,
-        status: "sent",
-        related_table: "profiles",
-        related_id: recipient.id,
+      emailLogs.push({
+        type: REMINDER_TYPE, direction: "outbound", fromEmail: smtpUser, fromName,
+        toEmail: recipient.email, replyTo: smtpUser, subject, textBody: message, status: "sent",
+        relatedTable: "profiles", relatedId: recipient.id,
         metadata: { completion: recipient.completion, role: recipient.role, missingFields: recipient.missingFields, triggeredBy },
       });
-      await supabaseAdmin.from("notifications").insert({
-        user_id: recipient.id,
-        title: subject,
-        message,
-        type: "warning",
-        link: recipient.profileUrl,
-      });
+      notifications.push({ user_id: recipient.id, title: subject, message, type: "warning", link: recipient.profileUrl });
     } catch {
       failed += 1;
     }
+  }
+  await logEmailMessages(emailLogs);
+  for (let index = 0; index < notifications.length; index += 100) {
+    const { error } = await supabaseAdmin.from("notifications").insert(notifications.slice(index, index + 100));
+    if (error) console.warn("Profile reminder notifications were not fully logged:", error.message);
   }
   return { sent, failed, recipients };
 }

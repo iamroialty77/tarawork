@@ -43,8 +43,10 @@ export async function POST(req: NextRequest) {
       await saveProfileReminderConfig(config, admin.user?.id);
       return NextResponse.json({ success: true, config });
     }
-    const recipients = await getProfileReminderRecipients(config, true);
-    if (action === "preview") return NextResponse.json({ success: true, recipients, recipientCount: recipients.length });
+    if (action === "preview") {
+      const recipients = await getProfileReminderRecipients(config, true);
+      return NextResponse.json({ success: true, recipients, recipientCount: recipients.length });
+    }
     const limited = rateLimit({
       key: `admin:profile-reminder:${admin.user?.id || getClientIp(req)}`,
       limit: 3,

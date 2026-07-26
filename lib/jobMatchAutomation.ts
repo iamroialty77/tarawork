@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { getConfirmedAuthEmail } from "@/lib/emailEligibility.mjs";
 import { getJobSharePath } from "@/lib/jobShare";
+import { logEmailMessages, type EmailLogInput } from "@/lib/emailLog";
 
 export type JobMatchConfig = {
   enabled: boolean;
@@ -107,22 +108,29 @@ async function getEmail(profile: Record<string, unknown>) {
   return getConfirmedAuthEmail(data.user);
 }
 
-export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecentlySent = true) {
-  const [{ data: profiles, error: profileError }, { data: jobs, error: jobError }, { data: applications, error: applicationError }] = await Promise.all([
-    supabaseAdmin.from("profiles").select("id, name, category, skills, bio, aiInsights, status").eq("role", "freelancer"),
-    supabaseAdmin.from("jobs").select("id, title, description, company, category, skills, status, createdAt").eq("status", "live"),
-    supabaseAdmin.from("applications").select("freelancer_id, job_id"),
+export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecentlySent = true, selectedUserIds?: string[]) {
+  let profileQuery = supabaseAdmin.from("profiles").select("id, name, category, skills, bio, aiInsights, status").eq("role", "freelancer").limit(2000);
+  if (selectedUserIds?.length) profileQuery = profileQuery.in("id", selectedUserIds);
+  const [{ data: profiles, error: profileError }, { data: jobs, error: jobError }] = await Promise.all([
+    profileQuery,
+    supabaseAdmin.from("jobs").select("id, title, description, company, category, skills, status, createdAt").eq("status", "live").order("createdAt", { ascending: false }).limit(500),
   ]);
   if (profileError) throw profileError;
   if (jobError) throw jobError;
-  if (applicationError) throw applicationError;
-  const appliedPairs = new Set((applications || []).map((item) => `${item.freelancer_id}:${item.job_id}`));
+  const appliedPairs = new Set<string>();
+  const jobIds = (jobs || []).map((job) => job.id);
+  for (let index = 0; index < jobIds.length; index += 100) {
+    const { data: applications, error: applicationError } = await supabaseAdmin.from("applications")
+      .select("freelancer_id, job_id").in("job_id", jobIds.slice(index, index + 100)).limit(10000);
+    if (applicationError) throw applicationError;
+    (applications || []).forEach((item) => appliedPairs.add(`${item.freelancer_id}:${item.job_id}`));
+  }
 
   let sentPairs = new Set<string>();
   if (excludeRecentlySent) {
     const since = new Date(Date.now() - config.cooldownDays * 86400000).toISOString();
     const { data } = await supabaseAdmin.from("email_messages").select("related_id, metadata")
-      .eq("type", MESSAGE_TYPE).eq("status", "sent").gte("created_at", since);
+      .eq("type", MESSAGE_TYPE).eq("status", "sent").gte("created_at", since).limit(5000);
     sentPairs = new Set((data || []).map((item) => `${item.related_id}:${item.metadata?.jobId || ""}`));
   }
 
@@ -173,7 +181,7 @@ function render(template: string, recipient: JobMatchRecipient) {
 export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string, selectedUserIds?: string[]) {
   if (!config.subject || !config.message) throw new Error("Add a subject and message before running the automation.");
   const selected = selectedUserIds ? new Set(selectedUserIds) : null;
-  const recipients = (await getJobMatchRecipients(config, true))
+  const recipients = (await getJobMatchRecipients(config, true, selectedUserIds))
     .filter((recipient) => !selected || selected.has(recipient.userId))
     .slice(0, 200);
   if (!recipients.length) return { sent: 0, failed: 0, recipients };
@@ -188,6 +196,8 @@ export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string
 
   let sent = 0;
   let failed = 0;
+  const emailLogs: EmailLogInput[] = [];
+  const notifications: Array<{ user_id: string; title: string; message: string; type: string; link: string }> = [];
   for (const recipient of recipients) {
     const subject = render(config.subject, recipient);
     const message = render(config.message, recipient);
@@ -197,10 +207,10 @@ export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string
         html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p style="white-space:pre-line">${escapeHtml(message)}</p><p><a href="${escapeHtml(recipient.jobUrl)}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700">View matching job</a></p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Job Match</p></div>`,
       });
       sent += 1;
-      await supabaseAdmin.from("email_messages").insert({
-        type: MESSAGE_TYPE, direction: "outbound", from_email: smtpUser, from_name: fromName,
-        to_email: recipient.email, reply_to: smtpUser, subject, text_body: message, status: "sent",
-        related_table: "profiles", related_id: recipient.userId,
+      emailLogs.push({
+        type: MESSAGE_TYPE, direction: "outbound", fromEmail: smtpUser, fromName,
+        toEmail: recipient.email, replyTo: smtpUser, subject, textBody: message, status: "sent",
+        relatedTable: "profiles", relatedId: recipient.userId,
         metadata: {
           jobId: recipient.jobId,
           matchScore: recipient.score,
@@ -210,12 +220,15 @@ export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string
           triggeredBy,
         },
       });
-      await supabaseAdmin.from("notifications").insert({
-        user_id: recipient.userId, title: subject, message, type: "info", link: getJobSharePath({ id: recipient.jobId, title: recipient.jobTitle }),
-      });
+      notifications.push({ user_id: recipient.userId, title: subject, message, type: "info", link: getJobSharePath({ id: recipient.jobId, title: recipient.jobTitle }) });
     } catch {
       failed += 1;
     }
+  }
+  await logEmailMessages(emailLogs);
+  for (let index = 0; index < notifications.length; index += 100) {
+    const { error } = await supabaseAdmin.from("notifications").insert(notifications.slice(index, index + 100));
+    if (error) console.warn("Job match notifications were not fully logged:", error.message);
   }
   return { sent, failed, recipients };
 }

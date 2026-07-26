@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { requireAdminUser } from "@/lib/authz";
 import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
-import { logEmailMessage } from "@/lib/emailLog";
+import { logEmailMessages, type EmailLogInput } from "@/lib/emailLog";
 
 export const runtime = "nodejs";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -60,22 +60,24 @@ export async function POST(req: NextRequest) {
     const fromName = process.env.MARKETING_EMAIL_FROM_NAME || "TaraWork Support";
     const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST || "smtp.hostinger.com", port, secure: port === 465, auth: { user: smtpUser, pass: smtpPass } });
     let sent = 0, failed = 0;
+    const emailLogs: EmailLogInput[] = [];
     const sendOne = async (recipient: (typeof recipients)[number]) => {
       const subject = render(subjectTemplate, alias, recipient.row).slice(0, 300);
       const message = render(messageTemplate, alias, recipient.row).slice(0, 20000);
       try {
         await transporter.sendMail({ from: `"${fromName}" <${smtpUser}>`, to: recipient.email, replyTo: smtpUser, subject, text: message, html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p style="white-space:pre-line">${escapeHtml(message)}</p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Support</p></div>` });
         sent++;
-        await logEmailMessage({ type: "csv_campaign", direction: "outbound", fromEmail: smtpUser, fromName, toEmail: recipient.email, replyTo: smtpUser, subject, textBody: message, status: "sent", metadata: { alias, sentBy: admin.user?.id } });
+        emailLogs.push({ type: "csv_campaign", direction: "outbound", fromEmail: smtpUser, fromName, toEmail: recipient.email, replyTo: smtpUser, subject, textBody: message, status: "sent", metadata: { alias, sentBy: admin.user?.id } });
       } catch (error) {
         failed++;
-        await logEmailMessage({ type: "csv_campaign", direction: "outbound", fromEmail: smtpUser, fromName, toEmail: recipient.email, replyTo: smtpUser, subject, textBody: message, status: "failed", metadata: { alias, sentBy: admin.user?.id, error: error instanceof Error ? error.message : "SMTP send failed" } });
+        emailLogs.push({ type: "csv_campaign", direction: "outbound", fromEmail: smtpUser, fromName, toEmail: recipient.email, replyTo: smtpUser, subject, textBody: message, status: "failed", metadata: { alias, sentBy: admin.user?.id, error: error instanceof Error ? error.message : "SMTP send failed" } });
       }
     };
     // Small batches keep large campaigns responsive without overwhelming the SMTP provider.
     for (let index = 0; index < recipients.length; index += 5) {
       await Promise.all(recipients.slice(index, index + 5).map(sendOne));
     }
+    await logEmailMessages(emailLogs);
     return NextResponse.json({ success: true, sent, failed, duplicatesSkipped });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to send CSV campaign." }, { status: 500 });

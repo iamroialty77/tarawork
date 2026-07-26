@@ -37,8 +37,10 @@ export async function POST(req: NextRequest) {
       await saveJobMatchConfig(config, admin.user?.id);
       return NextResponse.json({ success: true, config });
     }
-    const recipients = await getJobMatchRecipients(config, true);
-    if (action === "preview") return NextResponse.json({ success: true, recipients, recipientCount: recipients.length });
+    if (action === "preview") {
+      const recipients = await getJobMatchRecipients(config, true);
+      return NextResponse.json({ success: true, recipients, recipientCount: recipients.length });
+    }
     const limited = rateLimit({ key: `admin:job-match:${admin.user?.id || getClientIp(req)}`, limit: 3, windowMs: 3600000 });
     if (limited) return limited;
     const selectedUserIds: string[] | undefined = Array.isArray(body.selectedUserIds)
