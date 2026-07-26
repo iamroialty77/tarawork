@@ -65,6 +65,7 @@ export default function AdminAutomation() {
 
   useEffect(() => {
     void loadSummaries();
+    if (new URLSearchParams(window.location.search).get("open") === "csv-email") setActiveBot("csv-email");
   }, []);
 
   const bots = [

@@ -103,6 +103,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [emailReplyBody, setEmailReplyBody] = useState("");
   const [emailReplyLoading, setEmailReplyLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab === "automation") setActiveTab("automation");
+  }, []);
   
   const [healthStatus, setHealthStatus] = useState({
     profiles: { exists: false, loading: true },

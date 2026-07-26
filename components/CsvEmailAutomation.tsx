@@ -79,15 +79,12 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   }, []);
 
   useEffect(() => {
-    const connected = (event: MessageEvent) => {
-      if (event.origin === window.location.origin && event.data?.type === "google-sheets-connected") void loadGoogle();
-    };
-    window.addEventListener("message", connected);
-    return () => window.removeEventListener("message", connected);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("googleSheets") === "connected") void loadGoogle();
   }, [loadGoogle]);
 
   const connectGoogle = () => {
-    window.open("/api/admin/google-sheets/connect", "google-sheets-oauth", "popup=yes,width=560,height=720");
+    window.location.assign("/api/admin/google-sheets/connect");
   };
 
   const chooseSpreadsheet = async (id: string) => {

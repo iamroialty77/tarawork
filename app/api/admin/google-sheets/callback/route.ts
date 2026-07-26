@@ -13,8 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     const refreshToken = await exchangeGoogleCode(code);
     await saveGoogleConnection(refreshToken, admin.user!.id);
-    const origin = url.origin;
-    const response = new NextResponse(`<!doctype html><html><body><script>window.opener&&window.opener.postMessage({type:"google-sheets-connected"},${JSON.stringify(origin)});window.close();</script><p>Google Sheets connected. You may close this window.</p></body></html>`, { headers: { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": `default-src 'none'; script-src 'unsafe-inline'` } });
+    const response = NextResponse.redirect(new URL("/admin?tab=automation&open=csv-email&googleSheets=connected", url.origin));
     response.cookies.set("google_sheets_oauth_state", "", { maxAge: 0, path: "/" });
     return response;
   } catch (error) {
