@@ -7,6 +7,7 @@ import RichTextEditor from "./RichTextEditor";
 import AdminEmailInbox from "./AdminEmailInbox";
 import AdminAutomation from "./AdminAutomation";
 import SiteSettingsEditor from "./SiteSettingsEditor";
+import { blogCategories } from "@/lib/blog";
 import { 
   Users, 
   Briefcase, 
@@ -41,8 +42,22 @@ import {
   X,
   BookOpen,
   Bot,
-  Settings
+  Settings,
+  Plus
 } from "lucide-react";
+
+const createEmptyBlogDraft = () => ({
+  title: "",
+  excerpt: "",
+  category: "Employer Hiring Guides",
+  imageUrl: "",
+  imageAlt: "",
+  keyword: "",
+  readTime: "5 min read",
+  publishedAt: new Date().toISOString().slice(0, 10),
+  status: "published",
+  content: "",
+});
 
 type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "site_settings" | "blog" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
@@ -69,19 +84,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [talentRequests, setTalentRequests] = useState<any[]>([]);
   const [emailMessages, setEmailMessages] = useState<any[]>([]);
   const [blogPostsAdmin, setBlogPostsAdmin] = useState<any[]>([]);
-  const [blogDraft, setBlogDraft] = useState({
-    title: "",
-    excerpt: "",
-    category: "Employer Hiring Guides",
-    imageUrl: "",
-    imageAlt: "",
-    keyword: "",
-    readTime: "5 min read",
-    publishedAt: new Date().toISOString().slice(0, 10),
-    status: "published",
-    content: "",
-  });
+  const [blogDraft, setBlogDraft] = useState(createEmptyBlogDraft);
   const [editingBlogPostId, setEditingBlogPostId] = useState<string | null>(null);
+  const [blogEditorOpen, setBlogEditorOpen] = useState(false);
   const [blogLoading, setBlogLoading] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
@@ -567,19 +572,9 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       if (!response.ok) throw new Error(payload?.error || "Unable to publish blog post.");
 
       notify(editingBlogPostId ? "Blog post updated." : "Blog post saved.");
-      setBlogDraft({
-        title: "",
-        excerpt: "",
-        category: "Employer Hiring Guides",
-        imageUrl: "",
-        imageAlt: "",
-        keyword: "",
-        readTime: "5 min read",
-        publishedAt: new Date().toISOString().slice(0, 10),
-        status: "published",
-        content: "",
-      });
+      setBlogDraft(createEmptyBlogDraft());
       setEditingBlogPostId(null);
+      setBlogEditorOpen(false);
       fetchData();
     } catch (error: any) {
       notify(error?.message || "Unable to publish blog post.");
@@ -590,6 +585,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
   const editBlogPost = (post: any) => {
     setEditingBlogPostId(post.id);
+    setBlogEditorOpen(true);
     setBlogDraft({
       title: post.title || "",
       excerpt: post.excerpt || "",
@@ -618,7 +614,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       if (!response.ok) throw new Error(payload?.error || "Unable to delete blog post.");
 
       notify("Blog post deleted.");
-      if (editingBlogPostId === postId) setEditingBlogPostId(null);
+      if (editingBlogPostId === postId) {
+        setEditingBlogPostId(null);
+        setBlogEditorOpen(false);
+        setBlogDraft(createEmptyBlogDraft());
+      }
       fetchData();
     } catch (error: any) {
       notify(error?.message || "Unable to delete blog post.");
@@ -1465,8 +1465,16 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]"
+            className="space-y-6"
           >
+            <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><BookOpen className="h-5 w-5" /></div>
+                <div><h3 className="text-xl font-bold text-slate-900">Blog Studio</h3><p className="text-sm font-medium text-slate-500">{blogPostsAdmin.length} article{blogPostsAdmin.length === 1 ? "" : "s"} organized by category</p></div>
+              </div>
+              <button type="button" onClick={() => { setEditingBlogPostId(null); setBlogDraft(createEmptyBlogDraft()); setBlogEditorOpen(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-teal-700"><Plus className="h-4 w-4" /> Add article</button>
+            </div>
+            {blogEditorOpen && (
             <div className="rounded-2xl border border-slate-100 bg-white shadow-sm">
               <div className="border-b border-slate-100 p-8">
                 <div className="flex items-center gap-3">
@@ -1474,7 +1482,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                     <BookOpen className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">Blog Studio</h3>
+                    <h3 className="text-xl font-bold text-slate-900">{editingBlogPostId ? "Edit Article" : "New Article"}</h3>
                     <p className="text-sm font-medium text-slate-500">
                       {editingBlogPostId ? "Edit the selected public article." : "Create publishable articles for the public blog section."}
                     </p>
@@ -1589,31 +1597,20 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                 >
                   {blogLoading ? "Saving..." : editingBlogPostId ? "Update Blog Post" : "Save Blog Post"}
                 </button>
-                {editingBlogPostId && (
                   <button
                     type="button"
                     onClick={() => {
                       setEditingBlogPostId(null);
-                      setBlogDraft({
-                        title: "",
-                        excerpt: "",
-                        category: "Employer Hiring Guides",
-                        imageUrl: "",
-                        imageAlt: "",
-                        keyword: "",
-                        readTime: "5 min read",
-                        publishedAt: new Date().toISOString().slice(0, 10),
-                        status: "published",
-                        content: "",
-                      });
+                      setBlogDraft(createEmptyBlogDraft());
+                      setBlogEditorOpen(false);
                     }}
                     className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50"
                   >
-                    Cancel Edit
+                    {editingBlogPostId ? "Cancel Edit" : "Cancel"}
                   </button>
-                )}
               </div>
             </div>
+            )}
 
             <aside className="space-y-5">
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -1622,43 +1619,18 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                   Published posts appear on the Blog page, landing page blog cards, and share previews.
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-                <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Recent Posts</h4>
-                <div className="mt-4 space-y-3">
-                  {blogPostsAdmin.length ? (
-                    blogPostsAdmin.slice(0, 8).map((post) => (
-                      <div key={post.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                        <p className="text-sm font-black text-slate-900">{post.title}</p>
-                        <p className="mt-1 text-xs font-semibold text-slate-500">{post.status} · {post.published_at ? new Date(post.published_at).toLocaleDateString() : ""}</p>
-                        {post.status === "published" ? (
-                          <a href={`/blog/${post.slug}`} target="_blank" className="mt-3 inline-flex text-xs font-black text-teal-700 hover:underline">
-                            Open public post
-                          </a>
-                        ) : null}
-                        <div className="mt-3 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => editBlogPost(post)}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteBlogPost(post.id)}
-                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-700 hover:bg-rose-100"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="rounded-xl bg-slate-50 p-4 text-xs font-semibold text-slate-500">
-                      No database posts yet. Run docs/blog_posts.sql if the table is missing.
-                    </p>
-                  )}
-                </div>
+              <div>
+                <div className="mb-4 flex items-center justify-between"><div><h4 className="text-sm font-black uppercase tracking-widest text-slate-500">Article Library</h4><p className="mt-1 text-xs font-semibold text-slate-400">Articles are grouped by their public blog category.</p></div></div>
+                {blogPostsAdmin.length ? <div className="grid gap-5 xl:grid-cols-2">{blogCategories.map((category) => {
+                  const categoryPosts = blogPostsAdmin.filter((post) => post.category === category);
+                  return <section key={category} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-4"><div><h5 className="text-sm font-black text-slate-900">{category}</h5><p className="mt-0.5 text-[11px] font-semibold text-slate-400">{categoryPosts.length} article{categoryPosts.length === 1 ? "" : "s"}</p></div><span className="rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-black text-teal-700">{categoryPosts.filter((post) => post.status === "published").length} published</span></div>
+                    <div className="divide-y divide-slate-100">{categoryPosts.length ? categoryPosts.map((post) => <article key={post.id} className="p-5">
+                      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{post.title}</p><p className="mt-1 text-xs font-semibold capitalize text-slate-500">{post.status} · {post.published_at ? new Date(post.published_at).toLocaleDateString() : "No publish date"}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider ${post.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{post.status}</span></div>
+                      <div className="mt-4 flex flex-wrap gap-2">{post.status === "published" && <a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer" className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-teal-700 hover:bg-teal-100">View</a>}<button type="button" onClick={() => editBlogPost(post)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100">Edit</button><button type="button" onClick={() => deleteBlogPost(post.id)} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-700 hover:bg-rose-100">Delete</button></div>
+                    </article>) : <p className="p-6 text-center text-xs font-semibold text-slate-400">No articles in this category yet.</p>}</div>
+                  </section>;
+                })}</div> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><BookOpen className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-4 text-sm font-black text-slate-700">No blog articles yet</p><p className="mt-1 text-xs font-semibold text-slate-400">Click Add article to create the first public blog post.</p></div>}
               </div>
             </aside>
           </motion.div>
