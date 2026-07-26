@@ -1,13 +1,14 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Fragment, useState, useEffect } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import RichTextEditor from "./RichTextEditor";
 import AdminEmailInbox from "./AdminEmailInbox";
 import AdminAutomation from "./AdminAutomation";
 import SiteSettingsEditor from "./SiteSettingsEditor";
 import AdminProfileEditorModal from "./AdminProfileEditorModal";
+import AutomationToast from "./AutomationToast";
 import { blogCategories } from "@/lib/blog";
 import { 
   Users, 
@@ -70,24 +71,43 @@ const createUserEditDraft = (user?: any) => ({
   avatarUrl: user?.avatar_url || "",
   companyName: user?.companyName || "",
   hourlyRate: user?.hourlyRate || "",
-  preferredCurrency: user?.preferredCurrency || "PHP",
   skills: Array.isArray(user?.skills) ? user.skills.join(", ") : "",
 });
+
+const normalizedIdentityName = (value: unknown) => String(value || "").toLowerCase().replace(/\d+/g, "").replace(/[^a-z]/g, "");
+const editDistance = (left: string, right: string) => {
+  const row = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+    let diagonal = row[0];
+    row[0] = leftIndex;
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+      const previous = row[rightIndex];
+      row[rightIndex] = Math.min(row[rightIndex] + 1, row[rightIndex - 1] + 1, diagonal + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1));
+      diagonal = previous;
+    }
+  }
+  return row[right.length];
+};
 
 const getAccountRisk = (user: any, allUsers: any[]) => {
   let score = 0;
   const reasons: string[] = [];
-  const normalizedName = String(user.name || "").trim().toLowerCase();
-  const duplicateNames = normalizedName ? allUsers.filter((item) => String(item.name || "").trim().toLowerCase() === normalizedName).length : 0;
+  const normalizedName = normalizedIdentityName(user.name);
+  const similarNames = normalizedName.length >= 6 ? allUsers.filter((item) => {
+    const candidate = normalizedIdentityName(item.name);
+    return candidate.length >= 6 && editDistance(normalizedName, candidate) <= 1;
+  }).length : 0;
   const duplicateAvatar = user.avatar_url ? allUsers.filter((item) => item.id !== user.id && item.avatar_url === user.avatar_url).length : 0;
   const age = user.created_at ? Date.now() - new Date(user.created_at).getTime() : Number.POSITIVE_INFINITY;
-  if (duplicateNames >= 3) { score += 35; reasons.push(`${duplicateNames} accounts share this name`); }
+  if (similarNames >= 3) { score += 45; reasons.push(`${similarNames} accounts use near-duplicate names`); }
+  if (/\d/.test(String(user.name || ""))) { score += 20; reasons.push("Number added to display name"); }
   if (duplicateAvatar) { score += 35; reasons.push("Profile photo reused"); }
   if (age < 24 * 60 * 60 * 1000) { score += 10; reasons.push("Created in the last 24 hours"); }
   if (!String(user.bio || "").trim()) { score += 10; reasons.push("No profile bio"); }
   if (!user.avatar_url) { score += 10; reasons.push("No profile photo"); }
   if (!Array.isArray(user.verification_documents) || !user.verification_documents.length) { score += 10; reasons.push("No verification document"); }
   if (!user.username || String(user.username).length < 3) { score += 10; reasons.push("Missing username"); }
+  if (user.status === "pending" && !String(user.bio || "").trim() && !user.avatar_url) { score += 10; reasons.push("Pending and largely incomplete"); }
   return { score: Math.min(score, 100), reasons, suspicious: score >= 50 };
 };
 
@@ -119,6 +139,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
   const [suspiciousOnly, setSuspiciousOnly] = useState(false);
   const [accountSecurityLoading, setAccountSecurityLoading] = useState(false);
+  const accountRisks = useMemo(() => new Map(users.map((user) => [user.id, getAccountRisk(user, users)])), [users]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [talentRequests, setTalentRequests] = useState<any[]>([]);
@@ -285,7 +306,6 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const notify = (msg: string) => {
     setToastMsg(msg);
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
   };
 
   const updateUserStatus = async (userId: string, status: string) => {
@@ -712,7 +732,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
   const visibleVerificationUsers = users.filter((user) => {
     if (user.role !== verificationRole) return false;
-    if (suspiciousOnly && !getAccountRisk(user, users).suspicious) return false;
+    if (suspiciousOnly && !accountRisks.get(user.id)?.suspicious) return false;
     const search = verificationSearch.trim().toLowerCase();
     return !search || [user.name, user.username, user.category, user.companyName].some((value) => String(value || "").toLowerCase().includes(search));
   });
@@ -926,7 +946,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
               </div>
               <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <div className="flex gap-2">{(["freelancer", "employer"] as const).map((role) => <button key={role} type="button" onClick={() => { setVerificationRole(role); setSelectedAccountIds([]); }} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-black capitalize transition ${verificationRole === role ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100"}`}>{role === "freelancer" ? "Freelancers" : "Employers"}<span className={`rounded-full px-2 py-0.5 text-[10px] ${verificationRole === role ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"}`}>{users.filter((user) => user.role === role).length}</span></button>)}</div>
-                <button type="button" onClick={() => { setSuspiciousOnly((value) => !value); setSelectedAccountIds([]); }} className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black ${suspiciousOnly ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}`}><Shield className="h-4 w-4" /> Suspicious only <span className="rounded-full bg-rose-100 px-2 py-0.5 text-rose-700">{users.filter((user) => user.role === verificationRole && getAccountRisk(user, users).suspicious).length}</span></button>
+                <button type="button" onClick={() => { setSuspiciousOnly((value) => !value); setSelectedAccountIds([]); }} className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black ${suspiciousOnly ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}`}><Shield className="h-4 w-4" /> Suspicious only <span className="rounded-full bg-rose-100 px-2 py-0.5 text-rose-700">{users.filter((user) => user.role === verificationRole && accountRisks.get(user.id)?.suspicious).length}</span></button>
               </div>
               {selectedAccountIds.length > 0 && <div className="flex flex-col gap-3 border-b border-indigo-100 bg-indigo-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"><p className="text-xs font-black text-indigo-800">{selectedAccountIds.length} account{selectedAccountIds.length === 1 ? "" : "s"} selected</p><div className="flex gap-2"><button type="button" onClick={() => void processSelectedAccounts("suspend")} disabled={accountSecurityLoading} className="rounded-lg border border-amber-200 bg-white px-4 py-2 text-xs font-black text-amber-700 disabled:opacity-50">Suspend selected</button><button type="button" onClick={() => void processSelectedAccounts("delete")} disabled={accountSecurityLoading} className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50">Delete selected</button></div></div>}
               
@@ -962,8 +982,8 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                          {getAccountRisk(user, users).suspicious ? (
-                            <div><div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-rose-600"><AlertTriangle className="h-3.5 w-3.5" /> Risk {getAccountRisk(user, users).score}/100</div><p className="mt-1 max-w-52 text-[10px] font-semibold leading-4 text-slate-400">{getAccountRisk(user, users).reasons.slice(0, 2).join(" · ")}</p></div>
+                          {accountRisks.get(user.id)?.suspicious ? (
+                            <div><div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-rose-600"><AlertTriangle className="h-3.5 w-3.5" /> Risk {accountRisks.get(user.id)?.score}/100</div><p className="mt-1 max-w-52 text-[10px] font-semibold leading-4 text-slate-400">{accountRisks.get(user.id)?.reasons.slice(0, 2).join(" · ")}</p></div>
                           ) : user.status === 'approved' ? (
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase">
                               <ShieldCheck className="w-3.5 h-3.5" /> AI Verified
@@ -2137,20 +2157,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
       {editingUserId && <AdminProfileEditorModal draft={userEditDraft} setDraft={setUserEditDraft} saving={userEditLoading} close={() => setEditingUserId(null)} save={() => void saveUserProfile()} />}
 
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {showToast && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-800"
-          >
-            <Check className="w-4 h-4 text-emerald-400" />
-            <p className="text-sm font-bold">{toastMsg}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showToast && <AutomationToast message={toastMsg} type={/error|unable|failed|invalid/i.test(toastMsg) ? "error" : "success"} onDismiss={() => setShowToast(false)} />}
       </main>
     </div>
   );

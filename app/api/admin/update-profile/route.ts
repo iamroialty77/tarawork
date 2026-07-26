@@ -8,7 +8,6 @@ const cleanText = (value: unknown, max: number) => String(value || "").trim().sl
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const roles = new Set(["freelancer", "employer"]);
 const statuses = new Set(["pending", "approved", "suspended"]);
-const currencies = new Set(["PHP", "USD", "EUR", "GBP", "AUD", "CAD", "SGD"]);
 
 export async function POST(req: NextRequest) {
   const originError = assertSameOrigin(req);
@@ -30,7 +29,6 @@ export async function POST(req: NextRequest) {
     const avatarUrl = cleanLine(body.avatarUrl, 1000);
     const companyName = cleanLine(body.companyName, 180);
     const hourlyRate = cleanLine(body.hourlyRate, 80);
-    const preferredCurrency = cleanLine(body.preferredCurrency, 3).toUpperCase() || "PHP";
     const skills = Array.isArray(body.skills)
       ? [...new Set(body.skills.map((skill: unknown) => cleanLine(skill, 60)).filter(Boolean))].slice(0, 50)
       : [];
@@ -40,7 +38,6 @@ export async function POST(req: NextRequest) {
     if (!roles.has(role)) return NextResponse.json({ error: "Role must be freelancer or employer." }, { status: 400 });
     if (!statuses.has(status)) return NextResponse.json({ error: "Invalid verification status." }, { status: 400 });
     if (username && username.length < 3) return NextResponse.json({ error: "Username must contain at least 3 characters." }, { status: 400 });
-    if (!currencies.has(preferredCurrency)) return NextResponse.json({ error: "Invalid preferred currency." }, { status: 400 });
     if (avatarUrl) {
       try {
         if (new URL(avatarUrl).protocol !== "https:") throw new Error();
@@ -59,7 +56,6 @@ export async function POST(req: NextRequest) {
       avatar_url: avatarUrl || null,
       companyName: role === "employer" ? companyName : null,
       hourlyRate: role === "freelancer" ? hourlyRate : "",
-      preferredCurrency,
       skills: role === "freelancer" ? skills : [],
       updated_at: new Date().toISOString(),
     }).eq("id", userId).select("*").maybeSingle();

@@ -35,7 +35,7 @@ export default function AutomationToast({
   return <div
     role={error ? "alert" : "status"}
     aria-live={error ? "assertive" : "polite"}
-    className={`fixed right-4 top-4 z-[100] w-[calc(100%-2rem)] max-w-sm overflow-hidden rounded-2xl border bg-white shadow-2xl transition-all duration-300 sm:right-6 sm:top-6 ${
+    className={`fixed right-4 top-4 z-[200] w-[calc(100%-2rem)] max-w-sm overflow-hidden rounded-2xl border bg-white shadow-2xl transition-all duration-300 sm:right-6 sm:top-6 ${
       visible ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0"
     } ${error ? "border-rose-200" : "border-emerald-200"}`}
   >
