@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
   const savedState = req.cookies.get("google_sheets_oauth_state")?.value || "";
   if (!code || !state || !savedState || state !== savedState) return NextResponse.json({ error: "Invalid or expired Google OAuth request." }, { status: 400 });
   try {
-    const refreshToken = await exchangeGoogleCode(code);
+    const redirectUri = `${url.origin}/api/admin/google-sheets/callback`;
+    const refreshToken = await exchangeGoogleCode(code, redirectUri);
     await saveGoogleConnection(refreshToken, admin.user!.id);
     const response = NextResponse.redirect(new URL("/admin?tab=automation&open=csv-email&googleSheets=connected", url.origin));
     response.cookies.set("google_sheets_oauth_state", "", { maxAge: 0, path: "/" });

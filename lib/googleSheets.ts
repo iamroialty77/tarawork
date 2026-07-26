@@ -7,9 +7,8 @@ const clean = (value: unknown, max: number) => String(value || "").trim().slice(
 function credentials() {
   const clientId = process.env.GOOGLE_CLIENT_ID || "";
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || "";
-  if (!clientId || !clientSecret || !redirectUri) throw new Error("Google Sheets OAuth is not fully configured.");
-  return { clientId, clientSecret, redirectUri };
+  if (!clientId || !clientSecret) throw new Error("Google Sheets OAuth is not fully configured.");
+  return { clientId, clientSecret };
 }
 
 function encryptionKey() {
@@ -31,8 +30,8 @@ function decrypt(value: string) {
   return Buffer.concat([decipher.update(Buffer.from(encrypted, "base64")), decipher.final()]).toString("utf8");
 }
 
-export function googleAuthorizationUrl(state: string) {
-  const { clientId, redirectUri } = credentials();
+export function googleAuthorizationUrl(state: string, redirectUri: string) {
+  const { clientId } = credentials();
   const query = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -48,8 +47,8 @@ export function googleAuthorizationUrl(state: string) {
   return `https://accounts.google.com/o/oauth2/v2/auth?${query}`;
 }
 
-export async function exchangeGoogleCode(code: string) {
-  const { clientId, clientSecret, redirectUri } = credentials();
+export async function exchangeGoogleCode(code: string, redirectUri: string) {
+  const { clientId, clientSecret } = credentials();
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -78,7 +77,7 @@ async function getRefreshToken() {
 }
 
 export async function googleConnectionStatus() {
-  return { connected: Boolean(await getRefreshToken()), configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI) };
+  return { connected: Boolean(await getRefreshToken()), configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) };
 }
 
 async function accessToken() {

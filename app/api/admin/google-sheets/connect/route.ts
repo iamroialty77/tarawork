@@ -1,14 +1,16 @@
 import crypto from "crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAdminUser } from "@/lib/authz";
 import { googleAuthorizationUrl } from "@/lib/googleSheets";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const admin = await requireAdminUser();
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   try {
     const state = crypto.randomBytes(24).toString("hex");
-    const response = NextResponse.redirect(googleAuthorizationUrl(state));
+    const origin = new URL(req.url).origin;
+    const redirectUri = `${origin}/api/admin/google-sheets/callback`;
+    const response = NextResponse.redirect(googleAuthorizationUrl(state, redirectUri));
     response.cookies.set("google_sheets_oauth_state", state, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 600, path: "/" });
     return response;
   } catch (error) {
