@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import HomeEntry from "@/components/HomeEntry";
 import { getSiteSettings } from "@/lib/siteSettings";
 import { DEFAULT_SITE_SETTINGS } from "@/lib/siteSettingsShared";
 
+const getLandingSettings = cache(() => getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS));
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS);
+  const settings = await getLandingSettings();
   const title = settings.seoTitle || DEFAULT_SITE_SETTINGS.seoTitle;
   const description = settings.seoDescription || DEFAULT_SITE_SETTINGS.seoDescription;
   const canonical = settings.canonicalUrl || DEFAULT_SITE_SETTINGS.canonicalUrl;
@@ -39,6 +42,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function Home() {
-  return <HomeEntry />;
+export default async function Home() {
+  const settings = await getLandingSettings();
+  return <>
+    {settings.googleSiteVerification && <meta name="google-site-verification" content={settings.googleSiteVerification} />}
+    <HomeEntry />
+  </>;
 }
