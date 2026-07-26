@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bot, ExternalLink, RefreshCw, Send, Settings2, X } from "lucide-react";
+import AutomationToast from "@/components/AutomationToast";
 
 type Config = { enabled: boolean; threshold: number; audience: "all" | "freelancer" | "employer"; subject: string; message: string; cooldownDays: number };
 type Recipient = { id: string; name: string; email: string; role: string; completion: number; missingFields: string[]; profileUrl: string };
@@ -45,7 +46,7 @@ export default function ProfileReminderAutomation({ close }: { close: () => void
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to process automation.");
       if (action === "preview") { setRecipients(data.recipients || []); setNotice(`${data.recipientCount} eligible user${data.recipientCount === 1 ? "" : "s"} loaded.`); }
-      else if (action === "run") { setNotice(`Complete: ${data.sent} sent${data.failed ? `, ${data.failed} failed` : ""}.`); await load(); }
+      else if (action === "run") { await load(); setNotice(`Complete: ${data.sent} sent${data.failed ? `, ${data.failed} failed` : ""}.`); }
       else { setNotice("Automation settings saved."); setShowSettings(false); }
     } catch (error) { setIsError(true); setNotice(error instanceof Error ? error.message : "Unable to process automation."); }
     finally { setBusy(false); }
@@ -56,7 +57,7 @@ export default function ProfileReminderAutomation({ close }: { close: () => void
       <div className="flex items-center gap-3"><div className="rounded-xl bg-violet-50 p-2 text-violet-600"><Bot className="h-5 w-5" /></div><div><h2 className="text-lg font-black text-slate-900">Profile Reminder Automation</h2><p className="text-xs font-medium text-slate-500">{recipients.length} eligible users</p></div></div>
       <div className="flex items-center gap-2"><button onClick={() => setShowSettings((value) => !value)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"><Settings2 className="h-4 w-4" />{showSettings ? "Hide settings" : "Configure automation"}</button><button onClick={close} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
     </header>
-    {notice && <div className={`border-b px-5 py-3 text-sm font-bold md:px-7 ${isError ? "border-rose-100 bg-rose-50 text-rose-700" : "border-violet-100 bg-violet-50 text-violet-700"}`}>{notice}</div>}
+    {notice && <AutomationToast message={notice} type={isError ? "error" : "success"} onDismiss={() => setNotice("")} />}
     <div className="flex-1 p-5 md:p-7">
       {showSettings && <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between"><h3 className="font-black text-slate-900">Automation settings</h3><label className="inline-flex items-center gap-2 text-xs font-black text-slate-600"><span>{config.enabled ? "Enabled" : "Disabled"}</span><input type="checkbox" checked={config.enabled} onChange={(event) => setConfig({ ...config, enabled: event.target.checked })} className="h-5 w-5 accent-violet-600" /></label></div>

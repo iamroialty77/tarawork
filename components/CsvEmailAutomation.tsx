@@ -1,7 +1,8 @@
 "use client";
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, FileSpreadsheet, Filter, Link2, LogOut, Mail, Search, Send, Upload, X } from "lucide-react";
+import { FileSpreadsheet, Filter, Link2, LogOut, Mail, Search, Send, Upload, X } from "lucide-react";
+import AutomationToast from "@/components/AutomationToast";
 
 type CsvRow = Record<string, string>;
 type GoogleSpreadsheet = { id: string; name: string; modifiedTime?: string };
@@ -237,8 +238,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
       <div className="flex items-center gap-3"><div className="rounded-xl bg-blue-50 p-2 text-blue-600"><FileSpreadsheet className="h-5 w-5" /></div><div><h2 className="text-lg font-black text-slate-900">CSV Email Campaign</h2><p className="text-xs font-medium text-slate-500">{rows.length ? `${selectedIndexes.length} of ${rows.length} selected` : "Upload a contact list to begin"}</p></div></div>
       <button type="button" onClick={close} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
     </header>
-    {notice && <div className="flex items-center gap-2 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 md:px-7"><CheckCircle2 className="h-4 w-4" />{notice}</div>}
-    {error && <div className="flex items-center gap-2 border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-700 md:px-7"><AlertCircle className="h-4 w-4" />{error}</div>}
+    {error ? <AutomationToast message={error} type="error" onDismiss={() => setError("")} /> : notice ? <AutomationToast message={notice} onDismiss={() => setNotice("")} /> : null}
     <div className="p-5 md:p-7">
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-blue-300 bg-blue-50/60 p-4">
         <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={upload} className="hidden" />
