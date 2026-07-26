@@ -1,11 +1,12 @@
 "use client";
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, Cloud, FileSpreadsheet, Mail, Send, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Cloud, FileSpreadsheet, LogOut, Mail, Send, Upload, X } from "lucide-react";
 
 type CsvRow = Record<string, string>;
 type GoogleSpreadsheet = { id: string; name: string; modifiedTime?: string };
 type GoogleSheetTab = { title: string; sheetId?: number };
+type GoogleAccount = { name: string; email: string; photoUrl?: string };
 
 function parseCsv(text: string) {
   const records: string[][] = [];
@@ -52,6 +53,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   const [showComposer, setShowComposer] = useState(false);
   const [showGoogle, setShowGoogle] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleAccount, setGoogleAccount] = useState<GoogleAccount | null>(null);
   const [spreadsheets, setSpreadsheets] = useState<GoogleSpreadsheet[]>([]);
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [sheetTabs, setSheetTabs] = useState<GoogleSheetTab[]>([]);
@@ -73,7 +75,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
       const response = await fetch("/api/admin/google-sheets", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load Google Sheets.");
-      setGoogleConnected(Boolean(data.connected)); setSpreadsheets(data.spreadsheets || []); setShowGoogle(true);
+      setGoogleConnected(Boolean(data.connected)); setGoogleAccount(data.account || null); setSpreadsheets(data.spreadsheets || []); setShowGoogle(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to load Google Sheets."); }
     finally { setBusy(false); }
   }, []);
@@ -85,6 +87,19 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
 
   const connectGoogle = () => {
     window.location.assign("/api/admin/google-sheets/connect");
+  };
+
+  const disconnectGoogle = async () => {
+    if (!window.confirm(`Disconnect ${googleAccount?.email || "this Google account"} from your CSV Email Campaign?`)) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/google-sheets", { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to disconnect Google Sheets.");
+      setGoogleConnected(false); setGoogleAccount(null); setSpreadsheets([]); setSpreadsheetId(""); setSheetTabs([]); setSheetName("");
+      setNotice("Your Google account was disconnected from Google Sheets.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to disconnect Google Sheets."); }
+    finally { setBusy(false); }
   };
 
   const chooseSpreadsheet = async (id: string) => {
@@ -174,9 +189,9 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
       </section>
 
       {showGoogle && <section className="mt-4 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between"><div><h3 className="font-black text-slate-900">Import from Google Sheets</h3><p className="text-xs text-slate-500">{googleConnected ? "Choose a spreadsheet and worksheet." : "Connect your Google account to access private spreadsheets."}</p></div><button onClick={() => setShowGoogle(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+        <div className="flex items-center justify-between gap-3"><div><h3 className="font-black text-slate-900">Import from Google Sheets</h3><p className="text-xs text-slate-500">{googleConnected ? `Connected as ${googleAccount?.email || "your Google account"}. Only your spreadsheets are shown.` : "Connect your Google account to access your private spreadsheets."}</p></div><button onClick={() => setShowGoogle(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
         {!googleConnected ? <button type="button" onClick={connectGoogle} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white"><Cloud className="h-4 w-4" /> Connect Google Sheets</button> :
-          <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Spreadsheet<select value={spreadsheetId} onChange={(event) => void chooseSpreadsheet(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal"><option value="">Select spreadsheet</option>{spreadsheets.map((sheet) => <option key={sheet.id} value={sheet.id}>{sheet.name}</option>)}</select></label><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Worksheet<select value={sheetName} onChange={(event) => setSheetName(event.target.value)} disabled={!spreadsheetId} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal disabled:opacity-50"><option value="">Select worksheet</option>{sheetTabs.map((sheet) => <option key={sheet.sheetId ?? sheet.title} value={sheet.title}>{sheet.title}</option>)}</select></label><button type="button" onClick={() => void importGoogleSheet()} disabled={busy || !spreadsheetId || !sheetName} className="self-end rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Import</button></div>}
+          <><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3"><div className="flex items-center gap-3">{googleAccount?.photoUrl ? <img src={googleAccount.photoUrl} alt="" className="h-9 w-9 rounded-full" /> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-black text-emerald-700">{(googleAccount?.name || googleAccount?.email || "G").charAt(0).toUpperCase()}</div>}<div><p className="text-xs font-black text-emerald-900">{googleAccount?.name || "Google account"}</p><p className="text-[11px] font-semibold text-emerald-700">{googleAccount?.email}</p></div></div><button type="button" onClick={() => void disconnectGoogle()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"><LogOut className="h-3.5 w-3.5" /> Sign out Google</button></div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Spreadsheet<select value={spreadsheetId} onChange={(event) => void chooseSpreadsheet(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal"><option value="">Select spreadsheet</option>{spreadsheets.map((sheet) => <option key={sheet.id} value={sheet.id}>{sheet.name}</option>)}</select></label><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Worksheet<select value={sheetName} onChange={(event) => setSheetName(event.target.value)} disabled={!spreadsheetId} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal disabled:opacity-50"><option value="">Select worksheet</option>{sheetTabs.map((sheet) => <option key={sheet.sheetId ?? sheet.title} value={sheet.title}>{sheet.title}</option>)}</select></label><button type="button" onClick={() => void importGoogleSheet()} disabled={busy || !spreadsheetId || !sheetName} className="self-end rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Import</button></div></>}
       </section>}
 
       {headers.length > 0 && <>

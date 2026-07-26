@@ -68,20 +68,33 @@ export async function saveGoogleConnection(refreshToken: string, adminId: string
   if (error) throw new Error(error.message);
 }
 
-async function getRefreshToken() {
+async function getRefreshToken(adminId: string) {
   const { data, error } = await supabaseAdmin.from("email_messages").select("metadata")
-    .eq("type", CONNECTION_TYPE).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    .eq("type", CONNECTION_TYPE)
+    .contains("metadata", { connectedBy: adminId })
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (error) throw new Error(error.message);
   const token = clean(data?.metadata?.refreshToken, 10000);
   return token ? decrypt(token) : null;
 }
 
-export async function googleConnectionStatus() {
-  return { connected: Boolean(await getRefreshToken()), configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) };
+export async function googleConnectionStatus(adminId: string) {
+  const connected = Boolean(await getRefreshToken(adminId));
+  if (!connected) return { connected: false, configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET), account: null };
+  const data = await googleGet("https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,photoLink)", adminId);
+  return {
+    connected: true,
+    configured: true,
+    account: {
+      name: clean(data.user?.displayName, 200),
+      email: clean(data.user?.emailAddress, 320),
+      photoUrl: clean(data.user?.photoLink, 500),
+    },
+  };
 }
 
-async function accessToken() {
-  const refreshToken = await getRefreshToken();
+async function accessToken(adminId: string) {
+  const refreshToken = await getRefreshToken(adminId);
   if (!refreshToken) throw new Error("Connect Google Sheets first.");
   const { clientId, clientSecret } = credentials();
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -94,34 +107,34 @@ async function accessToken() {
   return String(data.access_token);
 }
 
-async function googleGet(url: string) {
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${await accessToken()}` }, cache: "no-store" });
+async function googleGet(url: string, adminId: string) {
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${await accessToken(adminId)}` }, cache: "no-store" });
   const data = await response.json();
   if (!response.ok) throw new Error(clean(data.error?.message, 300) || "Google Sheets request failed.");
   return data;
 }
 
-export async function listGoogleSpreadsheets() {
+export async function listGoogleSpreadsheets(adminId: string) {
   const query = new URLSearchParams({
     q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
     fields: "files(id,name,modifiedTime,webViewLink)",
     orderBy: "modifiedTime desc",
     pageSize: "100",
   });
-  const data = await googleGet(`https://www.googleapis.com/drive/v3/files?${query}`);
+  const data = await googleGet(`https://www.googleapis.com/drive/v3/files?${query}`, adminId);
   return Array.isArray(data.files) ? data.files : [];
 }
 
-export async function listGoogleSheetTabs(spreadsheetId: string) {
-  const data = await googleGet(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties`);
+export async function listGoogleSheetTabs(spreadsheetId: string, adminId: string) {
+  const data = await googleGet(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties`, adminId);
   return (data.sheets || []).map((sheet: { properties?: { title?: string; sheetId?: number } }) => ({
     title: clean(sheet.properties?.title, 200), sheetId: sheet.properties?.sheetId,
   })).filter((sheet: { title: string }) => sheet.title);
 }
 
-export async function readGoogleSheet(spreadsheetId: string, sheetName: string) {
+export async function readGoogleSheet(spreadsheetId: string, sheetName: string, adminId: string) {
   const range = `'${sheetName.replace(/'/g, "''")}'`;
-  const data = await googleGet(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS`);
+  const data = await googleGet(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS`, adminId);
   const values: unknown[][] = Array.isArray(data.values) ? data.values : [];
   const rawHeaders = (values[0] || []).map((value) => clean(value, 100));
   if (!rawHeaders.length || rawHeaders.some((header) => !header)) throw new Error("The first Google Sheet row must contain complete column headers.");
@@ -132,4 +145,20 @@ export async function readGoogleSheet(spreadsheetId: string, sheetName: string) 
   const rows = values.slice(1, 501).filter((row) => row.some((value) => clean(value, 2000))).map((row) =>
     Object.fromEntries(headers.map((header, index) => [header, clean(row[index], 2000)])));
   return { headers, rows, wasLimited: values.length > 501 };
+}
+
+export async function disconnectGoogleConnection(adminId: string) {
+  const refreshToken = await getRefreshToken(adminId);
+  if (refreshToken) {
+    await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token: refreshToken }),
+      cache: "no-store",
+    }).catch(() => null);
+  }
+  const { error } = await supabaseAdmin.from("email_messages").delete()
+    .eq("type", CONNECTION_TYPE)
+    .contains("metadata", { connectedBy: adminId });
+  if (error) throw new Error(error.message);
 }
