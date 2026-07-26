@@ -1,9 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
-
-const facebookUrl = "https://www.facebook.com/profile.php?id=61581316087458&mibextid=wwXIfr";
-const linkedinUrl = "https://www.linkedin.com/company/tarawork-online/posts/?feedView=all";
+import { useEffect, useState } from "react";
+import { ArrowUpRight, Instagram, Mail, MapPin, Phone, Youtube } from "lucide-react";
+import { DEFAULT_SITE_SETTINGS, type SiteSettings } from "@/lib/siteSettingsShared";
 
 function FacebookLogo() {
   return (
@@ -22,6 +23,18 @@ function LinkedInLogo() {
 }
 
 export default function SiteFooter() {
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  useEffect(() => {
+    fetch("/api/site-settings").then((response) => response.ok ? response.json() : null)
+      .then((data) => { if (data?.settings) setSettings(data.settings); }).catch(() => undefined);
+  }, []);
+  const socialLinks = [
+    { key: "facebook", label: "Facebook", url: settings.facebookUrl, color: "bg-[#1877F2]", icon: <FacebookLogo /> },
+    { key: "linkedin", label: "LinkedIn", url: settings.linkedinUrl, color: "bg-[#0A66C2]", icon: <LinkedInLogo /> },
+    { key: "instagram", label: "Instagram", url: settings.instagramUrl, color: "bg-gradient-to-br from-purple-600 via-pink-500 to-amber-400", icon: <Instagram className="h-5 w-5" /> },
+    { key: "youtube", label: "YouTube", url: settings.youtubeUrl, color: "bg-[#FF0000]", icon: <Youtube className="h-5 w-5" /> },
+    { key: "x", label: "X / Twitter", url: settings.xUrl, color: "bg-black", icon: <span className="text-base font-black">X</span> },
+  ].filter((social) => social.url);
   return (
     <footer className="border-t border-zinc-800 bg-zinc-950 text-zinc-300">
       <div className="border-b border-zinc-800 bg-gradient-to-r from-teal-950 via-zinc-950 to-zinc-950">
@@ -59,26 +72,7 @@ export default function SiteFooter() {
             A professional marketplace connecting businesses with skilled Filipino freelancers and helping remote
             professionals build credible careers online.
           </p>
-          <div className="mt-6 grid max-w-sm grid-cols-2 gap-3">
-            <a href={facebookUrl} target="_blank" rel="noopener noreferrer" aria-label="Visit TaraWork on Facebook" className="group flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/70 p-3 transition hover:-translate-y-0.5 hover:border-[#1877F2]">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1877F2] text-white">
-                <FacebookLogo />
-              </span>
-              <span>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Follow us</span>
-                <span className="text-sm font-bold text-white">Facebook</span>
-              </span>
-            </a>
-            <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" aria-label="Visit TaraWork on LinkedIn" className="group flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/70 p-3 transition hover:-translate-y-0.5 hover:border-[#0A66C2]">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0A66C2] text-white">
-                <LinkedInLogo />
-              </span>
-              <span>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Connect</span>
-                <span className="text-sm font-bold text-white">LinkedIn</span>
-              </span>
-            </a>
-          </div>
+          {socialLinks.length > 0 && <div className="mt-6 grid max-w-sm grid-cols-2 gap-3">{socialLinks.map((social) => <a key={social.key} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={`Visit TaraWork on ${social.label}`} className="group flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/70 p-3 transition hover:-translate-y-0.5 hover:border-zinc-600"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white ${social.color}`}>{social.icon}</span><span><span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Connect</span><span className="text-sm font-bold text-white">{social.label}</span></span></a>)}</div>}
         </div>
 
         <div>
@@ -96,18 +90,18 @@ export default function SiteFooter() {
         <div>
           <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white">Get in touch</h2>
           <div className="mt-5 space-y-3 text-sm">
-            <a href="tel:+639944834740" className="flex items-start gap-3 rounded-lg p-2 -ml-2 transition hover:bg-zinc-900 hover:text-teal-400">
+            {settings.contactPhone && <a href={`tel:${settings.contactPhone.replace(/[^\d+]/g, "")}`} className="flex items-start gap-3 rounded-lg p-2 -ml-2 transition hover:bg-zinc-900 hover:text-teal-400">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-400/10"><Phone className="h-4 w-4 text-teal-400" /></span>
-              <span><span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Call us</span>+63 994 483 4740</span>
-            </a>
-            <a href="mailto:hello@tarawork.online" className="flex items-start gap-3 rounded-lg p-2 -ml-2 transition hover:bg-zinc-900 hover:text-teal-400">
+              <span><span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Call us</span>{settings.contactPhone}</span>
+            </a>}
+            {settings.contactEmail && <a href={`mailto:${settings.contactEmail}`} className="flex items-start gap-3 rounded-lg p-2 -ml-2 transition hover:bg-zinc-900 hover:text-teal-400">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-400/10"><Mail className="h-4 w-4 text-teal-400" /></span>
-              <span><span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Email us</span>hello@tarawork.online</span>
-            </a>
-            <a href="https://www.google.com/maps/search/?api=1&query=Waling-Waling%2C+Purok+Sta.+Cruz%2C+Calumpang%2C+General+Santos+City" target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 rounded-lg p-2 -ml-2 leading-6 text-zinc-400 transition hover:bg-zinc-900 hover:text-teal-400">
+              <span><span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Email us</span>{settings.contactEmail}</span>
+            </a>}
+            {settings.address && <a href={settings.mapsUrl || "#"} target={settings.mapsUrl ? "_blank" : undefined} rel={settings.mapsUrl ? "noopener noreferrer" : undefined} className="flex items-start gap-3 rounded-lg p-2 -ml-2 leading-6 text-zinc-400 transition hover:bg-zinc-900 hover:text-teal-400">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-400/10"><MapPin className="h-4 w-4 text-teal-400" /></span>
-              <address className="not-italic"><span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Our address</span>Waling-Waling, Purok Sta. Cruz, Calumpang, General Santos City, Philippines</address>
-            </a>
+              <address className="not-italic"><span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Our address</span>{settings.address}</address>
+            </a>}
           </div>
         </div>
       </div>

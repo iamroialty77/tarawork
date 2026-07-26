@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabase";
 import RichTextEditor from "./RichTextEditor";
 import AdminEmailInbox from "./AdminEmailInbox";
 import AdminAutomation from "./AdminAutomation";
+import SiteSettingsEditor from "./SiteSettingsEditor";
 import { 
   Users, 
   Briefcase, 
@@ -39,10 +40,11 @@ import {
   Paperclip,
   X,
   BookOpen,
-  Bot
+  Bot,
+  Settings
 } from "lucide-react";
 
-type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "blog" | "marketing" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "site_settings" | "blog" | "marketing" | "reports" | "health";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 type MarketingAttachment = {
@@ -633,6 +635,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
     { id: "talent_requests", label: "Talent Requests", icon: Users },
     { id: "email_messages", label: "Email", icon: Mail },
     { id: "automation", label: "Automation", icon: Bot },
+    { id: "site_settings", label: "Site Settings", icon: Settings },
     { id: "blog", label: "Blog Studio", icon: BookOpen },
     { id: "reports", label: "Insights", icon: BarChart3 },
     { id: "health", label: "System Health", icon: Activity },
@@ -1336,6 +1339,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         {activeTab === "email_messages" && <AdminEmailInbox key={emailMessages.map((message) => message.id + (message.metadata?.trashedAt || "")).join(":")} messages={emailMessages} refresh={() => void fetchData()} reply={(id, body) => submitEmailReply(id, body)} />}
 
         {activeTab === "automation" && <AdminAutomation />}
+        {activeTab === "site_settings" && <SiteSettingsEditor />}
 
         {false && (
           <motion.div
