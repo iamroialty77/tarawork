@@ -16,6 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { absolute: title },
     description,
     keywords: settings.seoKeywords,
+    verification: settings.googleSiteVerification ? { google: settings.googleSiteVerification } : undefined,
     alternates: { canonical },
     robots: {
       index: settings.searchIndexing,

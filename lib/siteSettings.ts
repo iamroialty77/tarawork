@@ -33,6 +33,7 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
     seoTitle: clean(valueOrDefault(input, "seoTitle"), 70),
     seoDescription: clean(valueOrDefault(input, "seoDescription"), 180),
     seoKeywords: keywords(valueOrDefault(input, "seoKeywords")),
+    googleSiteVerification: clean(valueOrDefault(input, "googleSiteVerification"), 200),
     canonicalUrl: url(valueOrDefault(input, "canonicalUrl")),
     ogTitle: clean(valueOrDefault(input, "ogTitle"), 70),
     ogDescription: clean(valueOrDefault(input, "ogDescription"), 200),

@@ -6,7 +6,7 @@ import type { SiteSettings } from "@/lib/siteSettingsShared";
 
 const empty: SiteSettings = {
   contactEmail: "", contactPhone: "", address: "", mapsUrl: "", facebookUrl: "", linkedinUrl: "",
-  instagramUrl: "", youtubeUrl: "", xUrl: "", seoTitle: "", seoDescription: "", seoKeywords: [], canonicalUrl: "",
+  instagramUrl: "", youtubeUrl: "", xUrl: "", seoTitle: "", seoDescription: "", seoKeywords: [], googleSiteVerification: "", canonicalUrl: "",
   ogTitle: "", ogDescription: "", ogImageUrl: "", searchIndexing: true,
 };
 
@@ -53,6 +53,18 @@ export default function SiteSettingsEditor() {
     { key: "youtubeUrl", label: "YouTube URL", placeholder: "https://youtube.com/@..." },
     { key: "xUrl", label: "X / Twitter URL", placeholder: "https://x.com/..." },
   ];
+  const siteOrigin = (() => {
+    try { return new URL(settings.canonicalUrl).origin; } catch { return "https://www.tarawork.online"; }
+  })();
+  const seoChecks = [
+    { label: "SEO title is 30–60 characters", passed: settings.seoTitle.length >= 30 && settings.seoTitle.length <= 60 },
+    { label: "Description is 120–160 characters", passed: settings.seoDescription.length >= 120 && settings.seoDescription.length <= 160 },
+    { label: "Canonical URL uses HTTPS", passed: /^https:\/\/.+/i.test(settings.canonicalUrl) },
+    { label: "At least 3 focused keywords", passed: settings.seoKeywords.length >= 3 },
+    { label: "Social sharing image is configured", passed: Boolean(settings.ogImageUrl) },
+    { label: "Google Search Console is verified", passed: Boolean(settings.googleSiteVerification) },
+  ];
+  const seoScore = Math.round((seoChecks.filter((check) => check.passed).length / seoChecks.length) * 100);
 
   if (loading) return <div className="flex min-h-80 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-indigo-600" /></div>;
   return <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -86,6 +98,11 @@ export default function SiteSettingsEditor() {
             </div>
           </section>
           <section className="rounded-2xl border border-slate-200 p-5">
+            <div className="mb-5 flex items-start gap-3"><div className="rounded-xl bg-emerald-50 p-2 text-emerald-600"><Globe2 className="h-4 w-4" /></div><div><h3 className="font-black text-slate-900">Google Search Console</h3><p className="mt-1 text-xs font-medium text-slate-500">Verify ownership, submit the sitemap, and monitor Google search performance.</p></div></div>
+            <label className="block text-xs font-black uppercase tracking-wider text-slate-500">Google verification token<input value={settings.googleSiteVerification} onChange={(event) => update("googleSiteVerification", event.target.value.replace(/^.*content=["']?([^"']+)["']?.*$/i, "$1").trim())} placeholder="Paste only the content value from Google's HTML tag" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold normal-case tracking-normal" /><span className="mt-2 block text-[11px] font-medium normal-case leading-5 tracking-normal text-slate-400">In Search Console, choose URL prefix → HTML tag, then paste the value inside <code className="rounded bg-slate-100 px-1">content=&quot;...&quot;</code>. Save before clicking Verify.</span></label>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3"><a href="https://search.google.com/search-console" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50">Open Search Console <ExternalLink className="h-3.5 w-3.5" /></a><a href={`${siteOrigin}/sitemap.xml`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50">View sitemap <ExternalLink className="h-3.5 w-3.5" /></a><a href={`${siteOrigin}/robots.txt`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50">View robots.txt <ExternalLink className="h-3.5 w-3.5" /></a></div>
+          </section>
+          <section className="rounded-2xl border border-slate-200 p-5">
             <div className="mb-5 flex items-start gap-3"><div className="rounded-xl bg-violet-50 p-2 text-violet-600"><ImageIcon className="h-4 w-4" /></div><div><h3 className="font-black text-slate-900">Social sharing</h3><p className="mt-1 text-xs font-medium text-slate-500">Customize the preview used by Facebook, LinkedIn, X, and messaging apps.</p></div></div>
             <div className="space-y-4">
               <label className="block text-xs font-black uppercase tracking-wider text-slate-500">Social title<input maxLength={70} value={settings.ogTitle} onChange={(event) => update("ogTitle", event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold normal-case tracking-normal" /></label>
@@ -95,7 +112,8 @@ export default function SiteSettingsEditor() {
           </section>
         </div>
         <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-5 xl:sticky xl:top-6">
-          <p className="text-xs font-black uppercase tracking-wider text-slate-500">Google preview</p>
+          <div className="rounded-2xl bg-slate-950 p-5 text-white"><div className="flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-wider text-slate-400">SEO health</p><p className="mt-1 text-3xl font-black">{seoScore}<span className="text-base text-slate-400">/100</span></p></div><div className={`flex h-14 w-14 items-center justify-center rounded-full border-4 text-sm font-black ${seoScore >= 80 ? "border-emerald-400 text-emerald-300" : seoScore >= 50 ? "border-amber-400 text-amber-300" : "border-rose-400 text-rose-300"}`}>{seoScore}%</div></div><div className="mt-4 space-y-2">{seoChecks.map((check) => <div key={check.label} className="flex items-center gap-2 text-[11px] font-semibold"><CheckCircle2 className={`h-3.5 w-3.5 shrink-0 ${check.passed ? "text-emerald-400" : "text-slate-600"}`} /><span className={check.passed ? "text-slate-200" : "text-slate-500"}>{check.label}</span></div>)}</div></div>
+          <p className="mt-6 text-xs font-black uppercase tracking-wider text-slate-500">Google preview</p>
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-3"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-black text-white">T</div><div><p className="text-sm text-slate-800">Tara Work</p><p className="max-w-[280px] truncate text-xs text-slate-500">{settings.canonicalUrl || "https://www.tarawork.online/"}</p></div></div><p className="mt-3 line-clamp-2 text-xl font-medium text-blue-800">{settings.seoTitle || "Landing page title"}</p><p className="mt-2 text-sm leading-6 text-slate-600">{settings.seoDescription || "Add a clear description of Tara Work for search results."}</p></div>
           <p className="mt-6 text-xs font-black uppercase tracking-wider text-slate-500">Social preview</p>
           <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">{settings.ogImageUrl ? <div className="aspect-[1.91/1] bg-slate-100"><img src={settings.ogImageUrl} alt="" className="h-full w-full object-cover" /></div> : <div className="flex aspect-[1.91/1] items-center justify-center bg-slate-100 text-slate-400"><ImageIcon className="h-8 w-8" /></div>}<div className="p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">tarawork.online</p><p className="mt-1 font-black text-slate-900">{settings.ogTitle || settings.seoTitle || "Tara Work"}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{settings.ogDescription || settings.seoDescription}</p></div></div>
