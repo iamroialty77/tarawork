@@ -1,9 +1,11 @@
 "use client";
 
-import { ChangeEvent, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, FileSpreadsheet, Mail, Send, Upload, X } from "lucide-react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, Cloud, FileSpreadsheet, Mail, Send, Upload, X } from "lucide-react";
 
 type CsvRow = Record<string, string>;
+type GoogleSpreadsheet = { id: string; name: string; modifiedTime?: string };
+type GoogleSheetTab = { title: string; sheetId?: number };
 
 function parseCsv(text: string) {
   const records: string[][] = [];
@@ -48,6 +50,12 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
   const [emailColumn, setEmailColumn] = useState("");
   const [showComposer, setShowComposer] = useState(false);
+  const [showGoogle, setShowGoogle] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [spreadsheets, setSpreadsheets] = useState<GoogleSpreadsheet[]>([]);
+  const [spreadsheetId, setSpreadsheetId] = useState("");
+  const [sheetTabs, setSheetTabs] = useState<GoogleSheetTab[]>([]);
+  const [sheetName, setSheetName] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState("");
@@ -58,6 +66,62 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   const validRows = useMemo(() => selectedRows.filter((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row[emailColumn] || "")), [selectedRows, emailColumn]);
   const uniqueCount = new Set(validRows.map((row) => row[emailColumn].toLowerCase())).size;
   const sample = validRows[0] || selectedRows[0];
+
+  const loadGoogle = useCallback(async () => {
+    setBusy(true); setError("");
+    try {
+      const response = await fetch("/api/admin/google-sheets", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to load Google Sheets.");
+      setGoogleConnected(Boolean(data.connected)); setSpreadsheets(data.spreadsheets || []); setShowGoogle(true);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to load Google Sheets."); }
+    finally { setBusy(false); }
+  }, []);
+
+  useEffect(() => {
+    const connected = (event: MessageEvent) => {
+      if (event.origin === window.location.origin && event.data?.type === "google-sheets-connected") void loadGoogle();
+    };
+    window.addEventListener("message", connected);
+    return () => window.removeEventListener("message", connected);
+  }, [loadGoogle]);
+
+  const connectGoogle = () => {
+    window.open("/api/admin/google-sheets/connect", "google-sheets-oauth", "popup=yes,width=560,height=720");
+  };
+
+  const chooseSpreadsheet = async (id: string) => {
+    setSpreadsheetId(id); setSheetName(""); setSheetTabs([]); setBusy(true); setError("");
+    if (!id) { setBusy(false); return; }
+    try {
+      const response = await fetch(`/api/admin/google-sheets?spreadsheetId=${encodeURIComponent(id)}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to load worksheets.");
+      setSheetTabs(data.sheets || []);
+      if (data.sheets?.length === 1) setSheetName(data.sheets[0].title);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to load worksheets."); }
+    finally { setBusy(false); }
+  };
+
+  const importGoogleSheet = async () => {
+    if (!spreadsheetId || !sheetName) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/admin/google-sheets?spreadsheetId=${encodeURIComponent(spreadsheetId)}&sheetName=${encodeURIComponent(sheetName)}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to import worksheet.");
+      const importedHeaders: string[] = data.headers || [];
+      const importedRows: CsvRow[] = data.rows || [];
+      const selectedSpreadsheet = spreadsheets.find((sheet) => sheet.id === spreadsheetId);
+      const detected = importedHeaders.find((header) => /^(email|email_address|emailaddress|e_mail)$/i.test(header)) || importedHeaders.find((header) => header.includes("email")) || "";
+      setHeaders(importedHeaders); setRows(importedRows); setSelectedIndexes([]); setEmailColumn(detected);
+      setFileName(`${selectedSpreadsheet?.name || "Google Sheet"} · ${sheetName}`);
+      setAlias((selectedSpreadsheet?.name || "google_sheet").replace(/[^a-zA-Z0-9_-]+/g, "_").toLowerCase());
+      setShowComposer(false); setShowGoogle(false);
+      setNotice(`${importedRows.length} rows imported from Google Sheets${data.wasLimited ? " (first 500 only)" : ""}.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to import worksheet."); }
+    finally { setBusy(false); }
+  };
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -109,8 +173,14 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-blue-300 bg-blue-50/60 p-4">
         <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={upload} className="hidden" />
         <div className="flex min-w-0 items-center gap-3"><div className="rounded-xl bg-white p-2.5 text-blue-600 shadow-sm"><Upload className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{fileName || "Upload contact CSV"}</p><p className="text-[10px] font-semibold text-slate-400">Maximum 500 rows · 2 MB</p></div></div>
-        <button type="button" onClick={() => inputRef.current?.click()} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace CSV" : "Choose CSV"}</button>
+        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void loadGoogle()} className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50"><Cloud className="h-4 w-4" /> Google Sheets</button><button type="button" onClick={() => inputRef.current?.click()} className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white hover:bg-blue-700">{fileName ? "Replace CSV" : "Choose CSV"}</button></div>
       </section>
+
+      {showGoogle && <section className="mt-4 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between"><div><h3 className="font-black text-slate-900">Import from Google Sheets</h3><p className="text-xs text-slate-500">{googleConnected ? "Choose a spreadsheet and worksheet." : "Connect your Google account to access private spreadsheets."}</p></div><button onClick={() => setShowGoogle(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+        {!googleConnected ? <button type="button" onClick={connectGoogle} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white"><Cloud className="h-4 w-4" /> Connect Google Sheets</button> :
+          <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Spreadsheet<select value={spreadsheetId} onChange={(event) => void chooseSpreadsheet(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal"><option value="">Select spreadsheet</option>{spreadsheets.map((sheet) => <option key={sheet.id} value={sheet.id}>{sheet.name}</option>)}</select></label><label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Worksheet<select value={sheetName} onChange={(event) => setSheetName(event.target.value)} disabled={!spreadsheetId} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal disabled:opacity-50"><option value="">Select worksheet</option>{sheetTabs.map((sheet) => <option key={sheet.sheetId ?? sheet.title} value={sheet.title}>{sheet.title}</option>)}</select></label><button type="button" onClick={() => void importGoogleSheet()} disabled={busy || !spreadsheetId || !sheetName} className="self-end rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Import</button></div>}
+      </section>}
 
       {headers.length > 0 && <>
         <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
