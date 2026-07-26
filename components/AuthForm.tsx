@@ -20,6 +20,32 @@ import {
 import { cn } from "../lib/utils";
 import TurnstileWidget from "./security/TurnstileWidget";
 
+function readableAuthError(error: unknown, fallback: string) {
+  const candidate = error && typeof error === "object" && "message" in error
+    ? String((error as { message?: unknown }).message || "")
+    : typeof error === "string" ? error : "";
+  const normalized = candidate.toLowerCase();
+  const status = error && typeof error === "object" && "status" in error
+    ? Number((error as { status?: unknown }).status)
+    : 0;
+
+  if (
+    status === 522 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    normalized.includes("error code 522") ||
+    normalized.includes("connection timed out") ||
+    normalized.includes("gateway timeout") ||
+    normalized.includes("<!doctype html") ||
+    normalized.includes("<html")
+  ) {
+    return "Our sign-in service is temporarily unavailable. Your account is safe—please wait a moment and try again.";
+  }
+
+  return candidate.trim() || fallback;
+}
+
 export default function AuthForm() {
   const [mode, setMode] = useState<"login" | "signup" | "forgot_password" | "update_password">("login");
   const [loading, setLoading] = useState(false);
@@ -147,7 +173,7 @@ export default function AuthForm() {
       if (error) throw error;
     } catch (err: any) {
       console.error("Social login error:", err);
-      let message = err.message || "An error occurred during social login.";
+      let message = readableAuthError(err, "An error occurred during social login.");
       
       if (message.includes("provider is not enabled")) {
         message = `Authentication Error: ${provider} login is not yet enabled in the Supabase Dashboard. Please go to Authentication > Providers and enable ${provider}.`;
@@ -275,16 +301,15 @@ export default function AuthForm() {
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      let message = err.message || "An error occurred during authentication.";
+      let message = readableAuthError(err, "An error occurred during authentication.");
       
       if (
         err?.name === "AuthRetryableFetchError" ||
-        err?.status === 504 ||
+        [502, 503, 504, 522].includes(Number(err?.status)) ||
         message.includes("504") ||
         message.toLowerCase().includes("gateway timeout")
       ) {
-        message = "Password reset email service timed out. Please wait a minute and try again. If this keeps happening, the Supabase email sender needs Custom SMTP configured.";
-        setShowSMTPHelp(true);
+        message = "Our sign-in service is temporarily unavailable. Your account is safe—please wait a moment and try again.";
       } else if (message.toLowerCase().includes("invalid-input-secret")) {
         message = "The security check is temporarily misconfigured. The administrator must update the Cloudflare Turnstile secret in Supabase Auth.";
         setShowSMTPHelp(true);
