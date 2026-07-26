@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ExternalLink, Eye, Globe2, ImageIcon, Loader2, Mail, MapPin, Monitor, Phone, Save, Search, Settings2, Share2 } from "lucide-react";
+import { CheckCircle2, ExternalLink, Eye, Globe2, ImageIcon, Loader2, Mail, MapPin, Monitor, Phone, Plus, Save, Search, Settings2, Share2, X } from "lucide-react";
 import type { SiteSettings } from "@/lib/siteSettingsShared";
 
 const empty: SiteSettings = {
   contactEmail: "", contactPhone: "", address: "", mapsUrl: "", facebookUrl: "", linkedinUrl: "",
-  instagramUrl: "", youtubeUrl: "", xUrl: "", seoTitle: "", seoDescription: "", canonicalUrl: "",
+  instagramUrl: "", youtubeUrl: "", xUrl: "", seoTitle: "", seoDescription: "", seoKeywords: [], canonicalUrl: "",
   ogTitle: "", ogDescription: "", ogImageUrl: "", searchIndexing: true,
 };
 
@@ -18,6 +18,7 @@ export default function SiteSettingsEditor() {
   const [error, setError] = useState("");
   const [view, setView] = useState<"edit" | "seo" | "preview">("edit");
   const [previewVersion, setPreviewVersion] = useState(0);
+  const [keywordDraft, setKeywordDraft] = useState("");
 
   useEffect(() => {
     fetch("/api/site-settings", { cache: "no-store" }).then(async (response) => {
@@ -28,6 +29,12 @@ export default function SiteSettingsEditor() {
   }, []);
 
   const update = <K extends keyof SiteSettings,>(field: K, value: SiteSettings[K]) => setSettings((current) => ({ ...current, [field]: value }));
+  const addKeyword = () => {
+    const keyword = keywordDraft.trim();
+    if (!keyword || settings.seoKeywords.length >= 20 || settings.seoKeywords.some((item) => item.toLowerCase() === keyword.toLowerCase())) return;
+    update("seoKeywords", [...settings.seoKeywords, keyword.slice(0, 60)]);
+    setKeywordDraft("");
+  };
   const save = async () => {
     setSaving(true); setError(""); setNotice("");
     try {
@@ -69,6 +76,11 @@ export default function SiteSettingsEditor() {
             <div className="space-y-5">
               <label className="block text-xs font-black uppercase tracking-wider text-slate-500">SEO title <span className={`float-right normal-case tracking-normal ${settings.seoTitle.length > 60 ? "text-amber-600" : "text-slate-400"}`}>{settings.seoTitle.length}/60 recommended</span><input maxLength={70} value={settings.seoTitle} onChange={(event) => update("seoTitle", event.target.value)} placeholder="Tara Work | Remote Jobs in the Philippines" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold normal-case tracking-normal" /></label>
               <label className="block text-xs font-black uppercase tracking-wider text-slate-500">Meta description <span className={`float-right normal-case tracking-normal ${settings.seoDescription.length > 160 ? "text-amber-600" : "text-slate-400"}`}>{settings.seoDescription.length}/160 recommended</span><textarea rows={4} maxLength={180} value={settings.seoDescription} onChange={(event) => update("seoDescription", event.target.value)} className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold normal-case tracking-normal" /></label>
+              <div>
+                <div className="flex items-center justify-between"><p className="text-xs font-black uppercase tracking-wider text-slate-500">SEO keywords</p><span className="text-[11px] font-semibold text-slate-400">{settings.seoKeywords.length}/20</span></div>
+                <div className="mt-2 flex gap-2"><input maxLength={60} value={keywordDraft} onChange={(event) => setKeywordDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addKeyword(); } }} placeholder="e.g. remote jobs Philippines" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold" /><button type="button" onClick={addKeyword} disabled={!keywordDraft.trim() || settings.seoKeywords.length >= 20} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40"><Plus className="h-4 w-4" /> Add</button></div>
+                {settings.seoKeywords.length > 0 ? <div className="mt-3 flex flex-wrap gap-2">{settings.seoKeywords.map((keyword) => <span key={keyword} className="inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700">{keyword}<button type="button" onClick={() => update("seoKeywords", settings.seoKeywords.filter((item) => item !== keyword))} aria-label={`Remove ${keyword}`} className="rounded-full p-0.5 hover:bg-indigo-100"><X className="h-3 w-3" /></button></span>)}</div> : <p className="mt-2 text-[11px] font-medium text-slate-400">Add focused phrases that describe the jobs, talent, and services on Tara Work.</p>}
+              </div>
               <label className="block text-xs font-black uppercase tracking-wider text-slate-500">Canonical URL<input type="url" value={settings.canonicalUrl} onChange={(event) => update("canonicalUrl", event.target.value)} placeholder="https://www.tarawork.online/" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold normal-case tracking-normal" /><span className="mt-2 block text-[11px] font-medium normal-case tracking-normal text-slate-400">Use the preferred HTTPS address of the public landing page.</span></label>
               <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4"><span><span className="block text-sm font-black text-slate-800">Allow search indexing</span><span className="mt-1 block text-xs font-medium text-slate-500">When disabled, the landing page sends a noindex instruction.</span></span><input type="checkbox" checked={settings.searchIndexing} onChange={(event) => update("searchIndexing", event.target.checked)} className="h-5 w-5 rounded border-slate-300 text-indigo-600" /></label>
             </div>

@@ -15,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: title },
     description,
+    keywords: settings.seoKeywords,
     alternates: { canonical },
     robots: {
       index: settings.searchIndexing,

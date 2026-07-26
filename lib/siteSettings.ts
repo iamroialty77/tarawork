@@ -13,6 +13,10 @@ const imageUrl = (value: unknown) => {
 };
 const valueOrDefault = (input: Record<string, unknown>, key: keyof SiteSettings) =>
   Object.prototype.hasOwnProperty.call(input, key) ? input[key] : DEFAULT_SITE_SETTINGS[key];
+const keywords = (value: unknown) => {
+  const source = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+  return [...new Set(source.map((item) => clean(item, 60)).filter(Boolean))].slice(0, 20);
+};
 
 export function normalizeSiteSettings(value: unknown): SiteSettings {
   const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -28,6 +32,7 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
     xUrl: url(input.xUrl),
     seoTitle: clean(valueOrDefault(input, "seoTitle"), 70),
     seoDescription: clean(valueOrDefault(input, "seoDescription"), 180),
+    seoKeywords: keywords(valueOrDefault(input, "seoKeywords")),
     canonicalUrl: url(valueOrDefault(input, "canonicalUrl")),
     ogTitle: clean(valueOrDefault(input, "ogTitle"), 70),
     ogDescription: clean(valueOrDefault(input, "ogDescription"), 200),
