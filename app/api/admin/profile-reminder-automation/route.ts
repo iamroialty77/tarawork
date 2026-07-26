@@ -10,6 +10,10 @@ import {
 } from "@/lib/profileReminderAutomation";
 
 export const runtime = "nodejs";
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message :
+    error && typeof error === "object" && "message" in error ? String(error.message) :
+      "Unable to process profile reminders.";
 
 export async function GET() {
   const admin = await requireAdminUser();
@@ -19,7 +23,7 @@ export async function GET() {
     const recipients = await getProfileReminderRecipients(config, true);
     return NextResponse.json({ config, recipients, recipientCount: recipients.length });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load automation." }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -50,6 +54,6 @@ export async function POST(req: NextRequest) {
     const result = await sendProfileReminders(config, `admin:${admin.user?.id || "unknown"}`);
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to process automation." }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }

@@ -95,7 +95,7 @@ export default function AdminAutomation() {
   const totalReady = Object.values(summaries).reduce((total, summary) => total + summary.recipientCount, 0);
 
   return (
-    <div className="relative min-h-[620px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div className="relative min-h-[820px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <section className="relative overflow-hidden bg-slate-950 px-6 py-6 text-white sm:px-8">
         <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-violet-500/10 blur-3xl" />

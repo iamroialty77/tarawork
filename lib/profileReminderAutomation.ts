@@ -123,13 +123,13 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
   let query = supabaseAdmin
     .from("profiles")
     .select("id, name, role, category, bio, username, skills, hourlyRate, companyName, avatar_url, aiInsights, status")
-    .in("role", ["freelancer", "employer"])
-    .or("status.is.null,status.neq.suspended");
+    .in("role", ["freelancer", "employer"]);
   if (config.audience !== "all") query = query.eq("role", config.audience);
   const { data: profiles, error } = await query;
   if (error) throw error;
 
-  const ids = (profiles || []).map((profile) => profile.id);
+  const activeProfiles = (profiles || []).filter((profile) => String(profile.status || "").toLowerCase() !== "suspended");
+  const ids = activeProfiles.map((profile) => profile.id);
   const portfolioIds = new Set<string>();
   for (let index = 0; index < ids.length; index += 500) {
     const batch = ids.slice(index, index + 500);
@@ -137,15 +137,16 @@ export async function getProfileReminderRecipients(config: ProfileReminderConfig
       supabaseAdmin.from("portfolio_items").select("profile_id").in("profile_id", batch),
       supabaseAdmin.from("portfolios").select("profile_id, portfolio_projects(id)").in("profile_id", batch),
     ]);
-    if (legacyResult.error) throw new Error(`Unable to verify legacy portfolios: ${legacyResult.error.message}`);
-    if (currentResult.error) throw new Error(`Unable to verify current portfolios: ${currentResult.error.message}`);
+    if (legacyResult.error && currentResult.error) {
+      throw new Error("Unable to verify user portfolios.");
+    }
     (legacyResult.data || []).forEach((item) => portfolioIds.add(item.profile_id));
     (currentResult.data || []).forEach((item) => {
       if (Array.isArray(item.portfolio_projects) && item.portfolio_projects.length > 0) portfolioIds.add(item.profile_id);
     });
   }
 
-  const eligible = (profiles || []).map((profile) => ({
+  const eligible = activeProfiles.map((profile) => ({
     profile,
     ...getCompletionDetails(profile, portfolioIds.has(profile.id)),
   })).filter((item) => item.completion <= config.threshold);

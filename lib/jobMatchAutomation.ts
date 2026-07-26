@@ -109,7 +109,7 @@ async function getEmail(profile: Record<string, unknown>) {
 
 export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecentlySent = true) {
   const [{ data: profiles, error: profileError }, { data: jobs, error: jobError }, { data: applications, error: applicationError }] = await Promise.all([
-    supabaseAdmin.from("profiles").select("id, name, category, skills, bio, aiInsights, status").eq("role", "freelancer").or("status.is.null,status.neq.suspended"),
+    supabaseAdmin.from("profiles").select("id, name, category, skills, bio, aiInsights, status").eq("role", "freelancer"),
     supabaseAdmin.from("jobs").select("id, title, description, company, category, skills, status, createdAt").eq("status", "live"),
     supabaseAdmin.from("applications").select("freelancer_id, job_id"),
   ]);
@@ -127,7 +127,8 @@ export async function getJobMatchRecipients(config: JobMatchConfig, excludeRecen
   }
 
   const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://tarawork.online").replace(/\/$/, "");
-  const recipients = await Promise.all((profiles || []).map(async (profile) => {
+  const activeProfiles = (profiles || []).filter((profile) => String(profile.status || "").toLowerCase() !== "suspended");
+  const recipients = await Promise.all(activeProfiles.map(async (profile) => {
     const matches = (jobs || []).map((job) => ({ job, ...scoreMatch(profile, job) }))
       .filter((match) =>
         match.score >= config.threshold &&

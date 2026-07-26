@@ -4,6 +4,10 @@ import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
 import { getJobMatchConfig, getJobMatchRecipients, normalizeJobMatchConfig, saveJobMatchConfig, sendJobMatches } from "@/lib/jobMatchAutomation";
 
 export const runtime = "nodejs";
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message :
+    error && typeof error === "object" && "message" in error ? String(error.message) :
+      "Unable to process job matches.";
 
 export async function GET() {
   const admin = await requireAdminUser();
@@ -13,7 +17,7 @@ export async function GET() {
     const recipients = await getJobMatchRecipients(config, true);
     return NextResponse.json({ config, recipients, recipientCount: recipients.length });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load job match automation." }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
 
@@ -49,6 +53,6 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ success: true, ...await sendJobMatches(config, `admin:${admin.user?.id || "unknown"}`, selectedUserIds) });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to process job matches." }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
