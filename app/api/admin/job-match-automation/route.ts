@@ -37,8 +37,12 @@ export async function POST(req: NextRequest) {
     if (action === "preview") return NextResponse.json({ success: true, recipients, recipientCount: recipients.length });
     const limited = rateLimit({ key: `admin:job-match:${admin.user?.id || getClientIp(req)}`, limit: 3, windowMs: 3600000 });
     if (limited) return limited;
-    const selectedUserIds = Array.isArray(body.selectedUserIds)
-      ? [...new Set(body.selectedUserIds.map((value: unknown) => String(value)).filter((value: string) => /^[0-9a-f-]{36}$/i.test(value)))].slice(0, 200)
+    const selectedUserIds: string[] | undefined = Array.isArray(body.selectedUserIds)
+      ? [...new Set<string>(
+          body.selectedUserIds
+            .map((value: unknown): string => String(value))
+            .filter((value: string) => /^[0-9a-f-]{36}$/i.test(value)),
+        )].slice(0, 200)
       : undefined;
     if (Array.isArray(body.selectedUserIds) && !selectedUserIds?.length) {
       return NextResponse.json({ error: "Select at least one eligible freelancer." }, { status: 400 });
