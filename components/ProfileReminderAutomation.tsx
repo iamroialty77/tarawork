@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, ExternalLink, RefreshCw, Send, Settings2, X } from "lucide-react";
 
 type Config = { enabled: boolean; threshold: number; audience: "all" | "freelancer" | "employer"; subject: string; message: string; cooldownDays: number };
@@ -8,6 +8,7 @@ type Recipient = { id: string; name: string; email: string; role: string; comple
 const initial: Config = { enabled: false, threshold: 50, audience: "all", subject: "", message: "", cooldownDays: 14 };
 
 export default function ProfileReminderAutomation({ close }: { close: () => void }) {
+  const messageRef = useRef<HTMLTextAreaElement>(null);
   const [config, setConfig] = useState(initial);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -26,6 +27,15 @@ export default function ProfileReminderAutomation({ close }: { close: () => void
     finally { setBusy(false); }
   };
   useEffect(() => { void load(); }, []);
+
+  const insertVariable = (variable: string) => {
+    const token = `{{${variable}}}`;
+    const textarea = messageRef.current;
+    const start = textarea?.selectionStart ?? config.message.length;
+    const end = textarea?.selectionEnd ?? config.message.length;
+    setConfig((current) => ({ ...current, message: `${current.message.slice(0, start)}${token}${current.message.slice(end)}` }));
+    requestAnimationFrame(() => { textarea?.focus(); textarea?.setSelectionRange(start + token.length, start + token.length); });
+  };
 
   const process = async (action: "save" | "preview" | "run") => {
     if (action === "run" && !window.confirm(`Send reminders to ${recipients.length} eligible users?`)) return;
@@ -52,7 +62,8 @@ export default function ProfileReminderAutomation({ close }: { close: () => void
         <div className="flex items-center justify-between"><h3 className="font-black text-slate-900">Automation settings</h3><label className="inline-flex items-center gap-2 text-xs font-black text-slate-600"><span>{config.enabled ? "Enabled" : "Disabled"}</span><input type="checkbox" checked={config.enabled} onChange={(event) => setConfig({ ...config, enabled: event.target.checked })} className="h-5 w-5 accent-violet-600" /></label></div>
         <div className="mt-4 grid gap-4 sm:grid-cols-3"><label className="text-xs font-black uppercase tracking-wider text-slate-500">Audience<select value={config.audience} onChange={(event) => setConfig({ ...config, audience: event.target.value as Config["audience"] })} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-800"><option value="all">Freelancers & employers</option><option value="freelancer">Freelancers only</option><option value="employer">Employers only</option></select></label><label className="text-xs font-black uppercase tracking-wider text-slate-500">Profile threshold<input type="number" min={0} max={100} value={config.threshold} onChange={(event) => setConfig({ ...config, threshold: Number(event.target.value) })} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-800" /></label><label className="text-xs font-black uppercase tracking-wider text-slate-500">Cooldown days<input type="number" min={1} max={90} value={config.cooldownDays} onChange={(event) => setConfig({ ...config, cooldownDays: Number(event.target.value) })} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-800" /></label></div>
         <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Professional subject<input value={config.subject} onChange={(event) => setConfig({ ...config, subject: event.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-violet-400" /></label>
-        <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Professional message<textarea value={config.message} onChange={(event) => setConfig({ ...config, message: event.target.value })} rows={7} className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-6 outline-none focus:border-violet-400" /></label>
+        <div className="mt-4"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Insert personalized field</p><div className="mt-2 flex flex-wrap gap-2">{["name", "role", "completion", "profile_url", "missing_fields"].map((variable) => <button type="button" key={variable} onClick={() => insertVariable(variable)} className="rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-1.5 font-mono text-[11px] font-bold text-violet-700 hover:border-violet-300 hover:bg-violet-100">{`{{${variable}}}`}</button>)}</div></div>
+        <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Professional message<textarea ref={messageRef} value={config.message} onChange={(event) => setConfig({ ...config, message: event.target.value })} rows={7} placeholder="Click a personalized field above to insert it here." className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-6 outline-none focus:border-violet-400" /></label>
         <div className="mt-4 flex justify-end"><button onClick={() => void process("save")} disabled={busy} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50">Save settings</button></div>
       </section>}
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

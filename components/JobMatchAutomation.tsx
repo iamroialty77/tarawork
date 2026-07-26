@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BriefcaseBusiness, RefreshCw, Send, Settings2, X } from "lucide-react";
 
 type Config = { enabled: boolean; threshold: number; subject: string; message: string; cooldownDays: number };
@@ -8,6 +8,7 @@ type Recipient = { userId: string; name: string; email: string; jobTitle: string
 const initial: Config = { enabled: false, threshold: 50, subject: "", message: "", cooldownDays: 14 };
 
 export default function JobMatchAutomation({ close }: { close: () => void }) {
+  const messageRef = useRef<HTMLTextAreaElement>(null);
   const [config, setConfig] = useState(initial);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -28,6 +29,15 @@ export default function JobMatchAutomation({ close }: { close: () => void }) {
     finally { setBusy(false); }
   };
   useEffect(() => { void load(); }, []);
+
+  const insertVariable = (variable: string) => {
+    const token = `{{${variable}}}`;
+    const textarea = messageRef.current;
+    const start = textarea?.selectionStart ?? config.message.length;
+    const end = textarea?.selectionEnd ?? config.message.length;
+    setConfig((current) => ({ ...current, message: `${current.message.slice(0, start)}${token}${current.message.slice(end)}` }));
+    requestAnimationFrame(() => { textarea?.focus(); textarea?.setSelectionRange(start + token.length, start + token.length); });
+  };
 
   const process = async (action: "save" | "preview" | "run") => {
     if (action === "run" && !window.confirm(`Send job matches to ${selectedUserIds.length} selected freelancer${selectedUserIds.length === 1 ? "" : "s"}?`)) return;
@@ -59,7 +69,8 @@ export default function JobMatchAutomation({ close }: { close: () => void }) {
         <div className="flex items-center justify-between"><h3 className="font-black text-slate-900">Automation settings</h3><label className="inline-flex items-center gap-2 text-xs font-black text-slate-600"><span>{config.enabled ? "Enabled" : "Disabled"}</span><input type="checkbox" checked={config.enabled} onChange={(event) => setConfig({ ...config, enabled: event.target.checked })} className="h-5 w-5 accent-emerald-600" /></label></div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="text-xs font-black uppercase tracking-wider text-slate-500">Minimum match score<input type="number" min={50} max={100} value={config.threshold} onChange={(event) => setConfig({ ...config, threshold: Number(event.target.value) })} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-800" /></label><label className="text-xs font-black uppercase tracking-wider text-slate-500">Same-job cooldown<input type="number" min={1} max={90} value={config.cooldownDays} onChange={(event) => setConfig({ ...config, cooldownDays: Number(event.target.value) })} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-800" /></label></div>
         <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Professional subject<input value={config.subject} onChange={(event) => setConfig({ ...config, subject: event.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-emerald-400" /></label>
-        <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Professional message<textarea value={config.message} onChange={(event) => setConfig({ ...config, message: event.target.value })} rows={7} className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-6 outline-none focus:border-emerald-400" /></label>
+        <div className="mt-4"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Insert personalized field</p><div className="mt-2 flex flex-wrap gap-2">{["name", "job_title", "company", "match_score", "matched_skills", "missing_skills", "job_url"].map((variable) => <button type="button" key={variable} onClick={() => insertVariable(variable)} className="rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 font-mono text-[11px] font-bold text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100">{`{{${variable}}}`}</button>)}</div></div>
+        <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Professional message<textarea ref={messageRef} value={config.message} onChange={(event) => setConfig({ ...config, message: event.target.value })} rows={7} placeholder="Click a personalized field above to insert it here." className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-6 outline-none focus:border-emerald-400" /></label>
         <div className="mt-4 flex justify-end"><button onClick={() => void process("save")} disabled={busy} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50">Save settings</button></div>
       </section>}
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
