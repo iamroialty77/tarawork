@@ -139,12 +139,28 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   };
 
   const importGoogleLink = async () => {
-    const match = googleSheetUrl.trim().match(/^https:\/\/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]{10,200})(?:\/|$)/i);
-    if (!match) { setError("Paste a valid Google Sheets URL."); return; }
-    const id = match[1];
+    const link = googleSheetUrl.trim();
+    const sheetMatch = link.match(/^https:\/\/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]{10,200})(?:\/|$)/i);
+    const driveMatch = link.match(/^https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]{10,200})(?:\/|$)/i);
+    if (!sheetMatch && !driveMatch) { setError("Paste a valid Google Sheets or Google Drive file URL."); return; }
     const gidMatch = googleSheetUrl.match(/(?:[?#&]gid=)(\d+)/i);
     setBusy(true); setError(""); setNotice("");
     try {
+      if (driveMatch) {
+        const response = await fetch(`/api/admin/google-sheets?driveFileId=${encodeURIComponent(driveMatch[1])}`, { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to import this Google Drive file.");
+        const importedHeaders: string[] = data.headers || [];
+        const importedRows: CsvRow[] = data.rows || [];
+        const sourceName = String(data.fileName || "Google Drive CSV").replace(/\.csv$/i, "");
+        const detected = importedHeaders.find((header) => /^(email|email_address|emailaddress|e_mail)$/i.test(header)) || importedHeaders.find((header) => header.includes("email")) || "";
+        setHeaders(importedHeaders); setRows(importedRows); setSelectedIndexes([]); setEmailColumn(detected);
+        setFileName(data.fileName || "Google Drive CSV"); setAlias(sourceName.replace(/[^a-zA-Z0-9_-]+/g, "_").toLowerCase() || "google_drive_csv");
+        setShowComposer(false); setShowGoogle(false); setGoogleSheetUrl("");
+        setNotice(`${importedRows.length} rows imported from Google Drive${data.wasLimited ? " (first 500 only)" : ""}.`);
+        return;
+      }
+      const id = sheetMatch![1];
       const response = await fetch(`/api/admin/google-sheets?spreadsheetId=${encodeURIComponent(id)}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to open this Google Sheet.");

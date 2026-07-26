@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminUser } from "@/lib/authz";
 import { assertSameOrigin } from "@/lib/security";
-import { disconnectGoogleConnection, googleConnectionStatus, listGoogleSheetTabs, listGoogleSpreadsheets, readGoogleSheet } from "@/lib/googleSheets";
+import { disconnectGoogleConnection, googleConnectionStatus, listGoogleSheetTabs, listGoogleSpreadsheets, readGoogleSheet, readPublicGoogleDriveCsv } from "@/lib/googleSheets";
 
 const validId = (value: string) => /^[a-zA-Z0-9_-]{10,200}$/.test(value);
 
@@ -12,7 +12,12 @@ export async function GET(req: NextRequest) {
     const adminId = admin.user!.id;
     const url = new URL(req.url);
     const spreadsheetId = url.searchParams.get("spreadsheetId") || "";
+    const driveFileId = url.searchParams.get("driveFileId") || "";
     const sheetName = (url.searchParams.get("sheetName") || "").slice(0, 200);
+    if (driveFileId) {
+      if (!validId(driveFileId)) return NextResponse.json({ error: "Invalid Google Drive file ID." }, { status: 400 });
+      return NextResponse.json(await readPublicGoogleDriveCsv(driveFileId));
+    }
     const status = await googleConnectionStatus(adminId);
     if (!spreadsheetId) return NextResponse.json({ ...status, spreadsheets: status.connected ? await listGoogleSpreadsheets(adminId) : [] });
     if (!validId(spreadsheetId)) return NextResponse.json({ error: "Invalid spreadsheet ID." }, { status: 400 });

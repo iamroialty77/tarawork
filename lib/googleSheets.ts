@@ -148,6 +148,54 @@ export async function readGoogleSheet(spreadsheetId: string, sheetName: string, 
   return { headers, rows, wasLimited: values.length > 501 };
 }
 
+export async function readPublicGoogleDriveCsv(fileId: string) {
+  const response = await fetch(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`, {
+    redirect: "follow",
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Unable to download this Google Drive file.");
+  const contentLength = Number(response.headers.get("content-length") || "0");
+  if (contentLength > 2 * 1024 * 1024) throw new Error("Google Drive CSV files must be 2 MB or smaller.");
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > 2 * 1024 * 1024) throw new Error("Google Drive CSV files must be 2 MB or smaller.");
+  const contentType = response.headers.get("content-type") || "";
+  const disposition = response.headers.get("content-disposition") || "";
+  if (contentType.includes("text/html")) throw new Error("Make the Google Drive CSV accessible to anyone with the link, then try again.");
+  const fileNameMatch = disposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+  const fileName = fileNameMatch ? decodeURIComponent(fileNameMatch[1].replace(/"$/, "")) : "Google Drive CSV";
+  if (!/\.csv$/i.test(fileName) && !contentType.includes("csv") && !contentType.includes("octet-stream")) {
+    throw new Error("This Drive link must point to a CSV file.");
+  }
+
+  const text = new TextDecoder("utf-8").decode(bytes);
+  const records: string[][] = [];
+  let row: string[] = [], field = "", quoted = false;
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index];
+    if (character === '"') {
+      if (quoted && text[index + 1] === '"') { field += '"'; index++; } else quoted = !quoted;
+    } else if (character === "," && !quoted) {
+      row.push(field); field = "";
+    } else if ((character === "\n" || character === "\r") && !quoted) {
+      if (character === "\r" && text[index + 1] === "\n") index++;
+      row.push(field); if (row.some((value) => value.trim())) records.push(row); row = []; field = "";
+    } else {
+      field += character;
+    }
+  }
+  row.push(field); if (row.some((value) => value.trim())) records.push(row);
+  if (quoted) throw new Error("The Google Drive CSV contains an unclosed quoted value.");
+  const rawHeaders = (records.shift() || []).map((value) => value.replace(/^\uFEFF/, "").trim());
+  if (!rawHeaders.length || rawHeaders.some((header) => !header)) throw new Error("Every CSV column must have a header.");
+  const headers = rawHeaders.map((header, index) => {
+    const normalized = header.replace(/[^\p{L}\p{N}_-]+/gu, "_").replace(/^_+|_+$/g, "").toLowerCase() || `column_${index + 1}`;
+    return rawHeaders.slice(0, index).some((item) => item.toLowerCase() === header.toLowerCase()) ? `${normalized}_${index + 1}` : normalized;
+  });
+  const rows = records.slice(0, 500).map((values) =>
+    Object.fromEntries(headers.map((header, index) => [header, clean(values[index], 2000)])));
+  return { fileName, headers, rows, wasLimited: records.length > 500 };
+}
+
 export async function disconnectGoogleConnection(adminId: string) {
   const refreshToken = await getRefreshToken(adminId);
   if (refreshToken) {
