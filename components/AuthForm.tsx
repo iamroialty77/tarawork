@@ -239,7 +239,10 @@ export default function AuthForm() {
           
           let message = error.message || "An error occurred during signup.";
           
-          if (message.includes("Database error saving new user") || error.status === 500) {
+          if (message.toLowerCase().includes("invalid-input-secret")) {
+            message = "The security check is temporarily misconfigured. The administrator must update the Cloudflare Turnstile secret in Supabase Auth.";
+            setShowSMTPHelp(true);
+          } else if (message.includes("Database error saving new user") || error.status === 500) {
             message = "Authentication Error (500): Your Supabase project has an issue with email sending or database configuration. Please check Supabase Dashboard > Authentication > Logs.";
             setShowSMTPHelp(true);
           } else if (message.includes("Email rate limit exceeded")) {
@@ -281,6 +284,9 @@ export default function AuthForm() {
         message.toLowerCase().includes("gateway timeout")
       ) {
         message = "Password reset email service timed out. Please wait a minute and try again. If this keeps happening, the Supabase email sender needs Custom SMTP configured.";
+        setShowSMTPHelp(true);
+      } else if (message.toLowerCase().includes("invalid-input-secret")) {
+        message = "The security check is temporarily misconfigured. The administrator must update the Cloudflare Turnstile secret in Supabase Auth.";
         setShowSMTPHelp(true);
       } else if (message.includes("Email rate limit exceeded")) {
         message = "System Limit Reached: Too many email requests (5 per hour limit). Please wait an hour before trying again or contact our technical team for scaling options.";
