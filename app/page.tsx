@@ -4,6 +4,11 @@ import HomeEntry from "@/components/HomeEntry";
 import { getSiteSettings } from "@/lib/siteSettings";
 import { DEFAULT_SITE_SETTINGS } from "@/lib/siteSettingsShared";
 
+// Site settings are editable in the admin panel and stored in Supabase. Rendering
+// this page at request time avoids making a temporary database/configuration issue
+// fail the entire production build and ensures published changes appear immediately.
+export const dynamic = "force-dynamic";
+
 const getLandingSettings = cache(() => getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS));
 
 export async function generateMetadata(): Promise<Metadata> {
