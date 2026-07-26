@@ -39,7 +39,7 @@ export default function SiteSettingsEditor() {
     finally { setSaving(false); }
   };
 
-  const fields: Array<{ key: keyof SiteSettings; label: string; placeholder: string }> = [
+  const fields: Array<{ key: "facebookUrl" | "linkedinUrl" | "instagramUrl" | "youtubeUrl" | "xUrl"; label: string; placeholder: string }> = [
     { key: "facebookUrl", label: "Facebook URL", placeholder: "https://facebook.com/..." },
     { key: "linkedinUrl", label: "LinkedIn URL", placeholder: "https://linkedin.com/company/..." },
     { key: "instagramUrl", label: "Instagram URL", placeholder: "https://instagram.com/..." },
