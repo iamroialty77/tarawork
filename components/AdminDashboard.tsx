@@ -367,13 +367,23 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: editingUserId,
-          ...userEditDraft,
-          skills: userEditDraft.skills.split(",").map((skill: string) => skill.trim()).filter(Boolean),
+          name: userEditDraft.name.slice(0, 160),
+          username: userEditDraft.username.slice(0, 80),
+          role: userEditDraft.role,
+          status: userEditDraft.status,
+          category: userEditDraft.category.slice(0, 120),
+          bio: userEditDraft.bio.slice(0, 5000),
+          avatarUrl: userEditDraft.avatarUrl.length <= 1000 ? userEditDraft.avatarUrl : undefined,
+          companyName: userEditDraft.companyName.slice(0, 180),
+          hourlyRate: userEditDraft.hourlyRate.slice(0, 80),
+          skills: userEditDraft.skills.split(",").map((skill: string) => skill.trim().slice(0, 60)).filter(Boolean).slice(0, 50),
         }),
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Unable to update profile.");
-      setUsers((current) => current.map((user) => user.id === editingUserId ? result.profile : user));
+      const responseText = await response.text();
+      let result: any = {};
+      try { result = responseText ? JSON.parse(responseText) : {}; } catch { result = {}; }
+      if (!response.ok) throw new Error(result.error || responseText.slice(0, 300) || `Unable to update profile (${response.status}).`);
+      setUsers((current) => current.map((user) => user.id === editingUserId ? { ...user, ...result.profile } : user));
       setVerificationRole(result.profile.role === "employer" ? "employer" : "freelancer");
       setEditingUserId(null);
       notify("Profile updated successfully.");

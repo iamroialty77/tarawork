@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
     const username = cleanLine(body.username, 80).toLowerCase().replace(/[^a-z0-9_-]/g, "");
     const category = cleanLine(body.category, 120) || "General";
     const bio = cleanText(body.bio, 5000);
-    const avatarUrl = cleanLine(body.avatarUrl, 1000);
+    const avatarProvided = typeof body.avatarUrl === "string";
+    const avatarUrl = avatarProvided ? cleanLine(body.avatarUrl, 1000) : "";
     const companyName = cleanLine(body.companyName, 180);
     const hourlyRate = cleanLine(body.hourlyRate, 80);
     const skills = Array.isArray(body.skills)
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (!roles.has(role)) return NextResponse.json({ error: "Role must be freelancer or employer." }, { status: 400 });
     if (!statuses.has(status)) return NextResponse.json({ error: "Invalid verification status." }, { status: 400 });
     if (username && username.length < 3) return NextResponse.json({ error: "Username must contain at least 3 characters." }, { status: 400 });
-    if (avatarUrl) {
+    if (avatarProvided && avatarUrl) {
       try {
         if (new URL(avatarUrl).protocol !== "https:") throw new Error();
       } catch {
@@ -46,19 +47,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { data, error } = await supabaseAdmin.from("profiles").update({
+    const updatePayload = {
       name,
       username: username || null,
       role,
       status,
       category,
       bio,
-      avatar_url: avatarUrl || null,
       companyName: role === "employer" ? companyName : null,
       hourlyRate: role === "freelancer" ? hourlyRate : "",
       skills: role === "freelancer" ? skills : [],
       updated_at: new Date().toISOString(),
-    }).eq("id", userId).select("*").maybeSingle();
+      ...(avatarProvided ? { avatar_url: avatarUrl || null } : {}),
+    };
+    const { data, error } = await supabaseAdmin.from("profiles").update(updatePayload)
+      .eq("id", userId)
+      .select("id,name,username,role,status,category,bio,avatar_url,companyName,hourlyRate,skills,updated_at")
+      .maybeSingle();
 
     if (error) {
       const duplicate = /duplicate|unique/i.test(error.message);
