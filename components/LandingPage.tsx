@@ -8,6 +8,8 @@ import {
   BookOpen,
   Briefcase,
   CheckCircle2,
+  ChevronDown,
+  Clock3,
   Mail,
   ShieldCheck,
   Sparkles,
@@ -17,6 +19,7 @@ import {
 import type { BlogPost } from "@/lib/blog";
 import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
+import { landingFaqs } from "@/lib/landingSeoContent";
 
 type LandingBlogPost = Pick<BlogPost, "title" | "excerpt" | "href" | "image" | "imageAlt" | "category" | "readTime">;
 
@@ -25,15 +28,18 @@ const collaborationImage = "/landing/filipino-collaboration.png";
 const workspaceImage = "/landing/filipino-remote-work.png";
 
 const categories = [
-  "Virtual Assistants",
-  "Web Developers",
-  "Social Media Managers",
-  "Graphic Designers",
-  "Content Writers",
-  "Customer Support",
+  { name: "Virtual Assistants", href: "/virtual-assistant-philippines" },
+  { name: "Web Developers", href: "/hire-filipino-web-developer" },
+  { name: "Social Media Managers", href: "/hire-filipino-social-media-manager" },
+  { name: "Graphic Designers", href: "/hire-filipino-freelancers" },
+  { name: "Content Writers", href: "/hire-filipino-freelancers" },
+  { name: "Customer Support", href: "/hire-filipino-freelancers" },
 ];
 
-export default function LandingPage() {
+type LandingJob = { id: string; title: string; category: string; rate: string; duration: string; href: string };
+type LandingFreelancer = { id: string; name: string; category: string; bio: string; skills: string[]; avatarUrl: string; hourlyRate: string; href: string };
+
+export default function LandingPage({ jobs = [], freelancers = [] }: { jobs?: LandingJob[]; freelancers?: LandingFreelancer[] }) {
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -155,15 +161,55 @@ export default function LandingPage() {
           <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[280px_1fr] lg:items-center">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-700">Popular categories</p>
+              <h2 className="mt-2 text-2xl font-black leading-tight text-zinc-950">Popular Freelance Job Categories</h2>
               <p className="mt-2 text-sm font-semibold leading-6 text-zinc-500">Browse common services requested by remote-first teams.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               {categories.map((category) => (
-                <span key={category} className="flex min-h-12 items-center border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-black leading-5 text-zinc-800 shadow-sm sm:px-4">
-                  {category}
-                </span>
+                <Link key={category.name} href={category.href} className="group flex min-h-12 items-center justify-between gap-2 border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-black leading-5 text-zinc-800 shadow-sm transition hover:border-teal-700 hover:bg-white hover:text-teal-800 sm:px-4">
+                  {category.name}
+                  <ArrowRight className="h-3.5 w-3.5 opacity-40 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                </Link>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section id="latest-jobs" className="w-full bg-zinc-50 px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Remote opportunities</p>
+                <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">Latest Remote Jobs in the Philippines</h2>
+                <p className="mt-5 text-base font-medium leading-8 text-zinc-600">Explore recently published remote roles for Filipino freelancers, virtual assistants, creative professionals, and technical specialists.</p>
+              </div>
+              <Link href="/remote-jobs-philippines" className="inline-flex w-fit items-center gap-2 border border-zinc-300 bg-white px-5 py-3 text-sm font-black text-zinc-900 transition hover:border-teal-700 hover:text-teal-800">
+                Browse remote jobs <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            {jobs.length ? (
+              <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {jobs.map((job) => (
+                  <article key={job.id} className="group flex min-h-64 flex-col border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-teal-700 hover:shadow-xl">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-700">{job.category}</p>
+                    <h3 className="mt-4 text-xl font-black leading-7 text-zinc-950">{job.title}</h3>
+                    <div className="mt-5 space-y-2 text-sm font-semibold text-zinc-500">
+                      <p className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-teal-700" />{job.rate}</p>
+                      <p className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-teal-700" />{job.duration}</p>
+                    </div>
+                    <Link href={job.href} className="mt-auto inline-flex items-center gap-2 pt-6 text-sm font-black text-teal-800">
+                      View job details <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-10 border border-dashed border-zinc-300 bg-white p-8 text-center">
+                <p className="font-black text-zinc-900">New remote opportunities are being prepared.</p>
+                <p className="mt-2 text-sm text-zinc-500">Create a freelancer account to complete your profile and receive relevant job updates.</p>
+                <Link href="/auth?role=freelancer" className="mt-5 inline-flex items-center gap-2 bg-zinc-950 px-5 py-3 text-sm font-black text-white">Create freelancer profile <ArrowRight className="h-4 w-4" /></Link>
+              </div>
+            )}
           </div>
         </section>
 
@@ -217,6 +263,69 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section id="filipino-freelancers" className="w-full border-y border-zinc-200 bg-white px-4 py-16 sm:px-6 sm:py-24 lg:px-10">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Professional directory</p>
+              <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">Find Skilled Filipino Freelancers</h2>
+              <p className="mt-5 text-base font-medium leading-8 text-zinc-600">Review public profiles, relevant skills, service categories, and professional background before starting a hiring conversation.</p>
+            </div>
+            {freelancers.length ? (
+              <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {freelancers.map((freelancer) => (
+                  <article key={freelancer.id} className="flex min-h-72 flex-col border border-zinc-200 bg-zinc-50 p-6 transition hover:border-teal-700 hover:bg-white hover:shadow-xl">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-teal-800 text-base font-black text-white">{freelancer.name.slice(0, 1).toUpperCase()}</div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-lg font-black text-zinc-950">{freelancer.name}</h3>
+                        <p className="truncate text-xs font-black uppercase tracking-[0.14em] text-teal-700">{freelancer.category}</p>
+                      </div>
+                    </div>
+                    <p className="mt-5 line-clamp-3 text-sm font-medium leading-6 text-zinc-600">{freelancer.bio}</p>
+                    {freelancer.skills.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{freelancer.skills.map((skill) => <span key={skill} className="border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-600">{skill}</span>)}</div>}
+                    <div className="mt-auto flex items-end justify-between gap-4 pt-6">
+                      <p className="text-xs font-bold text-zinc-500">{freelancer.hourlyRate || "View profile for rates"}</p>
+                      <Link href={freelancer.href} className="inline-flex items-center gap-2 text-sm font-black text-teal-800">View profile <ArrowRight className="h-4 w-4" /></Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-10 flex flex-col items-center border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
+                <Users className="h-8 w-8 text-teal-700" />
+                <p className="mt-4 font-black text-zinc-900">Build a discoverable professional profile.</p>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-500">Show employers your services, portfolio work, skills, and remote-work experience.</p>
+                <Link href="/auth?role=freelancer" className="mt-5 bg-teal-800 px-5 py-3 text-sm font-black text-white">Join as a freelancer</Link>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="w-full bg-amber-50 px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
+          <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-800">Remote hiring advantage</p>
+              <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">Why Hire Filipino Talent?</h2>
+              <p className="mt-5 text-base font-medium leading-8 text-zinc-600">Filipino remote professionals support international teams across administration, customer experience, creative production, marketing, finance, and technology.</p>
+              <Link href="/hire-filipino-freelancers" className="mt-7 inline-flex items-center gap-2 bg-zinc-950 px-5 py-3 text-sm font-black text-white">Learn about hiring Filipino freelancers <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                ["Clear communication", "Strong English communication and a service-oriented professional culture support distributed teams and international clients."],
+                ["Broad professional skills", "Hire across virtual assistance, development, design, writing, support, bookkeeping, marketing, and operations."],
+                ["Remote-work adaptability", "Many Filipino professionals are experienced with online collaboration, flexible schedules, and global business tools."],
+                ["Long-term team potential", "Clear expectations and fair working relationships can develop into dependable, long-term remote partnerships."],
+              ].map(([title, body]) => (
+                <article key={title} className="border border-amber-200 bg-white p-6">
+                  <CheckCircle2 className="h-6 w-6 text-teal-700" />
+                  <h3 className="mt-5 text-lg font-black text-zinc-950">{title}</h3>
+                  <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">{body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="grid w-full bg-zinc-950 text-white lg:grid-cols-2">
           <div className="relative min-h-[320px] sm:min-h-[420px] lg:min-h-[520px]">
             <Image
@@ -253,9 +362,9 @@ export default function LandingPage() {
           <div className="mx-auto grid w-full max-w-7xl gap-12 xl:grid-cols-[420px_1fr]">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">How It Works</p>
-              <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-4xl">From job post to shortlist without the clutter.</h2>
+              <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-4xl">How TaraWork Works</h2>
               <p className="mt-5 text-base leading-8 text-zinc-600">
-                Start with a clear role, review freelancer profiles, then move promising matches into conversations.
+                From a clear job post to a focused shortlist: review freelancer profiles, compare relevant experience, then move promising matches into conversations.
               </p>
             </div>
             <div className="grid gap-5 md:grid-cols-3">
@@ -349,6 +458,27 @@ export default function LandingPage() {
                 ))}
               </div>
             )}
+          </div>
+        </section>
+
+        <section id="faq" className="scroll-mt-24 w-full bg-white px-4 py-16 sm:px-6 sm:py-24 lg:px-10">
+          <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">Helpful answers</p>
+              <h2 className="mt-4 text-3xl font-black leading-tight text-zinc-950 sm:text-5xl">Frequently Asked Questions</h2>
+              <p className="mt-5 text-base font-medium leading-8 text-zinc-600">Learn how employers find Filipino talent and how freelancers discover remote work opportunities through TaraWork.</p>
+            </div>
+            <div className="divide-y divide-zinc-200 border-y border-zinc-200">
+              {landingFaqs.map((faq, index) => (
+                <details key={faq.question} className="group py-2" open={index === 0}>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-5 px-2 py-5 text-left text-base font-black text-zinc-950 sm:text-lg">
+                    {faq.question}
+                    <ChevronDown className="h-5 w-5 shrink-0 text-teal-700 transition group-open:rotate-180" />
+                  </summary>
+                  <p className="max-w-3xl px-2 pb-6 pr-10 text-sm font-medium leading-7 text-zinc-600 sm:text-base">{faq.answer}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
 

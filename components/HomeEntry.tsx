@@ -20,7 +20,16 @@ function HomeLoading({ label }: { label: string }) {
   );
 }
 
-export default function HomeEntry() {
+type LandingJob = { id: string; title: string; category: string; rate: string; duration: string; href: string };
+type LandingFreelancer = { id: string; name: string; category: string; bio: string; skills: string[]; avatarUrl: string; hourlyRate: string; href: string };
+
+export default function HomeEntry({
+  landingJobs = [],
+  landingFreelancers = [],
+}: {
+  landingJobs?: LandingJob[];
+  landingFreelancers?: LandingFreelancer[];
+}) {
   const [authState, setAuthState] = useState<"guest" | "authenticated">("guest");
 
   useEffect(() => {
@@ -49,5 +58,7 @@ export default function HomeEntry() {
     };
   }, []);
 
-  return authState === "authenticated" ? <TaraWorkApp /> : <LandingPage />;
+  return authState === "authenticated"
+    ? <TaraWorkApp />
+    : <LandingPage jobs={landingJobs} freelancers={landingFreelancers} />;
 }
