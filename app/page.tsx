@@ -16,7 +16,7 @@ const getLandingSettings = cache(() => getSiteSettings().catch(() => DEFAULT_SIT
 const getLandingDirectory = cache(async () => {
   const [{ data: jobs }, { data: profiles }] = await Promise.all([
     supabaseAdmin.from("jobs").select("id,title,category,rate,duration,created_at")
-      .eq("status", "live").order("created_at", { ascending: false }).limit(6),
+      .eq("status", "live").order("created_at", { ascending: false }).limit(3),
     supabaseAdmin.from("profiles").select("id,username,name,category,bio,skills,avatar_url,hourlyRate,aiInsights,status")
       .eq("role", "freelancer").order("updated_at", { ascending: false }).limit(50),
   ]);
@@ -67,7 +67,7 @@ const getLandingDirectory = cache(async () => {
       profile.rateValue > 0 &&
       profile.status !== "suspended"
     ).sort((a, b) => Number(b.status === "verified") - Number(a.status === "verified"))
-      .slice(0, 6).map((profile) => ({
+      .slice(0, 3).map((profile) => ({
       id: profile.id,
       name: profile.name,
       category: profile.category,

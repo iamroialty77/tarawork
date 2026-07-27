@@ -5,16 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
-const navLinks = [
-  { label: "Features", href: "/#features" },
-  { label: "Get Shortlist", href: "/hire/request" },
-  { label: "Hire Freelancers", href: "/hire-filipino-freelancers" },
-  { label: "Virtual Assistants", href: "/virtual-assistant-philippines" },
-  { label: "Blog", href: "/blog" },
-  { label: "Safety", href: "/safety" },
-  { label: "How it works", href: "/#how-it-works" },
-  { label: "Contact", href: "/#contact" },
-];
+  const navLinks = [
+    { label: "Find Talent", href: "/#filipino-freelancers" },
+    { label: "Remote Jobs", href: "/#latest-jobs" },
+    { label: "How It Works", href: "/#how-it-works" },
+    { label: "Guides", href: "/blog" },
+    { label: "Contact", href: "/#contact" },
+  ];
 
 export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
   const pathname = usePathname();
