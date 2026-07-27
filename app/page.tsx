@@ -17,8 +17,8 @@ const getLandingDirectory = cache(async () => {
   const [{ data: jobs }, { data: profiles }] = await Promise.all([
     supabaseAdmin.from("jobs").select("id,title,category,rate,duration,created_at")
       .eq("status", "live").order("created_at", { ascending: false }).limit(6),
-    supabaseAdmin.from("profiles").select("id,username,name,category,bio,skills,avatar_url,hourlyRate")
-      .eq("role", "freelancer").order("updated_at", { ascending: false }).limit(6),
+    supabaseAdmin.from("profiles").select("id,username,name,category,bio,skills,avatar_url,hourlyRate,aiInsights,status")
+      .eq("role", "freelancer").order("updated_at", { ascending: false }).limit(50),
   ]);
   return {
     jobs: (jobs || []).filter((job) => job.id && job.title).map((job) => ({
@@ -29,15 +29,54 @@ const getLandingDirectory = cache(async () => {
       duration: String(job.duration || "Flexible"),
       href: `/jobs/${createJobShareToken({ id: String(job.id), title: String(job.title) })}`,
     })),
-    freelancers: (profiles || []).filter((profile) => profile.id && profile.name).map((profile) => ({
-      id: String(profile.id),
-      name: String(profile.name),
-      category: String(profile.category || "Remote Professional"),
-      bio: String(profile.bio || "View this professional profile to learn more about their skills and services."),
-      skills: Array.isArray(profile.skills) ? profile.skills.map(String).slice(0, 3) : [],
-      avatarUrl: String(profile.avatar_url || ""),
-      hourlyRate: String(profile.hourlyRate || ""),
-      href: `/${encodeURIComponent(String(profile.username || profile.id))}`,
+    freelancers: (profiles || []).map((profile) => {
+      const insights = profile.aiInsights && typeof profile.aiInsights === "object"
+        ? profile.aiInsights as Record<string, unknown> : {};
+      const about = insights.aboutSections && typeof insights.aboutSections === "object"
+        ? insights.aboutSections as Record<string, unknown> : {};
+      const bio = String(profile.bio || Object.values(about).filter((value) => typeof value === "string" && value.trim()).join(" "));
+      const skills = Array.isArray(profile.skills) ? profile.skills.map(String).map((skill) => skill.trim()).filter(Boolean) : [];
+      const services = Array.isArray(insights.servicesOffered)
+        ? insights.servicesOffered.map((service) => service && typeof service === "object"
+          ? String((service as Record<string, unknown>).serviceName || "").trim() : "").filter(Boolean)
+        : [];
+      const hourlyRate = String(profile.hourlyRate || "").trim();
+      const rateValue = Number.parseFloat(hourlyRate.replace(/[^0-9.]/g, ""));
+      return {
+        id: String(profile.id || ""),
+        name: String(profile.name || "").trim(),
+        category: String(profile.category || "").trim(),
+        bio,
+        skills,
+        services,
+        avatarUrl: String(profile.avatar_url || "").trim(),
+        hourlyRate,
+        rateValue,
+        status: String(profile.status || "").toLowerCase(),
+        href: `/${encodeURIComponent(String(profile.username || profile.id))}`,
+      };
+    }).filter((profile) =>
+      profile.id &&
+      profile.name &&
+      profile.category &&
+      profile.avatarUrl &&
+      profile.bio.trim().length >= 60 &&
+      profile.skills.length >= 2 &&
+      profile.services.length >= 1 &&
+      Number.isFinite(profile.rateValue) &&
+      profile.rateValue > 0 &&
+      profile.status !== "suspended"
+    ).sort((a, b) => Number(b.status === "verified") - Number(a.status === "verified"))
+      .slice(0, 6).map((profile) => ({
+      id: profile.id,
+      name: profile.name,
+      category: profile.category,
+      bio: profile.bio,
+      avatarUrl: profile.avatarUrl,
+      hourlyRate: profile.hourlyRate,
+      href: profile.href,
+      skills: profile.skills.slice(0, 4),
+      services: profile.services.slice(0, 2),
     })),
   };
 });

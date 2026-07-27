@@ -37,7 +37,7 @@ const categories = [
 ];
 
 type LandingJob = { id: string; title: string; category: string; rate: string; duration: string; href: string };
-type LandingFreelancer = { id: string; name: string; category: string; bio: string; skills: string[]; avatarUrl: string; hourlyRate: string; href: string };
+type LandingFreelancer = { id: string; name: string; category: string; bio: string; skills: string[]; services: string[]; avatarUrl: string; hourlyRate: string; href: string };
 
 export default function LandingPage({ jobs = [], freelancers = [] }: { jobs?: LandingJob[]; freelancers?: LandingFreelancer[] }) {
   const [contactForm, setContactForm] = useState({
@@ -275,16 +275,36 @@ export default function LandingPage({ jobs = [], freelancers = [] }: { jobs?: La
                 {freelancers.map((freelancer) => (
                   <article key={freelancer.id} className="flex min-h-72 flex-col border border-zinc-200 bg-zinc-50 p-6 transition hover:border-teal-700 hover:bg-white hover:shadow-xl">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-teal-800 text-base font-black text-white">{freelancer.name.slice(0, 1).toUpperCase()}</div>
+                      <div className="relative h-16 w-16 shrink-0 overflow-hidden border border-zinc-200 bg-zinc-100">
+                        <Image
+                          src={freelancer.avatarUrl}
+                          alt={`${freelancer.name}, ${freelancer.category} on TaraWork`}
+                          fill
+                          unoptimized
+                          sizes="64px"
+                          className="object-cover"
+                        />
+                      </div>
                       <div className="min-w-0">
                         <h3 className="truncate text-lg font-black text-zinc-950">{freelancer.name}</h3>
                         <p className="truncate text-xs font-black uppercase tracking-[0.14em] text-teal-700">{freelancer.category}</p>
+                        <p className="mt-1 text-sm font-black text-zinc-800">{freelancer.hourlyRate}</p>
                       </div>
                     </div>
-                    <p className="mt-5 line-clamp-3 text-sm font-medium leading-6 text-zinc-600">{freelancer.bio}</p>
-                    {freelancer.skills.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{freelancer.skills.map((skill) => <span key={skill} className="border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-600">{skill}</span>)}</div>}
+                    <div className="mt-5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">About</p>
+                      <p className="mt-2 line-clamp-3 text-sm font-medium leading-6 text-zinc-600">{freelancer.bio}</p>
+                    </div>
+                    <div className="mt-5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">Services offered</p>
+                      <div className="mt-2 flex flex-wrap gap-2">{freelancer.services.map((service) => <span key={service} className="bg-teal-50 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-teal-800">{service}</span>)}</div>
+                    </div>
+                    <div className="mt-5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">Core skills</p>
+                      <div className="mt-2 flex flex-wrap gap-2">{freelancer.skills.map((skill) => <span key={skill} className="border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-600">{skill}</span>)}</div>
+                    </div>
                     <div className="mt-auto flex items-end justify-between gap-4 pt-6">
-                      <p className="text-xs font-bold text-zinc-500">{freelancer.hourlyRate || "View profile for rates"}</p>
+                      <p className="text-xs font-bold text-zinc-500">Complete public profile</p>
                       <Link href={freelancer.href} className="inline-flex items-center gap-2 text-sm font-black text-teal-800">View profile <ArrowRight className="h-4 w-4" /></Link>
                     </div>
                   </article>
