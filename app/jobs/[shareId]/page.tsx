@@ -11,7 +11,7 @@ import PublicJobApplyButton from "../../../components/PublicJobApplyButton";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?: string }) | null> => {
+const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?: string; hiringOrganizationName?: string }) | null> => {
   const jobId = extractJobIdFromShareToken(shareId);
   if (!jobId) return null;
 
@@ -25,13 +25,15 @@ const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?
   if (error || !data) return null;
 
   let hirerReviewLabel = "No hirer reviews yet";
+  let hiringOrganizationName = "Confidential employer";
   if (data.employer_id) {
     const { data: employerProfile } = await supabaseAdmin
       .from("profiles")
-      .select("aiInsights")
+      .select("aiInsights,name,companyName")
       .eq("id", data.employer_id)
       .maybeSingle();
 
+    hiringOrganizationName = employerProfile?.companyName || employerProfile?.name || hiringOrganizationName;
     const aiInsights = employerProfile?.aiInsights as Record<string, unknown> | undefined;
     const reviewScore = typeof aiInsights?.hirerReviewScore === "number" ? aiInsights.hirerReviewScore : null;
     const reviewCount = typeof aiInsights?.hirerReviewCount === "number" ? aiInsights.hirerReviewCount : null;
@@ -47,6 +49,7 @@ const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?
     paymentMethod: data.paymentMethod || "Flat-Rate",
     jobType: data.jobType || "Contract",
     hirerReviewLabel,
+    hiringOrganizationName,
   };
 };
 
@@ -105,9 +108,58 @@ export default async function PublicJobPage({
   }
 
   const nextPath = `/jobs/${shareId}`;
+  const canonical = absoluteUrl(nextPath);
+  const employmentType = /full[\s-]?time/i.test(job.jobType || "")
+    ? "FULL_TIME"
+    : /part[\s-]?time/i.test(job.jobType || "")
+      ? "PART_TIME"
+      : /intern/i.test(job.jobType || "")
+        ? "INTERN"
+        : /temporary/i.test(job.jobType || "")
+          ? "TEMPORARY"
+          : "CONTRACTOR";
+  const createdAt = new Date(job.createdAt);
+  const datePosted = Number.isNaN(createdAt.getTime()) ? new Date().toISOString() : createdAt.toISOString();
+  const jobPostingStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: job.title,
+    description: job.description,
+    identifier: { "@type": "PropertyValue", name: siteName, value: job.id },
+    datePosted,
+    employmentType,
+    directApply: true,
+    hiringOrganization: {
+      "@type": "Organization",
+      name: job.hiringOrganizationName,
+      sameAs: absoluteUrl("/"),
+      logo: absoluteUrl("/tarawork-logo.png"),
+    },
+    jobLocationType: "TELECOMMUTE",
+    applicantLocationRequirements: { "@type": "Country", name: "Philippines" },
+    skills: job.skills.join(", "),
+    url: canonical,
+  };
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+      { "@type": "ListItem", position: 2, name: "Remote jobs", item: absoluteUrl("/remote-jobs-philippines") },
+      { "@type": "ListItem", position: 3, name: job.title, item: canonical },
+    ],
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 py-10 px-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingStructuredData).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData).replace(/</g, "\\u003c") }}
+      />
       <div className="max-w-4xl mx-auto">
         <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
           <div className="h-2 bg-slate-900" />

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Job, UserProfile } from "../types";
+import { trackConversion } from "../lib/analytics";
 
 type PublicJobApplyButtonProps = {
   job: Job;
@@ -204,6 +205,7 @@ export default function PublicJobApplyButton({ job, nextPath }: PublicJobApplyBu
           const { error: retryError } = await supabase.from("applications").insert([minimalData]);
           if (retryError) throw retryError;
 
+          trackConversion("job_apply", { job_id: job.id, job_title: job.title });
           setApplicationStatus("pending");
           setMessage("Your application was submitted. Some optional fields were skipped because of the current database schema.");
           setShowModal(false);
@@ -213,6 +215,7 @@ export default function PublicJobApplyButton({ job, nextPath }: PublicJobApplyBu
         throw insertError;
       }
 
+      trackConversion("job_apply", { job_id: job.id, job_title: job.title });
       setApplicationStatus("pending");
       setMessage("Your application was submitted successfully. The hirer can now review it.");
       setShowModal(false);

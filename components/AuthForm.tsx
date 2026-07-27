@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import TurnstileWidget from "./security/TurnstileWidget";
+import { trackConversion } from "@/lib/analytics";
 
 function readableAuthError(error: unknown, fallback: string) {
   const candidate = error && typeof error === "object" && "message" in error
@@ -285,6 +286,7 @@ export default function AuthForm() {
           return;
         }
 
+        trackConversion("sign_up", { method: "email", role });
         setSuccess("Registration successful! Please check your email to confirm your account.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -296,6 +298,7 @@ export default function AuthForm() {
         });
         resetCaptcha();
         if (error) throw error;
+        trackConversion("login", { method: "email" });
         setSuccess("Logged in successfully!");
         window.location.href = nextPath;
       }

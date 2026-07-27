@@ -34,10 +34,16 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
     seoDescription: clean(valueOrDefault(input, "seoDescription"), 180),
     seoKeywords: keywords(valueOrDefault(input, "seoKeywords")),
     googleSiteVerification: clean(valueOrDefault(input, "googleSiteVerification"), 200),
+    bingSiteVerification: clean(valueOrDefault(input, "bingSiteVerification"), 200),
+    gaMeasurementId: /^G-[A-Z0-9]+$/i.test(clean(valueOrDefault(input, "gaMeasurementId"), 30))
+      ? clean(valueOrDefault(input, "gaMeasurementId"), 30).toUpperCase() : "",
+    gtmContainerId: /^GTM-[A-Z0-9]+$/i.test(clean(valueOrDefault(input, "gtmContainerId"), 30))
+      ? clean(valueOrDefault(input, "gtmContainerId"), 30).toUpperCase() : "",
     canonicalUrl: url(valueOrDefault(input, "canonicalUrl")),
     ogTitle: clean(valueOrDefault(input, "ogTitle"), 70),
     ogDescription: clean(valueOrDefault(input, "ogDescription"), 200),
     ogImageUrl: imageUrl(valueOrDefault(input, "ogImageUrl")),
+    twitterCardType: input.twitterCardType === "summary" ? "summary" : "summary_large_image",
     searchIndexing: typeof input.searchIndexing === "boolean" ? input.searchIndexing : DEFAULT_SITE_SETTINGS.searchIndexing,
   };
 }

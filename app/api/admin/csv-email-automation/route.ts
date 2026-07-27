@@ -3,20 +3,13 @@ import nodemailer from "nodemailer";
 import { requireAdminUser } from "@/lib/authz";
 import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
 import { logEmailMessages, type EmailLogInput } from "@/lib/emailLog";
+import { renderCsvTemplate } from "@/lib/csvTemplate";
 
 export const runtime = "nodejs";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_ROWS = 500;
 const clean = (value: unknown, max: number) => String(value ?? "").trim().slice(0, max);
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-function render(template: string, alias: string, row: Record<string, string>) {
-  return template
-    .replace(/\{\{\s*([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_-]+)\s*\}\}/g, (match, source, column) =>
-      source.toLowerCase() === alias.toLowerCase() && Object.prototype.hasOwnProperty.call(row, column) ? row[column] : match)
-    .replace(/\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/g, (match, column) =>
-      Object.prototype.hasOwnProperty.call(row, column) ? row[column] : match);
-}
 
 export async function GET() {
   const admin = await requireAdminUser();
@@ -54,6 +47,14 @@ export async function POST(req: NextRequest) {
     }
     if (!recipients.length) return NextResponse.json({ error: "No valid email addresses were found in the selected column." }, { status: 400 });
 
+    const sampleRendered = `${renderCsvTemplate(subjectTemplate, alias, recipients[0].row)}\n${renderCsvTemplate(messageTemplate, alias, recipients[0].row)}`;
+    const unresolved = [...sampleRendered.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)].map((match) => match[1]);
+    if (unresolved.length) {
+      return NextResponse.json({
+        error: `Unknown CSV field${unresolved.length > 1 ? "s" : ""}: ${[...new Set(unresolved)].join(", ")}. Insert a field using the available column buttons.`,
+      }, { status: 400 });
+    }
+
     const smtpUser = process.env.SMTP_USER || "", smtpPass = process.env.SMTP_PASS || "";
     if (!smtpUser || !smtpPass) return NextResponse.json({ error: "SMTP is not configured." }, { status: 500 });
     const port = Number(process.env.SMTP_PORT || "465");
@@ -62,8 +63,8 @@ export async function POST(req: NextRequest) {
     let sent = 0, failed = 0;
     const emailLogs: EmailLogInput[] = [];
     const sendOne = async (recipient: (typeof recipients)[number]) => {
-      const subject = render(subjectTemplate, alias, recipient.row).slice(0, 300);
-      const message = render(messageTemplate, alias, recipient.row).slice(0, 20000);
+      const subject = renderCsvTemplate(subjectTemplate, alias, recipient.row).slice(0, 300);
+      const message = renderCsvTemplate(messageTemplate, alias, recipient.row).slice(0, 20000);
       try {
         await transporter.sendMail({ from: `"${fromName}" <${smtpUser}>`, to: recipient.email, replyTo: smtpUser, subject, text: message, html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p style="white-space:pre-line">${escapeHtml(message)}</p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Support</p></div>` });
         sent++;

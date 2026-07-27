@@ -8,6 +8,7 @@ import { cn } from "../lib/utils";
 import TooltipAction from "@/components/ui/TooltipAction";
 import { CURRENCY_SYMBOLS, SUPPORTED_CURRENCIES, formatCurrencyAmount, getCurrencySymbol } from "@/lib/currency";
 import { DEFAULT_JOB_CATEGORIES, fetchJobCategoryOptions } from "@/lib/jobCategories";
+import { trackConversion } from "@/lib/analytics";
 
 interface JobPostingFormProps {
   onPublish?: () => void;
@@ -299,6 +300,14 @@ export default function JobPostingForm({
         type: 'success',
         msg: isEditMode ? "Job post updated successfully." : "Job published successfully! It's now live on the marketplace."
       });
+      if (!isEditMode) {
+        trackConversion("job_post", {
+          job_id: String(jobData.id || ""),
+          job_title: String(formData.title || ""),
+          currency: selectedCurrency,
+          value: resolvedBudget,
+        });
+      }
       if (onPublish) onPublish();
       if (isEditMode) onCancelEdit?.();
       setStep(1);

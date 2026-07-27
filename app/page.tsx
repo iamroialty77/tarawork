@@ -24,7 +24,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { absolute: title },
     description,
     keywords: settings.seoKeywords,
-    verification: settings.googleSiteVerification ? { google: settings.googleSiteVerification } : undefined,
+    verification: settings.googleSiteVerification || settings.bingSiteVerification ? {
+      google: settings.googleSiteVerification || undefined,
+      other: settings.bingSiteVerification ? { "msvalidate.01": [settings.bingSiteVerification] } : undefined,
+    } : undefined,
     alternates: { canonical },
     robots: {
       index: settings.searchIndexing,
@@ -39,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [{ url: image, width: 1200, height: 630, alt: ogTitle }],
     },
     twitter: {
-      card: "summary_large_image",
+      card: settings.twitterCardType,
       title: ogTitle,
       description: ogDescription,
       images: [image],

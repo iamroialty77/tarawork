@@ -12,10 +12,14 @@ export type SiteSettings = {
   seoDescription: string;
   seoKeywords: string[];
   googleSiteVerification: string;
+  bingSiteVerification: string;
+  gaMeasurementId: string;
+  gtmContainerId: string;
   canonicalUrl: string;
   ogTitle: string;
   ogDescription: string;
   ogImageUrl: string;
+  twitterCardType: "summary" | "summary_large_image";
   searchIndexing: boolean;
 };
 
@@ -33,9 +37,13 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   seoDescription: "Tara Work connects Filipino freelancers and businesses through remote jobs, verified talent, and practical tools for building successful working relationships.",
   seoKeywords: ["remote jobs Philippines", "Filipino freelancers", "hire Filipino talent", "online jobs"],
   googleSiteVerification: "",
+  bingSiteVerification: "",
+  gaMeasurementId: "",
+  gtmContainerId: "",
   canonicalUrl: "https://www.tarawork.online/",
   ogTitle: "Tara Work | Find Remote Work and Filipino Talent",
   ogDescription: "Discover remote opportunities or hire skilled Filipino freelancers through Tara Work.",
   ogImageUrl: "/landing/filipino-hero.png",
+  twitterCardType: "summary_large_image",
   searchIndexing: true,
 };
