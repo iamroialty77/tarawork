@@ -79,9 +79,11 @@ DECLARE
     requester_is_admin BOOLEAN;
     jwt_role TEXT;
 BEGIN
-    jwt_role := current_setting('request.jwt.claim.role', true);
+    jwt_role := COALESCE(auth.jwt()->>'role', current_setting('request.jwt.claim.role', true));
 
-    IF jwt_role = 'service_role' THEN
+    IF auth.role() = 'service_role'
+       OR jwt_role = 'service_role'
+       OR current_user IN ('postgres', 'supabase_admin', 'service_role') THEN
         RETURN NEW;
     END IF;
 

@@ -70,8 +70,19 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    const { error: roleError } = await supabaseAdmin.from("profiles").update({ role: "admin" }).eq("id", userId);
+    const { data: promotedProfile, error: roleError } = await supabaseAdmin
+      .from("profiles")
+      .update({ role: "admin" })
+      .eq("id", userId)
+      .select("id,role")
+      .maybeSingle();
     if (roleError) return NextResponse.json({ error: roleError.message }, { status: 500 });
+    if (promotedProfile?.role !== "admin") {
+      await supabaseAdmin.from("delegated_admins").delete().eq("user_id", userId).eq("is_owner", false);
+      return NextResponse.json({
+        error: "The database role-protection trigger blocked this promotion. Re-run docs/delegated_admin_roles.sql in Supabase, then try again.",
+      }, { status: 409 });
+    }
   } else {
     return NextResponse.json({ error: "Invalid action." }, { status: 400 });
   }

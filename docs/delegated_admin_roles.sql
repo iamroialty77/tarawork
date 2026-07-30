@@ -1,4 +1,45 @@
 -- Granular admin access. Run once in the Supabase SQL editor.
+-- Fix legacy role-escalation trigger so protected server routes can promote users.
+CREATE OR REPLACE FUNCTION public.prevent_profile_role_escalation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  requester_is_admin BOOLEAN;
+BEGIN
+  -- Supabase service-role requests bypass user-level role protection.
+  IF auth.role() = 'service_role'
+     OR COALESCE(auth.jwt()->>'role', '') = 'service_role'
+     OR current_user IN ('postgres', 'supabase_admin', 'service_role') THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.role = 'admin' THEN
+      NEW.role := 'freelancer';
+    ELSIF NEW.role NOT IN ('freelancer', 'employer', 'client') THEN
+      NEW.role := 'freelancer';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    SELECT EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    ) INTO requester_is_admin;
+
+    IF NOT COALESCE(requester_is_admin, FALSE) THEN
+      NEW.role := OLD.role;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
 CREATE TABLE IF NOT EXISTS public.delegated_admins (
   user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   base_role TEXT NOT NULL CHECK (base_role IN ('freelancer', 'employer')),
