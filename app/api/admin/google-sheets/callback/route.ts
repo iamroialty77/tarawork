@@ -3,7 +3,7 @@ import { requireAdminUser } from "@/lib/authz";
 import { exchangeGoogleCode, saveGoogleConnection } from "@/lib/googleSheets";
 
 export async function GET(req: NextRequest) {
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   const url = new URL(req.url);
   const code = url.searchParams.get("code") || "";

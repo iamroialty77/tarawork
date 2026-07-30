@@ -12,7 +12,7 @@ const statuses = new Set(["pending", "approved", "suspended"]);
 export async function POST(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("users.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   const limited = rateLimit({ key: `admin:update-profile:${admin.user?.id || getClientIp(req)}`, limit: 120, windowMs: 60 * 60 * 1000 });
   if (limited) return limited;

@@ -77,7 +77,7 @@ const sectionsToText = (value: unknown) => {
 };
 
 export async function GET(req: NextRequest) {
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("blog.manage");
   const adminError = adminErrorResponse(admin);
   if (adminError) return adminError;
 
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
 
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("blog.manage");
   const adminError = adminErrorResponse(admin);
   if (adminError) return adminError;
 
@@ -193,7 +193,7 @@ export async function PUT(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
 
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("blog.manage");
   const adminError = adminErrorResponse(admin);
   if (adminError) return adminError;
 
@@ -260,7 +260,7 @@ export async function DELETE(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
 
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("blog.manage");
   const adminError = adminErrorResponse(admin);
   if (adminError) return adminError;
 

@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 const cleanId = (value: unknown) => String(value || "").trim().slice(0, 80);
 
 export async function GET() {
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("email.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
 
   const { data, error, count } = await supabaseAdmin
@@ -40,7 +40,7 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("email.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
 
   try {
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("email.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
 
   const id = cleanId(new URL(req.url).searchParams.get("id"));

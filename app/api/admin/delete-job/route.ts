@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const botError = assertNotLikelyBot(req);
     if (botError) return botError;
 
-    const admin = await requireAdminUser();
+    const admin = await requireAdminUser("jobs.manage");
     if (admin.error) {
       return NextResponse.json({ error: admin.error }, { status: admin.status });
     }

@@ -12,7 +12,7 @@ const clean = (value: unknown, max: number) => String(value ?? "").trim().slice(
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export async function GET() {
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   return NextResponse.json({ config: { enabled: true }, recipientCount: 0 });
 }
@@ -20,7 +20,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   const limited = rateLimit({ key: `admin:csv-campaign:${admin.user?.id || getClientIp(req)}`, limit: 3, windowMs: 60 * 60 * 1000 });
   if (limited) return limited;

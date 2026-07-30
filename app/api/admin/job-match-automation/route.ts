@@ -10,7 +10,7 @@ const errorMessage = (error: unknown) =>
       "Unable to process job matches.";
 
 export async function GET() {
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   try {
     const config = await getJobMatchConfig();
@@ -24,7 +24,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   try {
     const body = await req.json();

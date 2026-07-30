@@ -4,7 +4,7 @@ import { requireAdminUser } from "@/lib/authz";
 import { googleAuthorizationUrl } from "@/lib/googleSheets";
 
 export async function GET(req: NextRequest) {
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   try {
     const state = crypto.randomBytes(24).toString("hex");

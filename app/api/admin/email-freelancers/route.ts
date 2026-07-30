@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
     const originError = assertSameOrigin(req);
     if (originError) return originError;
 
-    const admin = await requireAdminUser();
+    const admin = await requireAdminUser("email.manage");
     if (admin.error) {
       return NextResponse.json({ error: admin.error }, { status: admin.status });
     }

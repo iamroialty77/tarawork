@@ -9,6 +9,7 @@ import AdminAutomation from "./AdminAutomation";
 import SiteSettingsEditor from "./SiteSettingsEditor";
 import AdminProfileEditorModal from "./AdminProfileEditorModal";
 import AutomationToast from "./AutomationToast";
+import AdminRoleManager from "./AdminRoleManager";
 import { blogCategories } from "@/lib/blog";
 import { 
   Users, 
@@ -45,7 +46,8 @@ import {
   BookOpen,
   Bot,
   Settings,
-  Plus
+  Plus,
+  UserCog
 } from "lucide-react";
 
 const createEmptyBlogDraft = () => ({
@@ -111,7 +113,7 @@ const getAccountRisk = (user: any, allUsers: any[]) => {
   return { score: Math.min(score, 100), reasons, suspicious: score >= 50 };
 };
 
-type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "site_settings" | "blog" | "marketing" | "reports" | "health";
+type TabType = "overview" | "users" | "jobs" | "disputes" | "talent_requests" | "email_messages" | "automation" | "site_settings" | "blog" | "marketing" | "reports" | "health" | "roles";
 type AdminViewMode = "admin" | "freelancer" | "client";
 
 type MarketingAttachment = {
@@ -172,6 +174,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [emailReplyBody, setEmailReplyBody] = useState("");
   const [emailReplyLoading, setEmailReplyLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [adminPermissions, setAdminPermissions] = useState<string[] | null>(null);
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
@@ -299,8 +302,19 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   };
 
   useEffect(() => {
-    fetchData();
-    checkTableHealth();
+    const initialize = async () => {
+      try {
+        const response = await fetch("/api/admin/roles", { cache: "no-store" });
+        const payload = await response.json();
+        if (response.ok) setAdminPermissions(Array.isArray(payload.permissions) ? payload.permissions : []);
+        else notify(payload.error || "Unable to verify admin permissions.");
+      } catch {
+        notify("Unable to verify admin permissions.");
+      }
+      await fetchData();
+      await checkTableHealth();
+    };
+    void initialize();
   }, []);
 
   const notify = (msg: string) => {
@@ -727,18 +741,25 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   };
 
   const navItems = [
-    { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "users", label: "Verification Queue", icon: ShieldCheck },
-    { id: "jobs", label: "Marketplace", icon: Briefcase },
-    { id: "disputes", label: "Disputes", icon: Scale },
-    { id: "talent_requests", label: "Talent Requests", icon: Users },
-    { id: "email_messages", label: "Email", icon: Mail },
-    { id: "automation", label: "Automation", icon: Bot },
-    { id: "site_settings", label: "Site Settings", icon: Settings },
-    { id: "blog", label: "Blog Studio", icon: BookOpen },
-    { id: "reports", label: "Insights", icon: BarChart3 },
-    { id: "health", label: "System Health", icon: Activity },
-  ];
+    { id: "overview", label: "Overview", icon: LayoutDashboard, permission: "overview.view" },
+    { id: "users", label: "Verification Queue", icon: ShieldCheck, permission: "users.manage" },
+    { id: "jobs", label: "Marketplace", icon: Briefcase, permission: "jobs.manage" },
+    { id: "disputes", label: "Disputes", icon: Scale, permission: "disputes.manage" },
+    { id: "talent_requests", label: "Talent Requests", icon: Users, permission: "talent_requests.view" },
+    { id: "email_messages", label: "Email", icon: Mail, permission: "email.manage" },
+    { id: "automation", label: "Automation", icon: Bot, permission: "automation.manage" },
+    { id: "site_settings", label: "Site Settings", icon: Settings, permission: "site_settings.manage" },
+    { id: "blog", label: "Blog Studio", icon: BookOpen, permission: "blog.manage" },
+    { id: "reports", label: "Insights", icon: BarChart3, permission: "reports.view" },
+    { id: "health", label: "System Health", icon: Activity, permission: "health.view" },
+    { id: "roles", label: "Roles & Access", icon: UserCog, permission: "roles.manage" },
+  ].filter((item) => adminPermissions === null || adminPermissions.includes(item.permission));
+
+  useEffect(() => {
+    if (adminPermissions !== null && !navItems.some((item) => item.id === activeTab) && navItems[0]) {
+      setActiveTab(navItems[0].id as TabType);
+    }
+  }, [activeTab, adminPermissions, navItems]);
 
   const visibleVerificationUsers = users.filter((user) => {
     if (user.role !== verificationRole) return false;
@@ -1982,6 +2003,8 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             </aside>
           </motion.div>
         )}
+
+        {activeTab === "roles" && <AdminRoleManager />}
 
         {activeTab === "reports" && (
           <motion.div

@@ -10,7 +10,7 @@ const cleanIds = (value: unknown) => Array.isArray(value)
 export async function POST(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("users.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   const limited = rateLimit({ key: `admin:bulk-accounts:${admin.user?.id || getClientIp(req)}`, limit: 10, windowMs: 60 * 60 * 1000 });
   if (limited) return limited;

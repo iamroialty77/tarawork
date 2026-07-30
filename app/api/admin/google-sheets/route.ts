@@ -6,7 +6,7 @@ import { disconnectGoogleConnection, googleConnectionStatus, listGoogleSheetTabs
 const validId = (value: string) => /^[a-zA-Z0-9_-]{10,200}$/.test(value);
 
 export async function GET(req: NextRequest) {
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   try {
     const adminId = admin.user!.id;
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
-  const admin = await requireAdminUser();
+  const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   try {
     await disconnectGoogleConnection(admin.user!.id);
