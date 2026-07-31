@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/seo-automation",
       "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/blog-automation",
+      "schedule": "0 3 * * *"
     }
   ]
 }

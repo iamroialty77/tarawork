@@ -9,6 +9,7 @@ import AdminAutomation from "./AdminAutomation";
 import SiteSettingsEditor from "./SiteSettingsEditor";
 import AdminProfileEditorModal from "./AdminProfileEditorModal";
 import AutomationToast from "./AutomationToast";
+import BlogAutomationPanel from "./BlogAutomationPanel";
 import AdminRoleManager from "./AdminRoleManager";
 import { blogCategories } from "@/lib/blog";
 import { 
@@ -1642,6 +1643,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
+            <BlogAutomationPanel onCreated={() => void fetchData()} />
             <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white"><BookOpen className="h-5 w-5" /></div>

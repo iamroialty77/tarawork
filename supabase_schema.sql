@@ -1150,3 +1150,43 @@ DROP POLICY IF EXISTS "Admins can manage SEO automation runs." ON public.seo_aut
 CREATE POLICY "Admins can manage SEO automation runs." ON public.seo_automation_runs FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
 DROP POLICY IF EXISTS "Admins can manage SEO change history." ON public.seo_change_history;
 CREATE POLICY "Admins can manage SEO change history." ON public.seo_change_history FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- Blog Studio content automation
+CREATE TABLE IF NOT EXISTS public.blog_automation_configs (
+    id TEXT PRIMARY KEY DEFAULT 'primary' CHECK (id = 'primary'),
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    mode TEXT NOT NULL DEFAULT 'review' CHECK (mode IN ('ideas', 'review', 'auto_publish')),
+    schedule TEXT NOT NULL DEFAULT 'weekly' CHECK (schedule IN ('weekly', 'biweekly', 'monthly')),
+    articles_per_run INTEGER NOT NULL DEFAULT 1 CHECK (articles_per_run BETWEEN 1 AND 3),
+    minimum_keyword_score INTEGER NOT NULL DEFAULT 60 CHECK (minimum_keyword_score BETWEEN 40 AND 100),
+    preferred_categories TEXT[] NOT NULL DEFAULT ARRAY['Employer Hiring Guides', 'Remote Jobs for Filipinos', 'Virtual Assistant Guides', 'Freelancer Career Tips'],
+    tone TEXT NOT NULL DEFAULT 'professional, practical, trustworthy, and helpful',
+    target_words INTEGER NOT NULL DEFAULT 1200 CHECK (target_words BETWEEN 700 AND 2500),
+    last_run_at TIMESTAMP WITH TIME ZONE,
+    next_run_at TIMESTAMP WITH TIME ZONE,
+    updated_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.blog_automation_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trigger_type TEXT NOT NULL CHECK (trigger_type IN ('manual', 'cron')),
+    status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed', 'skipped')),
+    mode TEXT NOT NULL,
+    selected_topics JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_post_ids UUID[] NOT NULL DEFAULT '{}',
+    created_count INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    started_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS blog_automation_runs_started_at_idx ON public.blog_automation_runs (started_at DESC);
+ALTER TABLE public.blog_automation_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.blog_automation_runs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admins can manage blog automation configs." ON public.blog_automation_configs;
+CREATE POLICY "Admins can manage blog automation configs." ON public.blog_automation_configs FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+DROP POLICY IF EXISTS "Admins can manage blog automation runs." ON public.blog_automation_runs;
+CREATE POLICY "Admins can manage blog automation runs." ON public.blog_automation_runs FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
