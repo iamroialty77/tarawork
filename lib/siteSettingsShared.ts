@@ -21,6 +21,7 @@ export type SiteSettings = {
   ogImageUrl: string;
   twitterCardType: "summary" | "summary_large_image";
   searchIndexing: boolean;
+  metadataAutomationEnabled: boolean;
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
@@ -46,4 +47,5 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   ogImageUrl: "/landing/filipino-hero.png",
   twitterCardType: "summary_large_image",
   searchIndexing: true,
+  metadataAutomationEnabled: true,
 };

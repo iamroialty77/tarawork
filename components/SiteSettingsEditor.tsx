@@ -9,7 +9,7 @@ const empty: SiteSettings = {
   contactEmail: "", contactPhone: "", address: "", mapsUrl: "", facebookUrl: "", linkedinUrl: "",
   instagramUrl: "", youtubeUrl: "", xUrl: "", seoTitle: "", seoDescription: "", seoKeywords: [],
   googleSiteVerification: "", bingSiteVerification: "", gaMeasurementId: "", gtmContainerId: "", canonicalUrl: "",
-  ogTitle: "", ogDescription: "", ogImageUrl: "", twitterCardType: "summary_large_image", searchIndexing: true,
+  ogTitle: "", ogDescription: "", ogImageUrl: "", twitterCardType: "summary_large_image", searchIndexing: true, metadataAutomationEnabled: true,
 };
 
 type View = "general" | "seo" | "preview";

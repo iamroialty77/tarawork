@@ -45,6 +45,7 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
     ogImageUrl: imageUrl(valueOrDefault(input, "ogImageUrl")),
     twitterCardType: input.twitterCardType === "summary" ? "summary" : "summary_large_image",
     searchIndexing: typeof input.searchIndexing === "boolean" ? input.searchIndexing : DEFAULT_SITE_SETTINGS.searchIndexing,
+    metadataAutomationEnabled: typeof input.metadataAutomationEnabled === "boolean" ? input.metadataAutomationEnabled : DEFAULT_SITE_SETTINGS.metadataAutomationEnabled,
   };
 }
 
