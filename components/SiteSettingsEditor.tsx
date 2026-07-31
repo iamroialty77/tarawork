@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ExternalLink, Eye, Globe2, ImageIcon, Loader2, Mail, MapPin, Monitor, Phone, Plus, Save, Search, Settings2, Share2, X } from "lucide-react";
+import { CheckCircle2, ExternalLink, Eye, Globe2, ImageIcon, Loader2, Mail, MapPin, Monitor, Phone, Plus, RefreshCw, Save, Search, Settings2, Share2, Sparkles, Target, TrendingUp, X } from "lucide-react";
 import type { SiteSettings } from "@/lib/siteSettingsShared";
 
 const empty: SiteSettings = {
@@ -20,6 +20,11 @@ export default function SiteSettingsEditor() {
   const [view, setView] = useState<"edit" | "seo" | "preview">("edit");
   const [previewVersion, setPreviewVersion] = useState(0);
   const [keywordDraft, setKeywordDraft] = useState("");
+  const [keywordSeed, setKeywordSeed] = useState("remote jobs Philippines");
+  const [keywordSuggestions, setKeywordSuggestions] = useState<Array<{ keyword: string; score: number; intent: string; competition: string; sources: string[] }>>([]);
+  const [keywordMethodology, setKeywordMethodology] = useState("");
+  const [keywordLoading, setKeywordLoading] = useState(false);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/site-settings", { cache: "no-store" }).then(async (response) => {
@@ -35,6 +40,34 @@ export default function SiteSettingsEditor() {
     if (!keyword || settings.seoKeywords.length >= 20 || settings.seoKeywords.some((item) => item.toLowerCase() === keyword.toLowerCase())) return;
     update("seoKeywords", [...settings.seoKeywords, keyword.slice(0, 60)]);
     setKeywordDraft("");
+  };
+  const discoverKeywords = async () => {
+    setKeywordLoading(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/admin/seo-keywords?seed=${encodeURIComponent(keywordSeed)}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to analyze keywords.");
+      setKeywordSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+      setKeywordMethodology(data.methodology || "");
+      setSelectedSuggestions([]);
+      setNotice(`Keyword analysis completed with ${data.suggestions?.length || 0} opportunities.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to analyze keywords."); }
+    finally { setKeywordLoading(false); }
+  };
+  const applySuggestedKeywords = () => {
+    const additions = keywordSuggestions.filter((item) => selectedSuggestions.includes(item.keyword)).map((item) => item.keyword);
+    const merged = [...settings.seoKeywords, ...additions].filter((keyword, index, list) => list.findIndex((item) => item.toLowerCase() === keyword.toLowerCase()) === index).slice(0, 20);
+    update("seoKeywords", merged); setSelectedSuggestions([]); setNotice(`${merged.length - settings.seoKeywords.length} keyword opportunities added. Save SEO settings to publish.`);
+  };
+  const applyAutomatedSeoDraft = () => {
+    const primary = selectedSuggestions[0] || keywordSuggestions[0]?.keyword;
+    if (!primary) return;
+    const displayKeyword = primary.replace(/\b\w/g, (character) => character.toUpperCase());
+    const title = `${displayKeyword} | TaraWork`.slice(0, 60);
+    const description = `Discover ${primary} on TaraWork. Find trusted remote opportunities, skilled Filipino professionals, and practical tools for successful online work.`.slice(0, 160);
+    const merged = [primary, ...settings.seoKeywords].filter((keyword, index, list) => list.findIndex((item) => item.toLowerCase() === keyword.toLowerCase()) === index).slice(0, 20);
+    setSettings((current) => ({ ...current, seoTitle: title, seoDescription: description, seoKeywords: merged, ogTitle: title, ogDescription: description }));
+    setSelectedSuggestions([]); setNotice(`SEO draft optimized around “${primary}”. Review it, then save to publish.`);
   };
   const save = async () => {
     setSaving(true); setError(""); setNotice("");
@@ -70,6 +103,11 @@ export default function SiteSettingsEditor() {
       : estimatedTitlePixels > 580
         ? `Title may be truncated at approximately ${estimatedTitlePixels}px.`
         : "SEO title length and estimated pixel width are healthy.";
+  const coversKeyword = (text: string, keyword: string) => {
+    const haystack = text.toLowerCase();
+    const meaningfulWords = keyword.toLowerCase().split(/\s+/).filter((word) => word.length >= 3 && !["the", "and", "for", "with"].includes(word));
+    return meaningfulWords.length >= 2 && meaningfulWords.every((word) => haystack.includes(word));
+  };
   const seoChecks = [
     { label: titleIssue, passed: settings.seoTitle.length >= 30 && settings.seoTitle.length <= 60 && estimatedTitlePixels <= 580 },
     { label: settings.seoDescription.length > 160 ? `Description is ${settings.seoDescription.length - 160} characters too long.` : "Description is 120–160 characters", passed: settings.seoDescription.length >= 120 && settings.seoDescription.length <= 160 },
@@ -77,6 +115,9 @@ export default function SiteSettingsEditor() {
     { label: "Social sharing image is configured", passed: Boolean(settings.ogImageUrl) },
     { label: "Google Search Console is verified", passed: Boolean(settings.googleSiteVerification) },
     { label: "Search indexing is enabled", passed: settings.searchIndexing },
+    { label: "A target keyword is covered by the SEO title", passed: settings.seoKeywords.some((keyword) => coversKeyword(settings.seoTitle, keyword)) },
+    { label: "A target keyword is covered by the meta description", passed: settings.seoKeywords.some((keyword) => coversKeyword(settings.seoDescription, keyword)) },
+    { label: "At least 3 focused keyword targets are configured", passed: settings.seoKeywords.length >= 3 },
   ];
   const seoScore = Math.round((seoChecks.filter((check) => check.passed).length / seoChecks.length) * 100);
 
@@ -97,6 +138,23 @@ export default function SiteSettingsEditor() {
     <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-6 py-4 sm:px-8"><button onClick={() => void save()} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? "Saving..." : "Save changes"}</button></div></> : view === "seo" ? <>
       <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,.85fr)] sm:p-8">
         <div className="space-y-6">
+          <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50">
+            <div className="border-b border-indigo-100 p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-3"><div className="rounded-xl bg-indigo-600 p-2 text-white shadow-lg shadow-indigo-200"><Sparkles className="h-4 w-4" /></div><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">SEO Automation</p><h3 className="mt-1 font-black text-slate-950">Keyword Intelligence</h3><p className="mt-1 max-w-2xl text-xs font-medium leading-5 text-slate-500">Discover relevant search opportunities using Google autocomplete signals plus live TaraWork jobs, talent skills, and published content.</p></div></div>
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live signals</span>
+              </div>
+              <div className="mt-5 flex flex-col gap-2 sm:flex-row"><div className="relative min-w-0 flex-1"><Target className="absolute left-3.5 top-3.5 h-4 w-4 text-indigo-500" /><input value={keywordSeed} onChange={(event) => setKeywordSeed(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void discoverKeywords(); } }} placeholder="Enter a topic, service, or audience" className="w-full rounded-xl border border-indigo-200 bg-white py-3 pl-10 pr-4 text-sm font-bold outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" /></div><button type="button" onClick={() => void discoverKeywords()} disabled={keywordLoading || keywordSeed.trim().length < 3} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-black text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">{keywordLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : keywordSuggestions.length ? <RefreshCw className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}{keywordLoading ? "Analyzing…" : keywordSuggestions.length ? "Refresh analysis" : "Find keyword opportunities"}</button></div>
+            </div>
+            {keywordSuggestions.length > 0 ? <div className="p-5">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-black uppercase tracking-wider text-slate-500">Ranked opportunities</p><p className="mt-1 text-[11px] text-slate-400">Select focused phrases that accurately match the landing page.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={applyAutomatedSeoDraft} className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-xs font-black text-indigo-700 hover:bg-indigo-50"><Sparkles className="h-3.5 w-3.5" /> Optimize metadata</button><button type="button" onClick={applySuggestedKeywords} disabled={!selectedSuggestions.length || settings.seoKeywords.length >= 20} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white disabled:opacity-40">Add selected ({selectedSuggestions.length})</button></div></div>
+              <div className="max-h-[390px] overflow-auto rounded-xl border border-slate-200 bg-white"><table className="w-full min-w-[650px] text-left"><thead className="sticky top-0 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-400"><tr><th className="w-10 px-4 py-3" /><th className="px-3 py-3">Keyword</th><th className="px-3 py-3">Intent</th><th className="px-3 py-3">Competition</th><th className="px-4 py-3 text-right">Opportunity</th></tr></thead><tbody className="divide-y divide-slate-100">{keywordSuggestions.map((item) => {
+                const selected = selectedSuggestions.includes(item.keyword); const alreadyAdded = settings.seoKeywords.some((keyword) => keyword.toLowerCase() === item.keyword.toLowerCase());
+                return <tr key={item.keyword} className={selected ? "bg-indigo-50/70" : "hover:bg-slate-50"}><td className="px-4 py-3"><input type="checkbox" checked={selected || alreadyAdded} disabled={alreadyAdded} onChange={() => setSelectedSuggestions((current) => selected ? current.filter((keyword) => keyword !== item.keyword) : [...current, item.keyword])} className="h-4 w-4 rounded border-slate-300 text-indigo-600" /></td><td className="px-3 py-3"><p className="text-sm font-black capitalize text-slate-900">{item.keyword}</p><p className="mt-1 text-[10px] text-slate-400">{alreadyAdded ? "Already targeted" : item.sources.join(" + ")}</p></td><td className="px-3 py-3"><span className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-black text-blue-700">{item.intent}</span></td><td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[10px] font-black ${item.competition === "Low" ? "bg-emerald-50 text-emerald-700" : item.competition === "High" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"}`}>{item.competition}</span></td><td className="px-4 py-3"><div className="ml-auto flex w-24 items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${item.score >= 80 ? "bg-emerald-500" : item.score >= 60 ? "bg-indigo-500" : "bg-amber-500"}`} style={{ width: `${item.score}%` }} /></div><span className="w-7 text-right text-xs font-black text-slate-700">{item.score}</span></div></td></tr>;
+              })}</tbody></table></div>
+              {keywordMethodology && <p className="mt-3 text-[10px] font-medium leading-5 text-slate-400">Methodology: {keywordMethodology}</p>}
+            </div> : <div className="flex items-center gap-3 p-5 text-xs font-medium text-slate-500"><TrendingUp className="h-5 w-5 text-indigo-400" /><span>Start an analysis to identify focused long-tail keywords and content demand signals.</span></div>}
+          </section>
           <section className="rounded-2xl border border-slate-200 p-5">
             <div className="mb-5 flex items-start gap-3"><div className="rounded-xl bg-indigo-50 p-2 text-indigo-600"><Search className="h-4 w-4" /></div><div><h3 className="font-black text-slate-900">Search appearance</h3><p className="mt-1 text-xs font-medium text-slate-500">Control how the home page may appear in Google and other search engines.</p></div></div>
             <div className="space-y-5">
