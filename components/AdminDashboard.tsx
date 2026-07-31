@@ -785,7 +785,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
 
       <main className="min-w-0">
       <header className="border-b border-slate-200 bg-white/90 px-4 py-5 backdrop-blur sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex w-full flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div><div className="flex items-center gap-2 text-xs font-bold text-slate-400"><span>Admin</span><ChevronRight className="h-3.5 w-3.5" /><span className="text-indigo-600">{navItems.find((item) => item.id === activeTab)?.label}</span></div><h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{navItems.find((item) => item.id === activeTab)?.label}</h1><p className="mt-1 text-sm font-medium text-slate-500">Manage TaraWork operations from one secure workspace.</p></div>
           <div className="flex w-full flex-col gap-3 xl:w-auto xl:items-end">
           {onViewAsChange && (
@@ -841,7 +841,11 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
         </div>
       </header>
 
-      <div className={activeTab === "email_messages" ? "w-full p-0" : "mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8"}>
+      <div className={activeTab === "email_messages"
+        ? "w-full p-0"
+        : activeTab === "site_settings"
+          ? "w-full p-3 sm:p-4 lg:p-5 xl:p-6"
+          : "mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8"}>
 
       <AnimatePresence mode="wait">
         {activeTab === "overview" && (
