@@ -1049,3 +1049,104 @@ CREATE POLICY "Admins can manage blog posts." ON public.blog_posts
             AND profiles.role = 'admin'
         )
     );
+
+-- SEO Autopilot configuration, signals, runs, and reversible changes
+CREATE TABLE IF NOT EXISTS public.seo_automation_configs (
+    id TEXT PRIMARY KEY DEFAULT 'primary' CHECK (id = 'primary'),
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    mode TEXT NOT NULL DEFAULT 'approval' CHECK (mode IN ('monitor', 'approval', 'safe_autopilot')),
+    schedule TEXT NOT NULL DEFAULT 'weekly' CHECK (schedule IN ('daily', 'weekly', 'monthly')),
+    seed_keywords TEXT[] NOT NULL DEFAULT ARRAY['remote jobs Philippines', 'hire Filipino freelancers'],
+    minimum_score INTEGER NOT NULL DEFAULT 70 CHECK (minimum_score BETWEEN 50 AND 100),
+    max_changes_per_run INTEGER NOT NULL DEFAULT 3 CHECK (max_changes_per_run BETWEEN 1 AND 10),
+    protect_home_metadata BOOLEAN NOT NULL DEFAULT TRUE,
+    google_site_url TEXT,
+    last_run_at TIMESTAMP WITH TIME ZONE,
+    next_run_at TIMESTAMP WITH TIME ZONE,
+    updated_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.seo_integrations (
+    provider TEXT PRIMARY KEY CHECK (provider IN ('google_search_console', 'google_ads')),
+    encrypted_refresh_token TEXT,
+    account_email TEXT,
+    account_name TEXT,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    connected_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    connected_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.seo_keyword_opportunities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    keyword TEXT NOT NULL,
+    normalized_keyword TEXT NOT NULL,
+    source TEXT[] NOT NULL DEFAULT '{}',
+    intent TEXT NOT NULL DEFAULT 'discovery',
+    opportunity_score INTEGER NOT NULL DEFAULT 0 CHECK (opportunity_score BETWEEN 0 AND 100),
+    competition TEXT NOT NULL DEFAULT 'unknown',
+    impressions BIGINT,
+    clicks BIGINT,
+    ctr NUMERIC(8,6),
+    average_position NUMERIC(10,3),
+    target_page TEXT,
+    status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'approved', 'applied', 'dismissed', 'monitoring')),
+    evidence JSONB NOT NULL DEFAULT '{}'::jsonb,
+    first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(normalized_keyword, target_page)
+);
+
+CREATE INDEX IF NOT EXISTS seo_keyword_opportunities_score_idx ON public.seo_keyword_opportunities (opportunity_score DESC, last_seen_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.seo_automation_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trigger_type TEXT NOT NULL CHECK (trigger_type IN ('manual', 'cron')),
+    mode TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed', 'skipped')),
+    discovered_count INTEGER NOT NULL DEFAULT 0,
+    applied_count INTEGER NOT NULL DEFAULT 0,
+    summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    error_message TEXT,
+    started_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS seo_automation_runs_started_at_idx ON public.seo_automation_runs (started_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.seo_change_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID REFERENCES public.seo_automation_runs(id) ON DELETE SET NULL,
+    change_type TEXT NOT NULL,
+    target_page TEXT NOT NULL DEFAULT '/',
+    before_value JSONB NOT NULL DEFAULT '{}'::jsonb,
+    after_value JSONB NOT NULL DEFAULT '{}'::jsonb,
+    reason TEXT NOT NULL,
+    confidence INTEGER NOT NULL DEFAULT 0 CHECK (confidence BETWEEN 0 AND 100),
+    status TEXT NOT NULL DEFAULT 'applied' CHECK (status IN ('proposed', 'approved', 'applied', 'rolled_back', 'rejected')),
+    applied_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    applied_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    rolled_back_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS seo_change_history_applied_at_idx ON public.seo_change_history (applied_at DESC);
+
+ALTER TABLE public.seo_automation_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.seo_integrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.seo_keyword_opportunities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.seo_automation_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.seo_change_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can manage SEO automation configs." ON public.seo_automation_configs;
+CREATE POLICY "Admins can manage SEO automation configs." ON public.seo_automation_configs FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+DROP POLICY IF EXISTS "Admins can manage SEO integrations." ON public.seo_integrations;
+-- No client policy is intentionally created for encrypted OAuth tokens.
+-- The protected server API uses the Supabase service role.
+DROP POLICY IF EXISTS "Admins can manage SEO keyword opportunities." ON public.seo_keyword_opportunities;
+CREATE POLICY "Admins can manage SEO keyword opportunities." ON public.seo_keyword_opportunities FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+DROP POLICY IF EXISTS "Admins can manage SEO automation runs." ON public.seo_automation_runs;
+CREATE POLICY "Admins can manage SEO automation runs." ON public.seo_automation_runs FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+DROP POLICY IF EXISTS "Admins can manage SEO change history." ON public.seo_change_history;
+CREATE POLICY "Admins can manage SEO change history." ON public.seo_change_history FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));

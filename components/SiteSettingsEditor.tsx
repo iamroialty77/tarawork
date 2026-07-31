@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, ExternalLink, Eye, Globe2, ImageIcon, Loader2, Mail, MapPin, Monitor, Phone, Plus, RefreshCw, Save, Search, Settings2, Share2, Sparkles, Target, TrendingUp, X } from "lucide-react";
 import type { SiteSettings } from "@/lib/siteSettingsShared";
+import SeoAutopilotPanel from "./SeoAutopilotPanel";
 
 const empty: SiteSettings = {
   contactEmail: "", contactPhone: "", address: "", mapsUrl: "", facebookUrl: "", linkedinUrl: "",
@@ -138,6 +139,7 @@ export default function SiteSettingsEditor() {
     <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-6 py-4 sm:px-8"><button onClick={() => void save()} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? "Saving..." : "Save changes"}</button></div></> : view === "seo" ? <>
       <div className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,.85fr)] sm:p-8">
         <div className="space-y-6">
+          <SeoAutopilotPanel />
           <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50">
             <div className="border-b border-indigo-100 p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
