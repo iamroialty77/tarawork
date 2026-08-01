@@ -7,6 +7,20 @@ export const DEFAULT_BLOG_AUTOMATION_CONFIG: BlogAutomationConfig = { enabled: f
 const clean = (value: unknown, max = 200) => String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90);
 
+export function getBlogAiConfig() {
+  const configuredBaseUrl = clean(process.env.BLOG_AI_BASE_URL, 500).replace(/\/+$/, "");
+  const localProvider = Boolean(configuredBaseUrl);
+  const baseUrl = configuredBaseUrl || "https://api.openai.com/v1";
+  const apiKey = localProvider ? clean(process.env.BLOG_AI_API_KEY, 1000) : clean(process.env.OPENAI_API_KEY, 1000);
+  const accessClientId = clean(process.env.BLOG_AI_ACCESS_CLIENT_ID, 500);
+  const accessClientSecret = clean(process.env.BLOG_AI_ACCESS_CLIENT_SECRET, 1000);
+  const model = clean(process.env.BLOG_AI_MODEL || process.env.OPENAI_MODEL, 120) || (localProvider ? "llama3.1:8b" : "gpt-4o-mini");
+  const isLoopback = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(baseUrl);
+  const insecureProductionUrl = Boolean(process.env.VERCEL && localProvider && !baseUrl.startsWith("https://"));
+  const configured = Boolean(apiKey) && !(process.env.VERCEL && isLoopback) && !insecureProductionUrl;
+  return { provider: localProvider ? "Local AI" : "OpenAI", baseUrl, apiKey, model, configured, isLoopback, insecureProductionUrl, accessClientId, accessClientSecret };
+}
+
 export async function getBlogAutomationConfig() {
   const { data, error } = await supabaseAdmin.from("blog_automation_configs").select("*").eq("id", "primary").maybeSingle();
   if (error) throw new Error(error.message); if (!data) return DEFAULT_BLOG_AUTOMATION_CONFIG;
@@ -31,11 +45,16 @@ async function selectTopics(config: BlogAutomationConfig) {
 }
 
 async function generateArticle(topic: { keyword: string; score: number; intent: string }, config: BlogAutomationConfig) {
-  const apiKey = process.env.OPENAI_API_KEY || ""; if (!apiKey) throw new Error("OPENAI_API_KEY is required for Blog Autopilot article generation.");
+  const ai = getBlogAiConfig();
+  if (!ai.apiKey) throw new Error(ai.provider === "Local AI" ? "BLOG_AI_API_KEY is required for the Local AI connection." : "OPENAI_API_KEY is required for Blog Autopilot article generation.");
+  if (process.env.VERCEL && ai.isLoopback) throw new Error("Vercel cannot reach a localhost Local AI URL. Set BLOG_AI_BASE_URL to a secure public HTTPS tunnel or hosted endpoint.");
+  if (ai.insecureProductionUrl) throw new Error("BLOG_AI_BASE_URL must use HTTPS when Blog Autopilot runs on Vercel.");
   const prompt = `Create an original, publication-ready TaraWork blog article targeting the keyword "${topic.keyword}".
 Audience: Filipino freelancers and/or businesses hiring Filipino remote talent. Search intent: ${topic.intent}. Tone: ${config.tone}. Target length: about ${config.targetWords} words.
 Requirements: useful and specific; no fabricated statistics, testimonials, guarantees, or claims; no keyword stuffing; use concise paragraphs, H2/H3 headings, bullet lists, practical steps, and a natural TaraWork call to action. Do not include an H1 because the page title supplies it. Return valid JSON only with keys title, excerpt, category, imageAlt, readTime, contentHtml. category must be one of: ${config.preferredCategories.join(" | ")}. excerpt must be 140-220 characters. contentHtml may use only p,h2,h3,strong,em,ul,ol,li,blockquote,table,thead,tbody,tr,th,td tags.`;
-  const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", temperature: 0.55, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store" });
+  const headers: Record<string, string> = { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" };
+  if (ai.accessClientId && ai.accessClientSecret) { headers["CF-Access-Client-Id"] = ai.accessClientId; headers["CF-Access-Client-Secret"] = ai.accessClientSecret; }
+  const response = await fetch(`${ai.baseUrl}/chat/completions`, { method: "POST", headers, body: JSON.stringify({ model: ai.model, temperature: 0.55, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store", signal: AbortSignal.timeout(120_000) });
   const payload = await response.json(); if (!response.ok) throw new Error(clean(payload.error?.message, 500) || "AI article generation failed.");
   let article: any; try { article = JSON.parse(payload.choices?.[0]?.message?.content || "{}"); } catch { throw new Error("AI returned invalid article JSON."); }
   const title = clean(article.title, 140); const excerpt = clean(article.excerpt, 280); const category = config.preferredCategories.includes(article.category) ? article.category : config.preferredCategories[0]; const content = sanitizeArticleHtml(String(article.contentHtml || "").slice(0, 50000));
