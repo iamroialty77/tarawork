@@ -4,6 +4,8 @@ import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
 import { getBlogAiConfig, getBlogAutomationConfig, runBlogAutomation, saveBlogAutomationConfig } from "@/lib/blogAutomation";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 
+export const maxDuration = 300;
+
 export async function GET() {
   const admin = await requireAdminUser("blog.manage"); if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
   try { const [config, runs, opportunities] = await Promise.all([getBlogAutomationConfig(), supabaseAdmin.from("blog_automation_runs").select("id,trigger_type,status,mode,selected_topics,created_post_ids,created_count,error_message,summary,started_at,completed_at").order("started_at", { ascending: false }).limit(12), supabaseAdmin.from("seo_keyword_opportunities").select("keyword,opportunity_score,intent,status").order("opportunity_score", { ascending: false }).limit(20)]); const error = runs.error || opportunities.error; if (error) throw new Error(error.message); const ai = getBlogAiConfig(); const connectionIssue = process.env.VERCEL && ai.isLoopback ? "Vercel cannot reach localhost. Use a secure public HTTPS endpoint." : ai.insecureProductionUrl ? "The Local AI endpoint must use HTTPS on Vercel." : !ai.apiKey ? `${ai.provider === "Local AI" ? "BLOG_AI" : "OPENAI"}_API_KEY is missing.` : null; return NextResponse.json({ config, runs: runs.data || [], opportunities: opportunities.data || [], aiConfigured: ai.configured, model: ai.model, provider: ai.provider, connectionIssue }); }

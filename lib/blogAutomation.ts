@@ -44,19 +44,11 @@ async function selectTopics(config: BlogAutomationConfig) {
   return candidates.slice(0, config.articlesPerRun).map((item) => ({ keyword: clean(item.keyword, 120), score: Number(item.opportunity_score) || 0, intent: clean(item.intent, 30), source: item.source || [], targetPage: clean(item.target_page, 500) || "/" }));
 }
 
-async function generateArticle(topic: { keyword: string; score: number; intent: string }, config: BlogAutomationConfig) {
-  const ai = getBlogAiConfig();
-  if (!ai.apiKey) throw new Error(ai.provider === "Local AI" ? "BLOG_AI_API_KEY is required for the Local AI connection." : "OPENAI_API_KEY is required for Blog Autopilot article generation.");
-  if (process.env.VERCEL && ai.isLoopback) throw new Error("Vercel cannot reach a localhost Local AI URL. Set BLOG_AI_BASE_URL to a secure public HTTPS tunnel or hosted endpoint.");
-  if (ai.insecureProductionUrl) throw new Error("BLOG_AI_BASE_URL must use HTTPS when Blog Autopilot runs on Vercel.");
-  const prompt = `Create an original, publication-ready TaraWork blog article targeting the keyword "${topic.keyword}".
-Audience: Filipino freelancers and/or businesses hiring Filipino remote talent. Search intent: ${topic.intent}. Tone: ${config.tone}. Target length: about ${config.targetWords} words.
-Requirements: useful and specific; no fabricated statistics, testimonials, guarantees, or claims; no keyword stuffing; use concise paragraphs, H2/H3 headings, bullet lists, practical steps, and a natural TaraWork call to action. Do not include an H1 because the page title supplies it. Return valid JSON only with keys title, excerpt, category, imageAlt, readTime, contentHtml. category must be one of: ${config.preferredCategories.join(" | ")}. excerpt must be 140-220 characters. contentHtml may use only p,h2,h3,strong,em,ul,ol,li,blockquote,table,thead,tbody,tr,th,td tags.`;
+async function requestBlogJson(ai: ReturnType<typeof getBlogAiConfig>, prompt: string, maxTokens: number, label: string) {
   const headers: Record<string, string> = { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" };
   if (ai.accessClientId && ai.accessClientSecret) { headers["CF-Access-Client-Id"] = ai.accessClientId; headers["CF-Access-Client-Secret"] = ai.accessClientSecret; }
   const endpoint = `${ai.baseUrl}/chat/completions`;
-  const maxTokens = Math.min(3200, Math.max(1400, Math.ceil(config.targetWords * 1.8)));
-  const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify({ model: ai.model, temperature: 0.55, max_tokens: maxTokens, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store", signal: AbortSignal.timeout(240_000) });
+  const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify({ model: ai.model, temperature: 0.55, max_tokens: maxTokens, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store", signal: AbortSignal.timeout(110_000) });
   const responseText = await response.text();
   let payload: any;
   try { payload = JSON.parse(responseText); }
@@ -64,11 +56,31 @@ Requirements: useful and specific; no fabricated statistics, testimonials, guara
     const contentType = clean(response.headers.get("content-type"), 100) || "unknown";
     const destination = (() => { try { const url = new URL(response.url || endpoint); return `${url.host}${url.pathname}`; } catch { return "unknown destination"; } })();
     const cfRay = clean(response.headers.get("cf-ray"), 100);
-    throw new Error(`AI endpoint returned non-JSON HTTP ${response.status} (${contentType}) from ${destination}${cfRay ? `; CF-Ray ${cfRay}` : ""}. Check the Vercel AI URL and Cloudflare Security Events.`);
+    throw new Error(`${label} returned non-JSON HTTP ${response.status} (${contentType}) from ${destination}${cfRay ? `; CF-Ray ${cfRay}` : ""}.`);
   }
-  if (!response.ok) throw new Error(clean(payload.error?.message || payload.error, 500) || `AI article generation failed with HTTP ${response.status}.`);
+  if (!response.ok) throw new Error(clean(payload.error?.message || payload.error, 500) || `${label} failed with HTTP ${response.status}.`);
   const rawArticle = String(payload.choices?.[0]?.message?.content || "{}").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  let article: any; try { article = JSON.parse(rawArticle); } catch { throw new Error("AI returned invalid article JSON. The response may have been truncated; reduce target words or retry."); }
+  try { return JSON.parse(rawArticle); } catch { throw new Error(`${label} returned invalid JSON. The response may have been truncated.`); }
+}
+
+async function generateArticle(topic: { keyword: string; score: number; intent: string }, config: BlogAutomationConfig) {
+  const ai = getBlogAiConfig();
+  if (!ai.apiKey) throw new Error(ai.provider === "Local AI" ? "BLOG_AI_API_KEY is required for the Local AI connection." : "OPENAI_API_KEY is required for Blog Autopilot article generation.");
+  if (process.env.VERCEL && ai.isLoopback) throw new Error("Vercel cannot reach a localhost Local AI URL. Set BLOG_AI_BASE_URL to a secure public HTTPS tunnel or hosted endpoint.");
+  if (ai.insecureProductionUrl) throw new Error("BLOG_AI_BASE_URL must use HTTPS when Blog Autopilot runs on Vercel.");
+  const requirements = `Target keyword: "${topic.keyword}". Audience: Filipino freelancers and/or businesses hiring Filipino remote talent. Search intent: ${topic.intent}. Tone: ${config.tone}. Be useful and specific; do not fabricate statistics, testimonials, guarantees, or claims; avoid keyword stuffing. Use concise paragraphs, H2/H3 headings, lists, and practical steps. Do not include an H1. HTML may use only p,h2,h3,strong,em,ul,ol,li,blockquote,table,thead,tbody,tr,th,td tags.`;
+  let article: any;
+  if (ai.provider === "Local AI") {
+    const firstWords = Math.ceil(config.targetWords / 2);
+    const secondWords = config.targetWords - firstWords;
+    const first = await requestBlogJson(ai, `Create the first half of a publication-ready TaraWork article. ${requirements} Write about ${firstWords} words, covering the introduction and first main sections. Return JSON only with keys title, excerpt, category, imageAlt, readTime, contentHtml. category must be one of: ${config.preferredCategories.join(" | ")}. excerpt must be 140-220 characters.`, 900, "Local AI article part 1");
+    const title = clean(first.title, 140);
+    const second = await requestBlogJson(ai, `Continue and finish the TaraWork article titled "${title}". ${requirements} Write about ${secondWords} words with the remaining practical sections, conclusion, and a natural TaraWork call to action. Do not repeat the introduction. Return JSON only with the key contentHtml.`, 900, "Local AI article part 2");
+    article = { ...first, contentHtml: `${String(first.contentHtml || "")}\n${String(second.contentHtml || "")}` };
+  } else {
+    const prompt = `Create an original, publication-ready TaraWork blog article. ${requirements} Target length: about ${config.targetWords} words. Return JSON only with keys title, excerpt, category, imageAlt, readTime, contentHtml. category must be one of: ${config.preferredCategories.join(" | ")}. excerpt must be 140-220 characters.`;
+    article = await requestBlogJson(ai, prompt, Math.min(3200, Math.max(1400, Math.ceil(config.targetWords * 1.8))), "AI article generation");
+  }
   const title = clean(article.title, 140); const excerpt = clean(article.excerpt, 280); const category = config.preferredCategories.includes(article.category) ? article.category : config.preferredCategories[0]; const content = sanitizeArticleHtml(String(article.contentHtml || "").slice(0, 50000));
   if (!title || excerpt.length < 100 || content.length < 1500) throw new Error("Generated article did not meet the minimum editorial quality checks.");
   return { title, excerpt, category, imageAlt: clean(article.imageAlt, 180) || title, readTime: /^\d{1,2} min read$/.test(clean(article.readTime, 30)) ? clean(article.readTime, 30) : `${Math.max(4, Math.round(config.targetWords / 220))} min read`, content };
