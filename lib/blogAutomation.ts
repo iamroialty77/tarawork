@@ -55,7 +55,8 @@ Requirements: useful and specific; no fabricated statistics, testimonials, guara
   const headers: Record<string, string> = { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" };
   if (ai.accessClientId && ai.accessClientSecret) { headers["CF-Access-Client-Id"] = ai.accessClientId; headers["CF-Access-Client-Secret"] = ai.accessClientSecret; }
   const endpoint = `${ai.baseUrl}/chat/completions`;
-  const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify({ model: ai.model, temperature: 0.55, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store", signal: AbortSignal.timeout(120_000) });
+  const maxTokens = Math.min(3200, Math.max(1400, Math.ceil(config.targetWords * 1.8)));
+  const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify({ model: ai.model, temperature: 0.55, max_tokens: maxTokens, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store", signal: AbortSignal.timeout(240_000) });
   const responseText = await response.text();
   let payload: any;
   try { payload = JSON.parse(responseText); }
@@ -66,7 +67,8 @@ Requirements: useful and specific; no fabricated statistics, testimonials, guara
     throw new Error(`AI endpoint returned non-JSON HTTP ${response.status} (${contentType}) from ${destination}${cfRay ? `; CF-Ray ${cfRay}` : ""}. Check the Vercel AI URL and Cloudflare Security Events.`);
   }
   if (!response.ok) throw new Error(clean(payload.error?.message || payload.error, 500) || `AI article generation failed with HTTP ${response.status}.`);
-  let article: any; try { article = JSON.parse(payload.choices?.[0]?.message?.content || "{}"); } catch { throw new Error("AI returned invalid article JSON."); }
+  const rawArticle = String(payload.choices?.[0]?.message?.content || "{}").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  let article: any; try { article = JSON.parse(rawArticle); } catch { throw new Error("AI returned invalid article JSON. The response may have been truncated; reduce target words or retry."); }
   const title = clean(article.title, 140); const excerpt = clean(article.excerpt, 280); const category = config.preferredCategories.includes(article.category) ? article.category : config.preferredCategories[0]; const content = sanitizeArticleHtml(String(article.contentHtml || "").slice(0, 50000));
   if (!title || excerpt.length < 100 || content.length < 1500) throw new Error("Generated article did not meet the minimum editorial quality checks.");
   return { title, excerpt, category, imageAlt: clean(article.imageAlt, 180) || title, readTime: /^\d{1,2} min read$/.test(clean(article.readTime, 30)) ? clean(article.readTime, 30) : `${Math.max(4, Math.round(config.targetWords / 220))} min read`, content };
