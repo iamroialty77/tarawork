@@ -54,8 +54,18 @@ Audience: Filipino freelancers and/or businesses hiring Filipino remote talent. 
 Requirements: useful and specific; no fabricated statistics, testimonials, guarantees, or claims; no keyword stuffing; use concise paragraphs, H2/H3 headings, bullet lists, practical steps, and a natural TaraWork call to action. Do not include an H1 because the page title supplies it. Return valid JSON only with keys title, excerpt, category, imageAlt, readTime, contentHtml. category must be one of: ${config.preferredCategories.join(" | ")}. excerpt must be 140-220 characters. contentHtml may use only p,h2,h3,strong,em,ul,ol,li,blockquote,table,thead,tbody,tr,th,td tags.`;
   const headers: Record<string, string> = { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" };
   if (ai.accessClientId && ai.accessClientSecret) { headers["CF-Access-Client-Id"] = ai.accessClientId; headers["CF-Access-Client-Secret"] = ai.accessClientSecret; }
-  const response = await fetch(`${ai.baseUrl}/chat/completions`, { method: "POST", headers, body: JSON.stringify({ model: ai.model, temperature: 0.55, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store", signal: AbortSignal.timeout(120_000) });
-  const payload = await response.json(); if (!response.ok) throw new Error(clean(payload.error?.message, 500) || "AI article generation failed.");
+  const endpoint = `${ai.baseUrl}/chat/completions`;
+  const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify({ model: ai.model, temperature: 0.55, response_format: { type: "json_object" }, messages: [{ role: "system", content: "You are a senior SEO editor for a trustworthy Filipino remote-work marketplace. Return strict JSON." }, { role: "user", content: prompt }] }), cache: "no-store", signal: AbortSignal.timeout(120_000) });
+  const responseText = await response.text();
+  let payload: any;
+  try { payload = JSON.parse(responseText); }
+  catch {
+    const contentType = clean(response.headers.get("content-type"), 100) || "unknown";
+    const destination = (() => { try { const url = new URL(response.url || endpoint); return `${url.host}${url.pathname}`; } catch { return "unknown destination"; } })();
+    const cfRay = clean(response.headers.get("cf-ray"), 100);
+    throw new Error(`AI endpoint returned non-JSON HTTP ${response.status} (${contentType}) from ${destination}${cfRay ? `; CF-Ray ${cfRay}` : ""}. Check the Vercel AI URL and Cloudflare Security Events.`);
+  }
+  if (!response.ok) throw new Error(clean(payload.error?.message || payload.error, 500) || `AI article generation failed with HTTP ${response.status}.`);
   let article: any; try { article = JSON.parse(payload.choices?.[0]?.message?.content || "{}"); } catch { throw new Error("AI returned invalid article JSON."); }
   const title = clean(article.title, 140); const excerpt = clean(article.excerpt, 280); const category = config.preferredCategories.includes(article.category) ? article.category : config.preferredCategories[0]; const content = sanitizeArticleHtml(String(article.contentHtml || "").slice(0, 50000));
   if (!title || excerpt.length < 100 || content.length < 1500) throw new Error("Generated article did not meet the minimum editorial quality checks.");
