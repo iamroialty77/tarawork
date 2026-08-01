@@ -256,6 +256,44 @@ export async function PUT(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  const originError = assertSameOrigin(req);
+  if (originError) return originError;
+
+  const admin = await requireAdminUser("blog.manage");
+  const adminError = adminErrorResponse(admin);
+  if (adminError) return adminError;
+
+  const limited = rateLimit({
+    key: `admin:blog-posts:publish:${admin.user?.id || getClientIp(req)}`,
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (limited) return limited;
+
+  try {
+    const body = (await req.json()) as Pick<BlogPostBody, "id" | "status">;
+    const id = cleanLine(body.id, 80);
+    if (!id || body.status !== "published") {
+      return NextResponse.json({ error: "A valid draft id and published status are required." }, { status: 400 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("blog_posts")
+      .update({ status: "published", published_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("status", "draft")
+      .select("id,title,slug,status,published_at")
+      .maybeSingle();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!data) return NextResponse.json({ error: "Draft not found or it is already published." }, { status: 404 });
+    return NextResponse.json({ success: true, post: data });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to publish draft." }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;

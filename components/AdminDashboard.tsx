@@ -151,6 +151,7 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
   const [blogDraft, setBlogDraft] = useState(createEmptyBlogDraft);
   const [editingBlogPostId, setEditingBlogPostId] = useState<string | null>(null);
   const [blogEditorOpen, setBlogEditorOpen] = useState(false);
+  const [blogStatusTab, setBlogStatusTab] = useState<"draft" | "published">("draft");
   const [blogCategoryFilter, setBlogCategoryFilter] = useState("All");
   const [blogLoading, setBlogLoading] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -736,6 +737,27 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
       fetchData();
     } catch (error: any) {
       notify(error?.message || "Unable to delete blog post.");
+    } finally {
+      setBlogLoading(false);
+    }
+  };
+
+  const publishBlogPost = async (post: any) => {
+    if (!confirm(`Publish “${post.title}” to the public blog?`)) return;
+    setBlogLoading(true);
+    try {
+      const response = await fetch("/api/admin/blog-posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: post.id, status: "published" }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || "Unable to publish draft.");
+      notify(`“${post.title}” is now live on the blog.`);
+      setBlogStatusTab("published");
+      await fetchData();
+    } catch (error: any) {
+      notify(error?.message || "Unable to publish draft.");
     } finally {
       setBlogLoading(false);
     }
@@ -1786,17 +1808,23 @@ export default function AdminDashboard({ viewAs = "admin", onViewAsChange }: Adm
             )}
 
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <h4 className="text-sm font-black text-slate-900">Articles</h4>
-                <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">{["All", ...blogCategories].map((category) => {
-                  const count = category === "All" ? blogPostsAdmin.length : blogPostsAdmin.filter((post) => post.category === category).length;
+              <div className="border-b border-slate-200 p-4 sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div><h4 className="text-base font-black text-slate-900">Content library</h4><p className="mt-1 text-xs font-semibold text-slate-500">Review drafts before publishing and manage articles already live.</p></div>
+                  <div className="inline-flex w-fit rounded-xl bg-slate-100 p-1">{([
+                    { id: "draft", label: "Drafts", count: blogPostsAdmin.filter((post) => post.status === "draft").length },
+                    { id: "published", label: "Published", count: blogPostsAdmin.filter((post) => post.status === "published").length },
+                  ] as const).map((tab) => <button key={tab.id} type="button" onClick={() => setBlogStatusTab(tab.id)} className={`rounded-lg px-4 py-2 text-xs font-black transition ${blogStatusTab === tab.id ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>{tab.label}<span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] ${blogStatusTab === tab.id ? tab.id === "draft" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>{tab.count}</span></button>)}</div>
+                </div>
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">{["All", ...blogCategories].map((category) => {
+                  const count = blogPostsAdmin.filter((post) => post.status === blogStatusTab && (category === "All" || post.category === category)).length;
                   return <button key={category} type="button" onClick={() => setBlogCategoryFilter(category)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-black transition ${blogCategoryFilter === category ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{category}<span className={`ml-2 ${blogCategoryFilter === category ? "text-slate-300" : "text-slate-400"}`}>{count}</span></button>;
                 })}</div>
               </div>
-              {blogPostsAdmin.filter((post) => blogCategoryFilter === "All" || post.category === blogCategoryFilter).length ? <div className="divide-y divide-slate-100">{blogPostsAdmin.filter((post) => blogCategoryFilter === "All" || post.category === blogCategoryFilter).map((post) => <article key={post.id} className="grid gap-4 p-4 transition hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-5">
+              {blogPostsAdmin.filter((post) => post.status === blogStatusTab && (blogCategoryFilter === "All" || post.category === blogCategoryFilter)).length ? <div className="divide-y divide-slate-100">{blogPostsAdmin.filter((post) => post.status === blogStatusTab && (blogCategoryFilter === "All" || post.category === blogCategoryFilter)).map((post) => <article key={post.id} className="grid gap-4 p-4 transition hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-5">
                 <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h5 className="truncate text-sm font-black text-slate-900">{post.title}</h5><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider ${post.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{post.status}</span></div><div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-400"><span className="rounded-md bg-teal-50 px-2 py-1 text-teal-700">{post.category}</span><span>{post.published_at ? new Date(post.published_at).toLocaleDateString() : "No date"}</span></div></div>
-                <div className="flex items-center gap-2">{post.status === "published" && <a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer" className="rounded-lg px-3 py-2 text-xs font-black text-teal-700 hover:bg-teal-50">View</a>}<button type="button" onClick={() => editBlogPost(post)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-100">Edit</button><button type="button" onClick={() => deleteBlogPost(post.id)} aria-label={`Delete ${post.title}`} className="rounded-lg border border-rose-100 bg-white p-2 text-rose-600 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button></div>
-              </article>)}</div> : <div className="p-10 text-center"><BookOpen className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-sm font-black text-slate-700">No articles here</p><button type="button" onClick={() => { setEditingBlogPostId(null); setBlogDraft({ ...createEmptyBlogDraft(), category: blogCategoryFilter === "All" ? "Employer Hiring Guides" : blogCategoryFilter }); setBlogEditorOpen(true); }} className="mt-3 text-xs font-black text-teal-700 hover:underline">Create an article</button></div>}
+                <div className="flex flex-wrap items-center gap-2">{post.status === "draft" && <button type="button" onClick={() => void publishBlogPost(post)} disabled={blogLoading} className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3.5 py-2 text-xs font-black text-white shadow-sm hover:bg-teal-700 disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /> Publish article</button>}{post.status === "published" && <a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100">View live <ExternalLink className="h-3.5 w-3.5" /></a>}<button type="button" onClick={() => editBlogPost(post)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-100">Edit</button><button type="button" onClick={() => deleteBlogPost(post.id)} aria-label={`Delete ${post.title}`} className="rounded-lg border border-rose-100 bg-white p-2 text-rose-600 hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button></div>
+              </article>)}</div> : <div className="p-12 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100"><BookOpen className="h-6 w-6 text-slate-400" /></div><p className="mt-4 text-sm font-black text-slate-800">No {blogStatusTab} articles</p><p className="mt-1 text-xs font-semibold text-slate-400">{blogStatusTab === "draft" ? "Generated and manually saved drafts will appear here for review." : "Published articles will appear here with a link to the live post."}</p></div>}
             </section>
           </motion.div>
         )}
