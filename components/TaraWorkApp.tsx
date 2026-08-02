@@ -1641,10 +1641,7 @@ export default function TaraWorkApp() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          portfolio_items(*)
-        `)
+        .select('*')
         .eq('role', 'freelancer')
         .order('ranking', { ascending: true });
 
@@ -1654,6 +1651,57 @@ export default function TaraWorkApp() {
       }
 
       if (data) {
+        const freelancerIds = data.map((freelancer: any) => freelancer.id).filter(Boolean);
+        const projectsByProfile = new Map<string, PortfolioItem[]>();
+
+        if (freelancerIds.length > 0) {
+          // Projects created by the current editor are stored in portfolio_projects.
+          // Keep the legacy read as a fallback for profiles that have not been migrated yet.
+          const [modernResult, legacyResult] = await Promise.all([
+            supabase
+              .from('portfolios')
+              .select('profile_id, portfolio_projects(*)')
+              .in('profile_id', freelancerIds),
+            supabase
+              .from('portfolio_items')
+              .select('*')
+              .in('profile_id', freelancerIds),
+          ]);
+
+          if (modernResult.error) {
+            console.warn("Modern freelancer portfolio fetch issue:", modernResult.error);
+          }
+          if (legacyResult.error) {
+            console.warn("Legacy freelancer portfolio fetch issue:", legacyResult.error);
+          }
+
+          const addProject = (profileId: string, project: any) => {
+            if (!profileId || !project?.id) return;
+            const existing = projectsByProfile.get(profileId) || [];
+            const duplicate = existing.some((item) =>
+              item.id === project.id ||
+              (item.title === project.title && item.project_url === project.project_url),
+            );
+            if (!duplicate) {
+              existing.push({
+                ...project,
+                profile_id: profileId,
+                technologies: Array.isArray(project.technologies) ? project.technologies : [],
+              });
+              projectsByProfile.set(profileId, existing);
+            }
+          };
+
+          (modernResult.data || []).forEach((portfolio: any) => {
+            (portfolio.portfolio_projects || []).forEach((project: any) =>
+              addProject(portfolio.profile_id, project),
+            );
+          });
+          (legacyResult.data || []).forEach((project: any) =>
+            addProject(project.profile_id, project),
+          );
+        }
+
         const normalizedFreelancers = data.map((f: any) => {
           const normalizedAbout = normalizeAboutSections(f.aiInsights?.aboutSections, f.bio || "");
           const normalizedServices = normalizeServicesOffered(f.aiInsights?.servicesOffered);
@@ -1663,7 +1711,7 @@ export default function TaraWorkApp() {
             servicesOffered: normalizedServices,
             clientReviews: Array.isArray(f.aiInsights?.clientReviews) ? f.aiInsights.clientReviews : [],
             bio: normalizedAbout.whatISpecializeIn || f.bio || "",
-            portfolio: f.portfolio_items || []
+            portfolio: projectsByProfile.get(f.id) || []
           };
         });
         setFreelancers(normalizedFreelancers);
