@@ -143,28 +143,58 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
     }
   }
 
-  // 2. Backfill featured projects from old portfolio_items when the new relation is empty.
-  const existingProjects = mergePortfolioProjects(profile?.portfolios);
-  if (
-    profile &&
-    existingProjects.length === 0
-  ) {
-    console.log(`[Portfolio] No featured projects found for ${profile.name} (ID: ${profile.id}), checking old portfolio_items...`);
+  if (profile) {
+    // Fetch projects directly as well as through the relationship. This avoids a
+    // public profile silently showing zero projects when PostgREST cannot hydrate
+    // the nested relation even though the project rows exist.
+    const portfolios = Array.isArray(profile.portfolios) ? profile.portfolios : [];
+    const portfolioIds = portfolios.map((portfolio: any) => portfolio?.id).filter(Boolean);
+    let directProjects: any[] = [];
+
+    if (portfolioIds.length > 0) {
+      const { data: projectRows, error: projectError } = await supabaseAdmin
+        .from('portfolio_projects')
+        .select('*')
+        .in('portfolio_id', portfolioIds);
+
+      if (projectError) {
+        console.error('[Portfolio] Error fetching current projects:', projectError.message);
+      } else {
+        directProjects = projectRows || [];
+      }
+
+      portfolios.forEach((portfolio: any) => {
+        const relatedProjects = directProjects.filter(
+          (project: any) => project.portfolio_id === portfolio.id,
+        );
+        if (relatedProjects.length > 0) {
+          portfolio.portfolio_projects = relatedProjects.map(normalizePortfolioProject);
+        }
+      });
+    }
+
     const { data: oldItems, error: oldError } = await supabaseAdmin
       .from('portfolio_items')
       .select('*')
       .eq('profile_id', profile.id);
-    
-    if (oldError) console.error(`[Portfolio] Error fetching old items:`, oldError.message);
 
-    if (oldItems && oldItems.length > 0) {
-      console.log(`[Portfolio] Found ${oldItems.length} items in old table. Mapping to new structure.`);
-      const mappedOldProjects = oldItems.map(normalizePortfolioProject);
+    if (oldError) console.error('[Portfolio] Error fetching legacy projects:', oldError.message);
 
-      if (profile.portfolios?.[0]) {
-        profile.portfolios[0].portfolio_projects = mappedOldProjects;
+    const currentProjects = mergePortfolioProjects(portfolios);
+    const combinedProjects = [...currentProjects];
+    (oldItems || []).map(normalizePortfolioProject).forEach((project: any) => {
+      const duplicate = combinedProjects.some((current: any) =>
+        current.id === project.id ||
+        (current.title === project.title && current.project_url === project.project_url),
+      );
+      if (!duplicate) combinedProjects.push(project);
+    });
+
+    if (combinedProjects.length > 0) {
+      if (portfolios[0]) {
+        portfolios[0].portfolio_projects = combinedProjects;
       } else {
-        profile.portfolios = [{
+        portfolios.push({
           id: 'fallback-' + (profile.id?.toString().substring(0, 8) || '0000'),
           about_me: profile.bio || '',
           tagline: 'Professional Portfolio',
@@ -174,12 +204,13 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
             aboutSections: normalizeAboutSections(profile.aiInsights?.aboutSections, profile.bio || ''),
             servicesOffered: normalizeServicesOffered(profile.aiInsights?.servicesOffered),
           },
-          portfolio_projects: mappedOldProjects,
+          portfolio_projects: combinedProjects,
           portfolio_skills: [],
-          portfolio_links: []
-        }] as any;
+          portfolio_links: [],
+        });
       }
     }
+    profile.portfolios = portfolios;
   }
 
   return profile;
