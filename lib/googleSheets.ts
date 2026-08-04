@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase_admin";
 
 const CONNECTION_TYPE = "google_sheets_connection";
 const clean = (value: unknown, max: number) => String(value || "").trim().slice(0, max);
+const SHARED_SCOPE = "automation_workspace";
 
 function credentials() {
   const clientId = process.env.GOOGLE_CLIENT_ID || "";
@@ -63,7 +64,12 @@ export async function exchangeGoogleCode(code: string, redirectUri: string) {
 export async function saveGoogleConnection(refreshToken: string, adminId: string) {
   const { error } = await supabaseAdmin.from("email_messages").insert({
     type: CONNECTION_TYPE, direction: "outbound", subject: "Google Sheets connection",
-    text_body: "", status: "draft", metadata: { refreshToken: encrypt(refreshToken), connectedBy: adminId, connectedAt: new Date().toISOString() },
+    text_body: "", status: "draft", metadata: {
+      refreshToken: encrypt(refreshToken),
+      connectedBy: adminId,
+      connectedAt: new Date().toISOString(),
+      scope: SHARED_SCOPE,
+    },
   });
   if (error) throw new Error(error.message);
 }
@@ -71,10 +77,14 @@ export async function saveGoogleConnection(refreshToken: string, adminId: string
 async function getRefreshToken(adminId: string) {
   const { data, error } = await supabaseAdmin.from("email_messages").select("metadata")
     .eq("type", CONNECTION_TYPE)
-    .contains("metadata", { connectedBy: adminId })
-    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(50);
   if (error) throw new Error(error.message);
-  const token = clean(data?.metadata?.refreshToken, 10000);
+  const records = Array.isArray(data) ? data : [];
+  const sharedRecord =
+    records.find((item) => clean(item?.metadata?.scope, 120) === SHARED_SCOPE)
+    || records.find((item) => clean(item?.metadata?.connectedBy, 120) === adminId);
+  const token = clean(sharedRecord?.metadata?.refreshToken, 10000);
   return token ? decrypt(token) : null;
 }
 
@@ -208,6 +218,6 @@ export async function disconnectGoogleConnection(adminId: string) {
   }
   const { error } = await supabaseAdmin.from("email_messages").delete()
     .eq("type", CONNECTION_TYPE)
-    .contains("metadata", { connectedBy: adminId });
+    .contains("metadata", { scope: SHARED_SCOPE });
   if (error) throw new Error(error.message);
 }
