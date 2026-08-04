@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase_admin";
 import { getProfileSlug } from "@/lib/profileUrl";
 import { getConfirmedAuthEmail } from "@/lib/emailEligibility.mjs";
 import { logEmailMessages, type EmailLogInput } from "@/lib/emailLog";
+import { escapeHtml, linkifyPlainText } from "@/lib/emailHtml";
 
 export type ReminderAudience = "all" | "freelancer" | "employer";
 export type ProfileReminderConfig = {
@@ -37,9 +38,6 @@ export const DEFAULT_PROFILE_REMINDER_CONFIG: ProfileReminderConfig = {
 const CONFIG_TYPE = "profile_completion_automation_config";
 const REMINDER_TYPE = "profile_completion_reminder";
 const clean = (value: unknown, max: number) => String(value || "").trim().slice(0, max);
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
 export function normalizeProfileReminderConfig(value: unknown): ProfileReminderConfig {
   const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const threshold = Math.min(100, Math.max(0, Math.round(Number(input.threshold ?? 50))));
@@ -217,7 +215,7 @@ function renderHtmlTemplate(template: string, recipient: ProfileReminderRecipien
     }
     const match = token.match(/^\{\{(role|completion|missing_fields)\}\}$/);
     if (match) return escapeHtml(values[match[1]]);
-    return escapeHtml(token);
+    return linkifyPlainText(token);
   }).join("").replace(/\n/g, "<br />");
 }
 

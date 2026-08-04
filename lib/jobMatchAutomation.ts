@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase_admin";
 import { getConfirmedAuthEmail } from "@/lib/emailEligibility.mjs";
 import { getJobSharePath } from "@/lib/jobShare";
 import { logEmailMessages, type EmailLogInput } from "@/lib/emailLog";
+import { escapeHtml, renderPlainTextEmailHtml } from "@/lib/emailHtml";
 
 export type JobMatchConfig = {
   enabled: boolean;
@@ -43,9 +44,6 @@ const SMART_JOB_KEYWORDS = [
   "quickbooks", "xero", "excel", "google sheets", "data analysis", "power bi", "tableau", "automation", "zapier",
   "make.com", "n8n", "project management", "agile", "scrum", "quality assurance", "software testing",
 ] as const;
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
 export const DEFAULT_JOB_MATCH_CONFIG: JobMatchConfig = {
   enabled: false,
   threshold: 50,
@@ -204,7 +202,7 @@ export async function sendJobMatches(config: JobMatchConfig, triggeredBy: string
     try {
       await transporter.sendMail({
         from: `"${fromName}" <${smtpUser}>`, to: recipient.email, replyTo: smtpUser, subject, text: message,
-        html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p style="white-space:pre-line">${escapeHtml(message)}</p><p><a href="${escapeHtml(recipient.jobUrl)}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700">View matching job</a></p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Job Match</p></div>`,
+        html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p>${renderPlainTextEmailHtml(message)}</p><p><a href="${escapeHtml(recipient.jobUrl)}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700">View matching job</a></p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Job Match</p></div>`,
       });
       sent += 1;
       emailLogs.push({

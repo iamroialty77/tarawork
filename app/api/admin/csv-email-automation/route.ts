@@ -4,13 +4,12 @@ import { requireAdminUser } from "@/lib/authz";
 import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
 import { logEmailMessages, type EmailLogInput } from "@/lib/emailLog";
 import { renderCsvTemplate } from "@/lib/csvTemplate";
+import { renderPlainTextEmailHtml } from "@/lib/emailHtml";
 
 export const runtime = "nodejs";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_ROWS = 500;
 const clean = (value: unknown, max: number) => String(value ?? "").trim().slice(0, max);
-const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
 export async function GET() {
   const admin = await requireAdminUser("automation.manage");
   if (admin.error) return NextResponse.json({ error: admin.error }, { status: admin.status });
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
       const subject = renderCsvTemplate(subjectTemplate, alias, recipient.row).slice(0, 300);
       const message = renderCsvTemplate(messageTemplate, alias, recipient.row).slice(0, 20000);
       try {
-        await transporter.sendMail({ from: `"${fromName}" <${smtpUser}>`, to: recipient.email, replyTo: smtpUser, subject, text: message, html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p style="white-space:pre-line">${escapeHtml(message)}</p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Support</p></div>` });
+        await transporter.sendMail({ from: `"${fromName}" <${smtpUser}>`, to: recipient.email, replyTo: smtpUser, subject, text: message, html: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#0f172a;max-width:680px;margin:auto"><p>${renderPlainTextEmailHtml(message)}</p><hr style="border:0;border-top:1px solid #e2e8f0;margin:24px 0"><p style="font-size:12px;color:#64748b">TaraWork Support</p></div>` });
         sent++;
         emailLogs.push({ type: "csv_campaign", direction: "outbound", fromEmail: smtpUser, fromName, toEmail: recipient.email, replyTo: smtpUser, subject, textBody: message, status: "sent", metadata: { alias, sentBy: admin.user?.id } });
       } catch (error) {
