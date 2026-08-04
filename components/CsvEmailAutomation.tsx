@@ -4,6 +4,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "
 import { FileSpreadsheet, Filter, Link2, LogOut, Mail, Search, Send, Upload, X } from "lucide-react";
 import AutomationToast from "@/components/AutomationToast";
 import { renderCsvTemplate } from "@/lib/csvTemplate";
+import { renderPlainTextEmailHtml } from "@/lib/emailHtml";
 
 type CsvRow = Record<string, string>;
 type GoogleSpreadsheet = { id: string; name: string; modifiedTime?: string };
@@ -69,6 +70,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
   const validRows = useMemo(() => selectedRows.filter((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row[emailColumn] || "")), [selectedRows, emailColumn]);
   const uniqueCount = new Set(validRows.map((row) => row[emailColumn].toLowerCase())).size;
   const sample = validRows[0] || selectedRows[0];
+  const messagePreview = useMemo(() => renderPlainTextEmailHtml(renderCsvTemplate(message, alias, sample) || ""), [alias, message, sample]);
   const filteredRows = useMemo(() => {
     const search = searchQuery.trim().toLowerCase();
     const filter = filterValue.trim().toLowerCase();
@@ -269,6 +271,7 @@ export default function CsvEmailAutomation({ close }: { close: () => void }) {
             <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Subject<input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Your email subject" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-blue-400" /></label>
             <div className="mt-4"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Insert CSV field</p><div className="mt-2 flex flex-wrap gap-2">{headers.map((header) => <button type="button" key={header} onClick={() => insertVariable(header)} className="rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 font-mono text-[11px] font-bold text-blue-700 hover:border-blue-300 hover:bg-blue-100">{`{{${header}}}`}</button>)}</div></div>
             <label className="mt-4 block text-xs font-black uppercase tracking-wider text-slate-500">Message<textarea ref={messageRef} value={message} onChange={(event) => setMessage(event.target.value)} rows={9} placeholder="Click a CSV field above to insert it into your message." className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium leading-7 outline-none focus:border-blue-400" /></label>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Rendered preview</p><div className="mt-2 min-h-16 whitespace-pre-wrap text-sm font-medium leading-6 text-slate-600 [&_a]:font-semibold [&_a]:text-blue-600 [&_a]:underline" dangerouslySetInnerHTML={{ __html: messagePreview || "Paste a link in the message to preview it here." }} /></div>
           </div>
           <aside className="h-fit rounded-xl border border-slate-200 bg-slate-50 p-4"><p className="text-[10px] font-black uppercase tracking-wider text-slate-400">First selected recipient</p><p className="mt-3 truncate text-xs font-bold text-slate-500">To: {sample?.[emailColumn] || "—"}</p><p className="mt-2 border-b border-slate-200 pb-3 text-sm font-black text-slate-900">{renderCsvTemplate(subject, alias, sample) || "Subject preview"}</p><p className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-sm font-medium leading-6 text-slate-600">{renderCsvTemplate(message, alias, sample) || "Message preview"}</p><button type="button" onClick={() => void send()} disabled={busy || !subject.trim() || !message.trim() || uniqueCount === 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white disabled:opacity-40"><Send className="h-4 w-4" />{busy ? "Sending..." : `Send to ${uniqueCount}`}</button></aside>
         </section>}
