@@ -2,11 +2,20 @@ import { createHash } from "node:crypto";
 import Parser from "rss-parser";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 
-type FeedConfig = { name: string; url: string };
+export type FeedConfig = { name: string; url: string };
+export type RssAutomationConfig = { enabled: boolean; expiryDays: number; feeds: FeedConfig[] };
 type ExistingJob = { external_url: string | null; title: string; company: string | null };
+type RssItemFields = { companyName?: string };
 
 const MAX_ITEMS_PER_FEED = 50;
-const DEFAULT_EXPIRY_DAYS = 21;
+const DEFAULT_CONFIG: RssAutomationConfig = {
+  enabled: false,
+  expiryDays: 21,
+  feeds: [
+    { name: "Himalayas", url: "https://himalayas.app/jobs/rss" },
+    { name: "Remote OK", url: "https://remoteok.com/remote-jobs.rss" },
+  ],
+};
 
 const cleanText = (value: unknown, maxLength: number) => String(value || "")
   .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -25,18 +34,10 @@ const cleanText = (value: unknown, maxLength: number) => String(value || "")
 const dedupKey = (title: string, company: string) => `${title}|${company}`.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const stableJobId = (url: string) => `rss_${createHash("sha256").update(url).digest("hex").slice(0, 24)}`;
 
-function expiryDays() {
-  const configured = Number(process.env.RSS_JOB_EXPIRY_DAYS || DEFAULT_EXPIRY_DAYS);
-  return Number.isFinite(configured) ? Math.min(30, Math.max(14, Math.round(configured))) : DEFAULT_EXPIRY_DAYS;
-}
-
-export function getRssFeedConfigs(): FeedConfig[] {
-  const raw = process.env.RSS_JOB_FEEDS?.trim();
-  if (!raw) return [];
-  let value: unknown;
-  try { value = JSON.parse(raw); } catch { throw new Error("RSS_JOB_FEEDS must be a JSON array of { name, url } objects."); }
-  if (!Array.isArray(value)) throw new Error("RSS_JOB_FEEDS must be a JSON array.");
-  return value.map((entry, index) => {
+export function normalizeRssConfig(value: unknown): RssAutomationConfig {
+  const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const rawFeeds = Array.isArray(input.feeds) ? input.feeds : DEFAULT_CONFIG.feeds;
+  const feeds = rawFeeds.slice(0, 12).map((entry, index) => {
     const candidate = entry as Partial<FeedConfig>;
     const name = cleanText(candidate.name || `Feed ${index + 1}`, 120);
     let url: URL;
@@ -44,6 +45,28 @@ export function getRssFeedConfigs(): FeedConfig[] {
     if (url.protocol !== "https:") throw new Error(`RSS URL for ${name} must use HTTPS.`);
     return { name, url: url.toString() };
   });
+  return {
+    enabled: input.enabled === true,
+    expiryDays: Math.min(30, Math.max(14, Math.round(Number(input.expiryDays ?? 21)))),
+    feeds,
+  };
+}
+
+export async function getRssAutomationConfig() {
+  const { data, error } = await supabaseAdmin.from("rss_automation_configs").select("enabled,expiry_days,feeds").eq("id", "primary").maybeSingle();
+  if (error) throw error;
+  if (!data) return DEFAULT_CONFIG;
+  return normalizeRssConfig({ enabled: data.enabled, expiryDays: data.expiry_days, feeds: data.feeds });
+}
+
+export async function saveRssAutomationConfig(config: RssAutomationConfig, adminId?: string) {
+  const normalized = normalizeRssConfig(config);
+  const { error } = await supabaseAdmin.from("rss_automation_configs").upsert({
+    id: "primary", enabled: normalized.enabled, expiry_days: normalized.expiryDays, feeds: normalized.feeds,
+    updated_by: adminId || null, updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+  return normalized;
 }
 
 function itemDate(item: Parser.Item) {
@@ -53,12 +76,17 @@ function itemDate(item: Parser.Item) {
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
-export async function ingestRssJobs() {
-  const feeds = getRssFeedConfigs();
-  if (!feeds.length) return { skipped: true, reason: "RSS_JOB_FEEDS is not configured.", feeds: 0, inserted: 0, duplicates: 0, expired: 0, errors: [] as string[] };
+export async function ingestRssJobs(config?: RssAutomationConfig, trigger: "manual" | "cron" = "cron", adminId?: string) {
+  const resolved = normalizeRssConfig(config || await getRssAutomationConfig());
+  if (trigger === "cron" && !resolved.enabled) return { skipped: true, reason: "RSS automation is disabled.", feeds: resolved.feeds.length, inserted: 0, duplicates: 0, expired: 0, errors: [] as string[] };
+  const feeds = resolved.feeds;
+  if (!feeds.length) return { skipped: true, reason: "No RSS feeds are configured.", feeds: 0, inserted: 0, duplicates: 0, expired: 0, errors: [] as string[] };
+
+  const { data: run, error: runError } = await supabaseAdmin.from("rss_automation_runs").insert({ trigger_type: trigger, started_by: adminId || null }).select("id").single();
+  if (runError) throw runError;
 
   const now = new Date();
-  const days = expiryDays();
+  const days = resolved.expiryDays;
   const { data: existing, error: existingError } = await supabaseAdmin
     .from("jobs")
     .select("external_url,title,company")
@@ -69,7 +97,10 @@ export async function ingestRssJobs() {
   const existingJobs = (existing || []) as ExistingJob[];
   const knownUrls = new Set(existingJobs.map((job) => job.external_url).filter(Boolean) as string[]);
   const knownListings = new Set(existingJobs.map((job) => dedupKey(job.title, job.company || "")));
-  const parser = new Parser({ headers: { "User-Agent": "TaraWork-RSS/1.0" }, timeout: 15_000, maxRedirects: 3 });
+  const parser = new Parser<Record<string, never>, RssItemFields>({
+    headers: { "User-Agent": "TaraWork-RSS/1.0" }, timeout: 15_000, maxRedirects: 3,
+    customFields: { item: [["himalayasJobs:companyName", "companyName"]] },
+  });
   const rows: Record<string, unknown>[] = [];
   const errors: string[] = [];
   let duplicates = 0;
@@ -80,7 +111,7 @@ export async function ingestRssJobs() {
       for (const item of parsed.items.slice(0, MAX_ITEMS_PER_FEED)) {
         const externalUrl = String(item.link || item.guid || "").trim();
         const title = cleanText(item.title, 240);
-        const company = cleanText(item.creator || parsed.title || feed.name, 160);
+        const company = cleanText(item.companyName || item.creator || parsed.title || feed.name, 160);
         if (!title || !externalUrl) continue;
         let safeUrl: URL;
         try { safeUrl = new URL(externalUrl); } catch { continue; }
@@ -122,5 +153,11 @@ export async function ingestRssJobs() {
     .select("id");
   if (expiryError) throw expiryError;
 
-  return { skipped: false, feeds: feeds.length, inserted, duplicates, expired: expiredRows?.length || 0, errors };
+  const result = { skipped: false, feeds: feeds.length, inserted, duplicates, expired: expiredRows?.length || 0, errors };
+  const { error: completionError } = await supabaseAdmin.from("rss_automation_runs").update({
+    status: errors.length === feeds.length ? "failed" : "completed", inserted_count: inserted,
+    duplicate_count: duplicates, expired_count: result.expired, errors, completed_at: new Date().toISOString(),
+  }).eq("id", run.id);
+  if (completionError) throw completionError;
+  return result;
 }

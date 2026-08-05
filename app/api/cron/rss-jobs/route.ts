@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   try {
-    return NextResponse.json({ success: true, ...await ingestRssJobs() });
+    return NextResponse.json({ success: true, ...await ingestRssJobs(undefined, "cron") });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "RSS job ingestion failed." }, { status: 500 });
   }

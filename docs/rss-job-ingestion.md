@@ -6,16 +6,11 @@ TaraWork imports configured RSS feeds through `GET /api/cron/rss-jobs` every six
 
 Run `scripts/rss_jobs_migration.sql` in the Supabase SQL editor. It adds provenance, source URL, publish/expiry timestamps, and indexes without changing existing client jobs.
 
-## Environment variables
+## Admin configuration
 
-Configure these in Vercel for Production (and Preview only if desired):
+Open **Admin → Automation → RSS Job Import**. From there an administrator with the `automation.manage` permission can enable or pause the schedule, add or remove feeds, choose a 14–30 day expiry, run an import immediately, and inspect recent run counts.
 
-```env
-RSS_JOB_FEEDS=[{"name":"Trusted Job Board","url":"https://jobs.example.com/feed.xml"}]
-RSS_JOB_EXPIRY_DAYS=21
-```
-
-Only trusted HTTPS feed URLs are accepted. Expiry is clamped to 14-30 days. Do not add a feed unless its publisher permits aggregation and displaying its job content.
+Only trusted HTTPS feed URLs are accepted. Do not add a feed unless its publisher permits aggregation and displaying its job content. Himalayas and Remote OK are included as disabled defaults because both publish aggregator guidance and require attribution/original links.
 
 ## Behavior
 
