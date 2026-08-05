@@ -330,7 +330,7 @@ export default function JobCard({
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
             <MapPin className="w-3.5 h-3.5 text-slate-500" />
-            Remote
+            {job.locationLabel || "Remote"}
           </div>
         </div>
         

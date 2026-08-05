@@ -828,6 +828,7 @@ CREATE TABLE IF NOT EXISTS public.rss_automation_runs (
     started_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL, completed_at TIMESTAMP WITH TIME ZONE
 );
 CREATE INDEX IF NOT EXISTS rss_automation_runs_started_at_idx ON public.rss_automation_runs (started_at DESC);
+-- Additional RSS curation columns and indexes are defined in scripts/rss_ai_curation_migration.sql.
 ALTER TABLE public.rss_automation_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rss_automation_runs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Admins can manage RSS automation configs." ON public.rss_automation_configs;
@@ -1189,6 +1190,17 @@ DROP POLICY IF EXISTS "Admins can manage SEO change history." ON public.seo_chan
 CREATE POLICY "Admins can manage SEO change history." ON public.seo_change_history FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')) WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- Blog Studio content automation
+-- slug_redirects is an internal table created by the blog slug migration.
+-- Keep it inaccessible to PostgREST clients; server service-role queries bypass RLS.
+ALTER TABLE IF EXISTS public.slug_redirects ENABLE ROW LEVEL SECURITY;
+
+-- Security Advisor hardening is kept as a repeatable migration because these
+-- objects may originate from earlier production migrations.
+-- See scripts/security_lints_migration.sql and
+-- scripts/security_helpers_private_schema.sql before enabling public API access.
+-- Server-only tables use explicit deny policies from
+-- scripts/internal_tables_explicit_deny_policies.sql.
+
 CREATE TABLE IF NOT EXISTS public.blog_automation_configs (
     id TEXT PRIMARY KEY DEFAULT 'primary' CHECK (id = 'primary'),
     enabled BOOLEAN NOT NULL DEFAULT FALSE,

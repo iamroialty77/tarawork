@@ -1156,6 +1156,14 @@ export default function TaraWorkApp() {
           externalUrl: job.external_url,
           publishedAt: job.published_at,
           expiresAt: job.expires_at,
+          locationLabel: job.location_label,
+          qualityScore: job.quality_score,
+          scamRiskScore: job.scam_risk_score,
+          seniorityTag: job.seniority_tag,
+          salaryEstimated: job.salary_estimated,
+          salaryEstimateMin: job.salary_estimate_min,
+          salaryEstimateMax: job.salary_estimate_max,
+          salaryEstimateCurrency: job.salary_estimate_currency,
           paymentMethod: job.paymentMethod || "Flat-Rate",
           jobType: job.jobType || "Contract"
         }));

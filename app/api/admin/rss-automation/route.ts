@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminUser } from "@/lib/authz";
 import { assertSameOrigin, getClientIp, rateLimit } from "@/lib/security";
 import { getRssAutomationConfig, ingestRssJobs, normalizeRssConfig, saveRssAutomationConfig } from "@/lib/rssJobIngestion";
+import { getRssLocalAiStatus } from "@/lib/rssLocalAi";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 
 export const runtime = "nodejs";
@@ -20,7 +21,7 @@ export async function GET() {
     ]);
     if (runs.error) throw runs.error;
     if (count.error) throw count.error;
-    return NextResponse.json({ config, runs: runs.data || [], activeJobCount: count.count || 0 });
+    return NextResponse.json({ config, runs: runs.data || [], activeJobCount: count.count || 0, localAi: getRssLocalAiStatus() });
   } catch (error) { return NextResponse.json({ error: message(error) }, { status: 500 }); }
 }
 
