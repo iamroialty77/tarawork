@@ -1151,6 +1151,11 @@ export default function TaraWorkApp() {
               ? job.rate
               : `${normalizeCurrencyCode(job.currency_code || job.currencyCode)} ${Number.isFinite(Number(job.budget)) ? Number(job.budget).toLocaleString() : "0"}`,
           energyRequirement: job.energy_requirement || "Balanced",
+          source: job.source || "client",
+          sourceFeed: job.source_feed,
+          externalUrl: job.external_url,
+          publishedAt: job.published_at,
+          expiresAt: job.expires_at,
           paymentMethod: job.paymentMethod || "Flat-Rate",
           jobType: job.jobType || "Contract"
         }));

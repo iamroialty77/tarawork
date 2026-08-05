@@ -798,6 +798,21 @@ CREATE TABLE IF NOT EXISTS public.portfolio_links (
 ALTER TABLE public.jobs
     ADD COLUMN IF NOT EXISTS currency_code TEXT DEFAULT 'PHP';
 
+-- External/RSS job provenance and lifecycle. Client posts keep source='client'.
+ALTER TABLE public.jobs
+    ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'client',
+    ADD COLUMN IF NOT EXISTS source_feed TEXT,
+    ADD COLUMN IF NOT EXISTS external_url TEXT,
+    ADD COLUMN IF NOT EXISTS published_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS jobs_external_url_unique
+    ON public.jobs (external_url)
+    WHERE external_url IS NOT NULL;
+CREATE INDEX IF NOT EXISTS jobs_rss_expiry_idx
+    ON public.jobs (expires_at)
+    WHERE source = 'rss' AND status = 'live';
+
 -- Enable RLS for Portfolio tables
 ALTER TABLE public.portfolios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_projects ENABLE ROW LEVEL SECURITY;

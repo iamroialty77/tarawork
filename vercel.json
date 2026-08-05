@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/blog-automation",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/rss-jobs",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

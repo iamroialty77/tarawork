@@ -68,7 +68,8 @@ export default function JobCard({
   const sharePath = getJobSharePath(job);
   const shareUrl = getJobShareUrl(job);
   const isSaved = controlledIsSaved ?? localIsSaved;
-  const isApplyDisabled = isApplied || isApplyingLocal;
+  const isExternalJob = job.source === "rss" && Boolean(job.externalUrl);
+  const isApplyDisabled = (!isExternalJob && isApplied) || isApplyingLocal;
 
   const copyShareLink = async () => {
     try {
@@ -83,6 +84,10 @@ export default function JobCard({
 
   const handleApplyClick = async () => {
     if (isApplyDisabled) return;
+    if (isExternalJob && job.externalUrl) {
+      window.open(job.externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     if (isApplyLocked) {
       await copyShareLink();
       return;
@@ -96,6 +101,8 @@ export default function JobCard({
 
   const applyButtonLabel = isApplyingLocal
     ? "Applying..."
+    : isExternalJob
+      ? "View Source"
     : isApplied
       ? applicationStatus === "hired"
         ? "Hired"
@@ -160,7 +167,7 @@ export default function JobCard({
                   )}
                   <span className="inline-flex items-center gap-1 text-xs text-slate-500 font-medium">
                     <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    Verified Partner
+                    {isExternalJob ? `External · ${job.sourceFeed || "RSS"}` : "Verified Partner"}
                   </span>
                 </div>
                 {matchScore !== undefined && matchScore > 0 && (
@@ -234,7 +241,7 @@ export default function JobCard({
           </div>
 
           <div className="flex flex-wrap justify-end gap-2 relative">
-            {!isApplyLocked && (
+            {(!isApplyLocked || isExternalJob) && (
               <button
                 onClick={handleApplyClick}
                 disabled={isApplyDisabled}
@@ -374,7 +381,7 @@ export default function JobCard({
             <button 
               onClick={handleApplyClick}
               disabled={isApplyDisabled}
-              title={isApplyLocked ? applyLockedReason : undefined}
+              title={!isExternalJob && isApplyLocked ? applyLockedReason : undefined}
               className={cn(
                 "flex items-center gap-2 px-4 sm:px-5 py-2 text-xs font-bold text-white rounded-lg transition-all active:scale-95 cursor-pointer uppercase tracking-wider",
                 isApplied ? "bg-emerald-600 shadow-emerald-100" : "bg-slate-900 hover:bg-black shadow-lg shadow-slate-200",
@@ -387,6 +394,11 @@ export default function JobCard({
                   <span className="hidden xs:inline">Applying...</span>
                   <span className="xs:hidden">...</span>
                 </span>
+              ) : isExternalJob ? (
+                <>
+                  <span>View Source</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </>
               ) : isApplied ? (
                 applicationStatus === 'hired' ? "Hired ✓" : "Pending"
               ) : isApplyLocked ? (
