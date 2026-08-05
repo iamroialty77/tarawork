@@ -33,6 +33,8 @@ type Config = {
   maximumScamRiskScore: number;
   excludeUsOnly: boolean;
   useLocalAi: boolean;
+  closedRetentionDays: number;
+  maximumStoredJobs: number;
   feeds: Feed[];
 };
 type Run = {
@@ -45,6 +47,7 @@ type Run = {
   ai_processed_count: number;
   ai_fallback_count: number;
   expired_count: number;
+  deleted_count: number;
   errors: string[];
   started_at: string;
 };
@@ -62,6 +65,8 @@ const initial: Config = {
   maximumScamRiskScore: 35,
   excludeUsOnly: true,
   useLocalAi: true,
+  closedRetentionDays: 30,
+  maximumStoredJobs: 2000,
   feeds: [
     { name: "Himalayas", url: "https://himalayas.app/jobs/rss" },
     { name: "Remote OK", url: "https://remoteok.com/remote-jobs.rss" },
@@ -137,7 +142,7 @@ export default function RssJobAutomation({ close }: { close: () => void }) {
       if (nextAction === "run") {
         await load();
         setNotice(
-          `${data.inserted} curated, ${data.duplicates} duplicates, ${data.rejected || 0} filtered. Local AI processed ${data.aiProcessed || 0}; fallback handled ${data.aiFallback || 0}.`,
+          `${data.inserted} curated, ${data.duplicates} duplicates, ${data.rejected || 0} filtered, ${data.deleted || 0} old records deleted. Local AI processed ${data.aiProcessed || 0}; fallback handled ${data.aiFallback || 0}.`,
         );
       } else {
         setConfig(data.config);
@@ -325,7 +330,7 @@ export default function RssJobAutomation({ close }: { close: () => void }) {
                   setConfig({ ...config, excludeUsOnly })
                 }
               />
-              <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 <NumberField
                   label="Expiry"
                   suffix="days"
@@ -354,6 +359,26 @@ export default function RssJobAutomation({ close }: { close: () => void }) {
                   max={80}
                   onChange={(maximumScamRiskScore) =>
                     setConfig({ ...config, maximumScamRiskScore })
+                  }
+                />
+                <NumberField
+                  label="Closed retention"
+                  suffix="days"
+                  value={config.closedRetentionDays}
+                  min={7}
+                  max={90}
+                  onChange={(closedRetentionDays) =>
+                    setConfig({ ...config, closedRetentionDays })
+                  }
+                />
+                <NumberField
+                  label="Maximum RSS records"
+                  suffix="jobs"
+                  value={config.maximumStoredJobs}
+                  min={500}
+                  max={5000}
+                  onChange={(maximumStoredJobs) =>
+                    setConfig({ ...config, maximumStoredJobs })
                   }
                 />
               </div>
@@ -422,7 +447,7 @@ export default function RssJobAutomation({ close }: { close: () => void }) {
             <div className="divide-y divide-slate-100">
               {config.feeds.map((feed, index) => (
                 <div
-              key={index}
+                  key={index}
                   className="grid gap-3 p-4 sm:grid-cols-[150px_minmax(0,1fr)_40px]"
                 >
                   <label>
@@ -507,7 +532,7 @@ export default function RssJobAutomation({ close }: { close: () => void }) {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-xs">
+            <table className="w-full min-w-[980px] text-left text-xs">
               <thead className="bg-slate-50 text-[10px] uppercase tracking-[0.12em] text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Started</th>
@@ -519,6 +544,7 @@ export default function RssJobAutomation({ close }: { close: () => void }) {
                   <th className="px-3 py-3 text-right">AI</th>
                   <th className="px-3 py-3 text-right">Fallback</th>
                   <th className="px-5 py-3 text-right">Expired</th>
+                  <th className="px-5 py-3 text-right">Deleted</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -550,6 +576,9 @@ export default function RssJobAutomation({ close }: { close: () => void }) {
                     </td>
                     <td className="px-5 py-3.5 text-right text-slate-600">
                       {numberValue(run.expired_count)}
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-bold text-rose-600">
+                      {numberValue(run.deleted_count)}
                     </td>
                   </tr>
                 ))}
