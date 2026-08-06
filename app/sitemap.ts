@@ -3,100 +3,87 @@ import { createJobShareToken } from "@/lib/jobShare";
 import { absoluteUrl } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase_admin";
 import { getPublishedBlogPosts } from "@/lib/blogData";
+import { getProfileSlug } from "@/lib/profileUrl";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
 
-const safeDate = (value: unknown) => {
-  if (typeof value !== "string") return new Date();
+const safeDate = (value: unknown): Date | undefined => {
+  if (typeof value !== "string") return undefined;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? new Date() : date;
+  return Number.isNaN(date.getTime()) ? undefined : date;
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: SitemapEntry[] = [
     {
       url: absoluteUrl("/"),
-      lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
     },
     {
       url: absoluteUrl("/blog"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     ...["/about", "/safety", "/privacy", "/terms", "/cookies", "/payment-policy", "/contact"].map((path) => ({
       url: absoluteUrl(path),
-      lastModified: new Date(),
       changeFrequency: "monthly" as const,
       priority: path === "/safety" || path === "/about" ? 0.8 : 0.65,
     })),
     {
       url: absoluteUrl("/hire-filipino-freelancers"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.95,
     },
     {
       url: absoluteUrl("/hire/request"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.96,
     },
     {
       url: absoluteUrl("/virtual-assistant-philippines"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.95,
     },
     {
       url: absoluteUrl("/remote-jobs-philippines"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: absoluteUrl("/hire-filipino-web-developer"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.88,
     },
     {
       url: absoluteUrl("/hire-filipino-social-media-manager"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.88,
     },
     {
       url: absoluteUrl("/virtual-assistant-rates-philippines"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.86,
     },
     {
       url: absoluteUrl("/top-remote-jobs-for-filipinos-2026"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.86,
     },
     {
       url: absoluteUrl("/how-to-hire-online-filipino-talent-safely"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.86,
     },
     {
       url: absoluteUrl("/flexible-remote-jobs-for-filipino-students"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.84,
     },
     {
       url: absoluteUrl("/best-freelance-niche-philippines"),
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.84,
     },
@@ -110,26 +97,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.78,
   }));
 
-  const [{ data: jobs }, { data: profiles }] = await Promise.all([
+  const [jobsResult, profilesResult] = await Promise.all([
     supabaseAdmin
       .from("jobs")
-      .select("id, title, updated_at, created_at")
+      .select("id, title, createdAt")
       .eq("status", "live")
-      .order("created_at", { ascending: false })
+      .order("createdAt", { ascending: false })
       .limit(1000),
     supabaseAdmin
       .from("profiles")
-      .select("id, username, role, updated_at, created_at")
+      .select("id, username, role, status, updated_at")
       .neq("role", "admin")
+      .neq("status", "suspended")
       .order("updated_at", { ascending: false })
       .limit(1000),
   ]);
+
+  if (jobsResult.error) console.error("[Sitemap] Could not load jobs:", jobsResult.error.message);
+  if (profilesResult.error) console.error("[Sitemap] Could not load profiles:", profilesResult.error.message);
+
+  const jobs = jobsResult.data;
+  const profiles = profilesResult.data;
 
   const jobRoutes: SitemapEntry[] = (jobs || [])
     .filter((job) => job.id && job.title)
     .map((job) => ({
       url: absoluteUrl(`/jobs/${createJobShareToken({ id: job.id, title: job.title })}`),
-      lastModified: safeDate(job.updated_at || job.created_at),
+      lastModified: safeDate(job.createdAt),
       changeFrequency: "daily",
       priority: 0.8,
     }));
@@ -137,9 +131,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const profileRoutes: SitemapEntry[] = (profiles || [])
     .map((profile) => ({
       id: profile.id,
-      slug: profile.username || profile.id,
+      slug: getProfileSlug(profile.username, profile.id),
       role: profile.role,
-      lastModified: profile.updated_at || profile.created_at,
+      lastModified: profile.updated_at,
     }))
     .filter((profile) => profile.slug && profile.role !== "admin")
     .map((profile) => ({
