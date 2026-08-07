@@ -47,30 +47,35 @@ if (!databaseUrl) {
 try {
   const supabaseHost = new URL(supabaseUrl).host;
   const databaseHost = new URL(databaseUrl).host;
-  const response = await fetch(
-    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/profiles?select=id&limit=1`,
-    {
+  const request = async (path, label) => {
+    const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}${path}`, {
       headers: {
         apikey: supabaseAnonKey,
         Authorization: `Bearer ${supabaseAnonKey}`,
       },
       signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      let detail = body;
+      try {
+        const parsed = JSON.parse(body);
+        detail = parsed.message ?? parsed.hint ?? parsed.code ?? body;
+      } catch {
+        // PostgREST normally returns JSON, but preserve a plain-text error response.
+      }
+      throw new Error(`${label} failed (${response.status}): ${detail}`);
     }
+
+    return { rows: await response.json(), status: response.status };
+  };
+
+  const profiles = await request("/rest/v1/profiles?select=id&limit=1", "Supabase profiles check");
+  const jobs = await request(
+    "/rest/v1/jobs?select=id,title,category,rate,duration,createdAt&status=eq.live&order=createdAt.desc&limit=3",
+    "Supabase jobs check",
   );
-
-  if (!response.ok) {
-    const body = await response.text();
-    let detail = body;
-    try {
-      const parsed = JSON.parse(body);
-      detail = parsed.message ?? parsed.hint ?? parsed.code ?? body;
-    } catch {
-      // PostgREST normally returns JSON, but preserve a plain-text error response.
-    }
-    throw new Error(`Supabase profiles check failed (${response.status}): ${detail}`);
-  }
-
-  const rows = await response.json();
 
   console.log(
     JSON.stringify(
@@ -79,11 +84,15 @@ try {
         checks: {
           databaseUrl: "configured",
           profilesRestQuery: "passed",
+          jobsRestQuery: "passed",
         },
         supabaseHost,
         databaseHost,
-        status: response.status,
-        rows: Array.isArray(rows) ? rows.length : 0,
+        status: profiles.status,
+        rows: {
+          profiles: Array.isArray(profiles.rows) ? profiles.rows.length : 0,
+          jobs: Array.isArray(jobs.rows) ? jobs.rows.length : 0,
+        },
       },
       null,
       2
