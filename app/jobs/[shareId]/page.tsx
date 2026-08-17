@@ -46,6 +46,11 @@ const getPublicJob = async (shareId: string): Promise<(Job & { hirerReviewLabel?
     ...data,
     skills: Array.isArray(data.skills) ? data.skills : [],
     energyRequirement: data.energy_requirement || "Balanced",
+    source: data.source || "client",
+    sourceFeed: data.source_feed || undefined,
+    externalUrl: data.external_url || undefined,
+    publishedAt: data.published_at || undefined,
+    expiresAt: data.expires_at || undefined,
     paymentMethod: data.paymentMethod || "Flat-Rate",
     jobType: data.jobType || "Contract",
     hirerReviewLabel,
@@ -128,7 +133,7 @@ export default async function PublicJobPage({
     identifier: { "@type": "PropertyValue", name: siteName, value: job.id },
     datePosted,
     employmentType,
-    directApply: true,
+    directApply: job.source !== "rss",
     hiringOrganization: {
       "@type": "Organization",
       name: job.hiringOrganizationName,
@@ -165,10 +170,10 @@ export default async function PublicJobPage({
           <div className="h-2 bg-slate-900" />
           <div className="p-6 sm:p-10 space-y-8">
             <header className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">TaraWork Opportunity</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">{job.source === "rss" ? `External Opportunity · ${job.sourceFeed || "RSS"}` : "TaraWork Opportunity"}</p>
               <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{job.title}</h1>
               <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                Shared via TaraWork. Discover verified remote opportunities and apply securely through the platform.
+                {job.source === "rss" ? "Aggregated from an external RSS source. Review the original listing before applying." : "Shared via TaraWork. Discover verified remote opportunities and apply securely through the platform."}
               </p>
             </header>
 

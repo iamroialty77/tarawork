@@ -90,7 +90,7 @@ export default function AdminEmailInbox({ messages, refresh, reply }: { messages
     setNotice("");
   };
 
-  return <div className="relative grid min-h-[700px] grid-cols-1 border-y border-slate-200 bg-white lg:grid-cols-[230px_360px_minmax(0,1fr)]">
+  return <div className="admin-mail-workspace relative grid min-h-[700px] grid-cols-1 border-y border-slate-200 bg-white lg:grid-cols-[230px_360px_minmax(0,1fr)]">
     <aside className="border-b border-slate-200 bg-slate-50/80 p-4 lg:border-b-0 lg:border-r">
       <div className="mb-4 flex items-center gap-3 px-3 py-2"><div className="rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 p-2 text-white"><Mail className="h-5 w-5" /></div><div><h3 className="font-black text-slate-900">TaraWork Mail</h3><p className="text-[11px] font-semibold text-slate-400">Admin workspace</p></div></div>
       <button onClick={() => { setCompose({ ...emptyCompose }); setSelectedId(null); }} className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3.5 text-sm font-black text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"><PenLine className="h-4 w-4" />Compose email</button>

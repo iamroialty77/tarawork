@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { createClient } from "@supabase/supabase-js";
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -45,30 +44,55 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
-
 try {
-  const { data, error, status } = await supabase
-    .from("profiles")
-    .select("id")
-    .limit(1);
+  const supabaseHost = new URL(supabaseUrl).host;
+  const databaseHost = new URL(databaseUrl).host;
+  const request = async (path, label) => {
+    const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}${path}`, {
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
 
-  if (error) {
-    throw new Error(`Supabase query failed (${status}): ${error.message}`);
-  }
+    if (!response.ok) {
+      const body = await response.text();
+      let detail = body;
+      try {
+        const parsed = JSON.parse(body);
+        detail = parsed.message ?? parsed.hint ?? parsed.code ?? body;
+      } catch {
+        // PostgREST normally returns JSON, but preserve a plain-text error response.
+      }
+      throw new Error(`${label} failed (${response.status}): ${detail}`);
+    }
 
-  const dbHost = new URL(databaseUrl).host;
+    return { rows: await response.json(), status: response.status };
+  };
+
+  const profiles = await request("/rest/v1/profiles?select=id&limit=1", "Supabase profiles check");
+  const jobs = await request(
+    "/rest/v1/jobs?select=id,title,category,rate,duration,createdAt&status=eq.live&order=createdAt.desc&limit=3",
+    "Supabase jobs check",
+  );
 
   console.log(
     JSON.stringify(
       {
         ok: true,
-        supabaseUrl,
-        databaseHost: dbHost,
-        status,
-        rows: data?.length ?? 0,
+        checks: {
+          databaseUrl: "configured",
+          profilesRestQuery: "passed",
+          jobsRestQuery: "passed",
+        },
+        supabaseHost,
+        databaseHost,
+        status: profiles.status,
+        rows: {
+          profiles: Array.isArray(profiles.rows) ? profiles.rows.length : 0,
+          jobs: Array.isArray(jobs.rows) ? jobs.rows.length : 0,
+        },
       },
       null,
       2

@@ -11,12 +11,14 @@ import {
   UserRoundCheck,
   Users,
   FileSpreadsheet,
+  Rss,
 } from "lucide-react";
 import JobMatchAutomation from "./JobMatchAutomation";
 import ProfileReminderAutomation from "./ProfileReminderAutomation";
 import CsvEmailAutomation from "./CsvEmailAutomation";
+import RssJobAutomation from "./RssJobAutomation";
 
-type BotId = "profile-reminder" | "job-match" | "csv-email";
+type BotId = "profile-reminder" | "job-match" | "csv-email" | "rss-jobs";
 type BotSummary = {
   enabled: boolean;
   recipientCount: number;
@@ -32,6 +34,7 @@ export default function AdminAutomation() {
     "profile-reminder": emptySummary,
     "job-match": emptySummary,
     "csv-email": { enabled: true, recipientCount: 0, loading: false },
+    "rss-jobs": emptySummary,
   });
 
   const loadSummaries = async () => {
@@ -39,12 +42,14 @@ export default function AdminAutomation() {
       "profile-reminder": { ...current["profile-reminder"], loading: true, error: undefined },
       "job-match": { ...current["job-match"], loading: true, error: undefined },
       "csv-email": current["csv-email"],
+      "rss-jobs": { ...current["rss-jobs"], loading: true, error: undefined },
     }));
 
     const requests: Array<[BotId, string]> = [
       ["profile-reminder", "/api/admin/profile-reminder-automation"],
       ["job-match", "/api/admin/job-match-automation"],
       ["csv-email", "/api/admin/csv-email-automation"],
+      ["rss-jobs", "/api/admin/rss-automation"],
     ];
 
     const results = await Promise.all(
@@ -53,7 +58,7 @@ export default function AdminAutomation() {
           const response = await fetch(url, { cache: "no-store" });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || "Unable to load bot.");
-          return [id, { enabled: Boolean(data.config?.enabled), recipientCount: Number(data.recipientCount || data.recipients?.length || 0), loading: false }] as const;
+          return [id, { enabled: Boolean(data.config?.enabled), recipientCount: Number(data.activeJobCount || data.recipientCount || data.recipients?.length || 0), loading: false }] as const;
         } catch (error) {
           return [id, { enabled: false, recipientCount: 0, loading: false, error: error instanceof Error ? error.message : "Unable to load bot." }] as const;
         }
@@ -90,6 +95,13 @@ export default function AdminAutomation() {
       accent: "blue",
       schedule: "Manual",
     },
+    {
+      id: "rss-jobs" as const,
+      name: "RSS Job Import",
+      icon: Rss,
+      accent: "orange",
+      schedule: "Every 6 hours",
+    },
   ];
 
   const enabledCount = Object.values(summaries).filter((summary) => summary.enabled).length;
@@ -119,7 +131,7 @@ export default function AdminAutomation() {
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { label: "Active bots", value: `${enabledCount} / ${bots.length}`, icon: Activity, color: "text-emerald-600 bg-emerald-50" },
-            { label: "Ready recipients", value: totalReady.toLocaleString(), icon: Users, color: "text-indigo-600 bg-indigo-50" },
+            { label: "Ready items", value: totalReady.toLocaleString(), icon: Users, color: "text-indigo-600 bg-indigo-50" },
             { label: "Automation health", value: Object.values(summaries).some((item) => item.error) ? "Needs review" : "Operational", icon: CheckCircle2, color: "text-violet-600 bg-violet-50" },
           ].map((stat) => (
             <div key={stat.label} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
@@ -132,17 +144,18 @@ export default function AdminAutomation() {
 
       <section className="px-6 py-6 sm:px-8">
         <div className="mb-4 flex items-center justify-between"><h3 className="text-sm font-black uppercase tracking-wider text-slate-500">Workflows</h3><span className="text-xs font-semibold text-slate-400">{bots.length} available</span></div>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           {bots.map((bot) => {
             const summary = summaries[bot.id];
             const isViolet = bot.accent === "violet";
             const isBlue = bot.accent === "blue";
+            const isOrange = bot.accent === "orange";
             return (
               <article key={bot.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-md">
-                <div className={`h-1 ${isViolet ? "bg-gradient-to-r from-violet-500 to-indigo-500" : isBlue ? "bg-gradient-to-r from-blue-500 to-cyan-500" : "bg-gradient-to-r from-emerald-500 to-teal-500"}`} />
+                <div className={`h-1 ${isViolet ? "bg-gradient-to-r from-violet-500 to-indigo-500" : isBlue ? "bg-gradient-to-r from-blue-500 to-cyan-500" : isOrange ? "bg-gradient-to-r from-orange-500 to-amber-500" : "bg-gradient-to-r from-emerald-500 to-teal-500"}`} />
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-4">
-                    <div className={`rounded-2xl p-3 ${isViolet ? "bg-violet-50 text-violet-600" : isBlue ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"}`}><bot.icon className="h-6 w-6" /></div>
+                    <div className={`rounded-2xl p-3 ${isViolet ? "bg-violet-50 text-violet-600" : isBlue ? "bg-blue-50 text-blue-600" : isOrange ? "bg-orange-50 text-orange-600" : "bg-emerald-50 text-emerald-600"}`}><bot.icon className="h-6 w-6" /></div>
                     <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${summary.loading ? "bg-slate-100 text-slate-500" : summary.error ? "bg-rose-50 text-rose-700" : summary.enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                       <span className={`h-2 w-2 rounded-full ${summary.loading ? "animate-pulse bg-slate-400" : summary.error ? "bg-rose-500" : summary.enabled ? "bg-emerald-500" : "bg-slate-400"}`} />
                       {summary.loading ? "Checking" : summary.error ? "Attention" : summary.enabled ? "Active" : "Paused"}
@@ -155,7 +168,7 @@ export default function AdminAutomation() {
                     <div><p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400"><Users className="h-3.5 w-3.5" /> Ready now</p><p className="mt-1 text-sm font-black text-slate-700">{summary.loading ? "—" : summary.recipientCount.toLocaleString()} recipients</p></div>
                   </div>
                   <div className="mt-3">
-                    <button type="button" onClick={() => setActiveBot(bot.id)} className={`inline-flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-black text-white transition ${isViolet ? "bg-violet-600 hover:bg-violet-700" : isBlue ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+                    <button type="button" onClick={() => setActiveBot(bot.id)} className={`inline-flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-black text-white transition ${isViolet ? "bg-violet-600 hover:bg-violet-700" : isBlue ? "bg-blue-600 hover:bg-blue-700" : isOrange ? "bg-orange-600 hover:bg-orange-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
                       Manage <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
@@ -169,6 +182,7 @@ export default function AdminAutomation() {
       {activeBot === "profile-reminder" && <ProfileReminderAutomation close={() => { setActiveBot(null); void loadSummaries(); }} />}
       {activeBot === "job-match" && <JobMatchAutomation close={() => { setActiveBot(null); void loadSummaries(); }} />}
       {activeBot === "csv-email" && <CsvEmailAutomation close={() => { setActiveBot(null); void loadSummaries(); }} />}
+      {activeBot === "rss-jobs" && <RssJobAutomation close={() => { setActiveBot(null); void loadSummaries(); }} />}
     </div>
   );
 }

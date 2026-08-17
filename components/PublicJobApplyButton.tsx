@@ -29,6 +29,7 @@ const buildSuggestedCoverLetter = (
 };
 
 export default function PublicJobApplyButton({ job, nextPath }: PublicJobApplyButtonProps) {
+  const isExternalJob = job.source === "rss" && Boolean(job.externalUrl);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -139,6 +140,10 @@ export default function PublicJobApplyButton({ job, nextPath }: PublicJobApplyBu
 
   const handlePrimaryAction = () => {
     if (loading) return;
+    if (isExternalJob && job.externalUrl) {
+      window.open(job.externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     if (!userId) {
       router.push(`/auth?next=${encodeURIComponent(nextPath)}`);
       return;
@@ -238,10 +243,15 @@ export default function PublicJobApplyButton({ job, nextPath }: PublicJobApplyBu
         <button
           type="button"
           onClick={handlePrimaryAction}
-          disabled={loading || !!applicationStatus}
+          disabled={!isExternalJob && (loading || !!applicationStatus)}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase tracking-wider hover:bg-black transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          {loading ? (
+          {isExternalJob ? (
+            <>
+              View original listing
+              <ExternalLink className="w-3.5 h-3.5" />
+            </>
+          ) : loading ? (
             "Loading..."
           ) : applicationStatus ? (
             applicationStatus === "hired" ? "Hired" : "Pending"

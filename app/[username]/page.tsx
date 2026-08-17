@@ -4,7 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase_admin';
 import { absoluteUrl, siteName, truncateSeoText } from '@/lib/seo';
 import { ClientReview, FreelancerProfile, ServiceOffering } from '@/types/portfolio';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { cache } from 'react';
+import { getProfileSlug, normalizeProfileSlug } from '@/lib/profileUrl';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -216,7 +218,7 @@ async function fetchProfileWithFallback(query: any, identifier: string) {
   return profile;
 }
 
-async function getPortfolio(username: string): Promise<FreelancerProfile | null> {
+const getPortfolio = cache(async function getPortfolio(username: string): Promise<FreelancerProfile | null> {
   const normalizedUsername = username.startsWith("@") ? username.slice(1) : username;
   if (!normalizedUsername) return null;
   console.log(`[Portfolio] Starting lookup for: "${username}" (normalized: "${normalizedUsername}")`);
@@ -230,6 +232,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
   if (normalizedUsername === 'johndoe' || normalizedUsername === 'demo') {
     return {
       id: 'demo-uuid',
+      username: 'johndoe',
       name: 'John Doe',
       role: 'Senior Full-stack Developer',
       avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
@@ -452,7 +455,7 @@ async function getPortfolio(username: string): Promise<FreelancerProfile | null>
     console.error('Error fetching portfolio:', err);
     return null;
   }
-}
+});
 
 // Helper to map DB profile to FreelancerProfile interface
 function mapProfile(profile: any): FreelancerProfile {
@@ -510,6 +513,7 @@ function mapProfile(profile: any): FreelancerProfile {
 
   return {
     id: profile.id,
+    username: profile.username || undefined,
     name: profile.name || 'Anonymous',
     role: profile.role || 'Freelancer',
     companyName: profile.companyName || '',
@@ -544,7 +548,8 @@ function mapProfile(profile: any): FreelancerProfile {
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
   const { username } = await params;
   const profile = await getPortfolio(username);
-  const canonical = absoluteUrl(`/${encodeURIComponent(username)}`);
+  const canonicalSlug = profile ? getProfileSlug(profile.username, profile.id) : normalizeProfileSlug(username);
+  const canonical = absoluteUrl(`/${encodeURIComponent(canonicalSlug)}`);
 
   if (!profile) {
     return {
@@ -597,6 +602,11 @@ export default async function PortfolioPage({ params }: { params: Promise<{ user
 
   if (!profile) {
     notFound();
+  }
+
+  const canonicalSlug = getProfileSlug(profile.username, profile.id);
+  if (username !== canonicalSlug) {
+    redirect(`/${encodeURIComponent(canonicalSlug)}`);
   }
 
   if (!profile.contactEmail) {

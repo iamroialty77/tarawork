@@ -65,6 +65,7 @@ export interface Portfolio {
 
 export interface FreelancerProfile {
   id: string;
+  username?: string;
   name: string;
   role: string;
   companyName?: string;

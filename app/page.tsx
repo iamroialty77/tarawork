@@ -15,8 +15,8 @@ export const dynamic = "force-dynamic";
 const getLandingSettings = cache(() => getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS));
 const getLandingDirectory = cache(async () => {
   const [{ data: jobs }, { data: profiles }] = await Promise.all([
-    supabaseAdmin.from("jobs").select("id,title,category,rate,duration,created_at")
-      .eq("status", "live").order("created_at", { ascending: false }).limit(3),
+    supabaseAdmin.from("jobs").select("id,title,category,rate,duration,createdAt")
+      .eq("status", "live").order("createdAt", { ascending: false }).limit(3),
     supabaseAdmin.from("profiles").select("id,username,name,category,bio,skills,avatar_url,hourlyRate,aiInsights,status")
       .eq("role", "freelancer").order("updated_at", { ascending: false }).limit(50),
   ]);

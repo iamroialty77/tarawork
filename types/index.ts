@@ -122,6 +122,19 @@ export interface Job {
   deadline?: string;
   customQuestions?: ProposalQuestion[];
   employer_id?: string;
+  source?: "client" | "rss";
+  sourceFeed?: string;
+  externalUrl?: string;
+  publishedAt?: string;
+  expiresAt?: string;
+  locationLabel?: string;
+  qualityScore?: number;
+  scamRiskScore?: number;
+  seniorityTag?: string;
+  salaryEstimated?: boolean;
+  salaryEstimateMin?: number;
+  salaryEstimateMax?: number;
+  salaryEstimateCurrency?: string;
   applicantCount?: number;
   energyRequirement?: "High" | "Balanced" | "Low"; // Energy requirement of the job
   sustainabilityMatchScore?: number; // 0-100: Calculated compatibility
